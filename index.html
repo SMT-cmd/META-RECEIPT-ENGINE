@@ -533,6 +533,78 @@
         .tpl-event-planning .totals-box { background: white; border: 2px solid var(--tpl-primary, #FF1493); border-radius: 15px; box-shadow: 0 5px 20px rgba(255,20,147,0.2); }
         .tpl-event-planning .total-value.grand { color: var(--tpl-primary, #FF1493); }
 
+        /* ===== UNIQUE & ARTISTIC (31-35) ===== */
+        /* 31. CURVED ORGANIC */
+        .tpl-curved-organic { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 40px; }
+        .tpl-curved-organic .receipt-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 30px; border-bottom: 2px dashed #eee; background: transparent; color: #1a1a1a; }
+        .tpl-curved-organic .header-content { flex-direction: column; align-items: center; }
+        .tpl-curved-organic .doc-type-badge { background: var(--tpl-primary, #FF6B00); color: white; border-radius: 50px; margin-top: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .tpl-curved-organic .info-section { background: #f9f9f9; border-radius: 25px; margin: 30px; border: none; }
+        .tpl-curved-organic .items-table { border-spacing: 0 15px; border-collapse: separate; }
+        .tpl-curved-organic .items-table th { background: transparent; color: #999; }
+        .tpl-curved-organic .items-table td { background: white; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: none; }
+        .tpl-curved-organic .totals-box { background: var(--tpl-secondary, #1A1A1A); border-radius: 30px; color: white; border: none; }
+        .tpl-curved-organic .total-label { color: rgba(255,255,255,0.7); }
+        .tpl-curved-organic .total-value { color: white; }
+        .tpl-curved-organic .total-value.grand { color: var(--tpl-primary, #FF6B00); font-size: 24px; }
+        .tpl-curved-organic .receipt-footer { background: #fff; color: #888; border-top: 1px solid #eee; }
+
+        /* 32. GEOMETRIC SLICE */
+        .tpl-geometric-slice { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 2px solid #000; }
+        .tpl-geometric-slice .receipt-header { background: #000; color: white; padding: 60px 40px; clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%); min-height: 220px; }
+        .tpl-geometric-slice .doc-type-badge { font-size: 60px; font-weight: 900; opacity: 0.1; background: transparent; position: absolute; top: 10px; right: 20px; transform: none; box-shadow: none; }
+        .tpl-geometric-slice .info-section { background: white; border-bottom: 4px solid #000; margin-top: -30px; }
+        .tpl-geometric-slice .items-table th { border: 2px solid #000; background: var(--tpl-primary, #FF6B00); color: #000; }
+        .tpl-geometric-slice .items-table td { border: 2px solid #000; }
+        .tpl-geometric-slice .totals-box { border: 4px solid #000; border-radius: 0; background: #fff; display: grid; grid-template-columns: 1fr; gap: 0; padding: 0; }
+        .tpl-geometric-slice .total-row { padding: 10px 15px; border-bottom: 2px solid #000; }
+        .tpl-geometric-slice .total-row:last-child { background: #000; color: white; border-top: none; margin-top: 0; }
+        .tpl-geometric-slice .total-value.grand { color: var(--tpl-primary, #FF6B00); }
+        .tpl-geometric-slice .receipt-footer { background: #f0f0f0; border-top: 2px solid #000; }
+
+        /* 33. VINTAGE TICKET */
+        .tpl-vintage-ticket { font-family: 'Roboto Mono', monospace; background: #fef9e7; border: 2px solid #d4c4a8; }
+        .tpl-vintage-ticket::before, .tpl-vintage-ticket::after { content: ""; position: absolute; width: 40px; height: 40px; background: #f5f5f5; border-radius: 50%; top: 50%; margin-top: -20px; border: 2px solid #d4c4a8; z-index: 10; }
+        .tpl-vintage-ticket::before { left: -22px; }
+        .tpl-vintage-ticket::after { right: -22px; }
+        .tpl-vintage-ticket .receipt-header { text-align: center; border-bottom: 2px dashed #d4c4a8; background: transparent; color: #7d6b5d; }
+        .tpl-vintage-ticket .header-content { flex-direction: column; align-items: center; }
+        .tpl-vintage-ticket .brand-name { border: 2px solid var(--tpl-primary, #7d6b5d); color: var(--tpl-primary, #7d6b5d); padding: 10px 20px; display: inline-block; }
+        .tpl-vintage-ticket .doc-type-badge { font-size: 14px; letter-spacing: 5px; color: #a69076; background: transparent; transform: none; box-shadow: none; margin-top: 15px; }
+        .tpl-vintage-ticket .info-section { background: transparent; border-bottom: 1px solid #d4c4a8; }
+        .tpl-vintage-ticket .items-table th { background: transparent; color: #a69076; border-bottom: 1px solid #d4c4a8; }
+        .tpl-vintage-ticket .items-table td { border-bottom: 1px dotted #d4c4a8; }
+        .tpl-vintage-ticket .totals-box { border: none; background: transparent; }
+        .tpl-vintage-ticket .total-row { border-bottom: 1px dashed #d4c4a8; }
+        .tpl-vintage-ticket .total-row:last-child { border-top: 2px dashed #d4c4a8; margin-top: 15px; }
+        .tpl-vintage-ticket .total-value.grand { font-size: 28px; text-decoration: underline double; color: #c0392b; }
+        .tpl-vintage-ticket .receipt-footer { background: #fef9e7; color: #a69076; border-top: 2px dashed #d4c4a8; }
+
+        /* 34. FUTURISTIC GLASS */
+        .tpl-futuristic-glass { font-family: 'Rajdhani', sans-serif; background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .receipt-header { background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .brand-name { color: var(--tpl-primary, #FF6B00); text-shadow: 0 0 15px var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .doc-type-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--tpl-primary, #FF6B00); color: white; transform: none; box-shadow: 0 0 10px var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .info-section { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .items-table th { background: rgba(255,255,255,0.05); color: var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .items-table td { border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+        .tpl-futuristic-glass .totals-box { background: linear-gradient(135deg, var(--tpl-primary, #FF6B00), var(--tpl-secondary, #1A1A1A)); border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tpl-futuristic-glass .total-label, .tpl-futuristic-glass .total-value { color: white; }
+        .tpl-futuristic-glass .receipt-footer { background: #121212; border-top: 1px solid rgba(255,255,255,0.1); color: #888; }
+
+        /* 35. STAMP QUALITY */
+        .tpl-stamp-quality { font-family: 'Cinzel', serif; background: #fff; border: 15px solid #f0f0f0; }
+        .tpl-stamp-quality::after { content: "CERTIFIED"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 120px; color: var(--tpl-primary, #FF6B00); opacity: 0.03; font-weight: 900; pointer-events: none; }
+        .tpl-stamp-quality .receipt-header { text-align: center; background: transparent; color: #1a1a1a; border-bottom: none; }
+        .tpl-stamp-quality .header-content { flex-direction: column; align-items: center; }
+        .tpl-stamp-quality .brand-name { letter-spacing: 5px; }
+        .tpl-stamp-quality .doc-type-badge { border-top: 2px solid #1a1a1a; border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; transform: none; box-shadow: none; letter-spacing: 10px; width: auto; padding: 10px 50px; }
+        .tpl-stamp-quality .info-section { background: transparent; border-bottom: 1px solid #eee; }
+        .tpl-stamp-quality .items-table th { border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; }
+        .tpl-stamp-quality .totals-box { border: 4px double var(--tpl-primary, #FF6B00); background: transparent; }
+        .tpl-stamp-quality .total-value.grand { color: var(--tpl-primary, #FF6B00); }
+        .tpl-stamp-quality .receipt-footer { background: #fff; color: #aaa; border-top: 1px solid #eee; }
+
         @media print { body { background: white; } .form-panel, .preview-header-bar { display: none; } .preview-container { box-shadow: none; border: none; padding: 0; } .a4-preview { box-shadow: none; margin: 0; width: 100%; } }
     </style>
 <base target="_blank">
@@ -687,6 +759,19 @@
                             <div class="template-card" data-template="real-estate" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #fff; border: 2px double #8B4513;"></div><div class="template-name">Real Estate</div></div>
                             <div class="template-card" data-template="event-planning" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: linear-gradient(135deg, #fff0f5, #FF1493); border-radius: 10px;"></div><div class="template-name">Event Planning</div></div>
                         </div>
+
+                        <div class="section-title">Unique & Artistic (31-35)</div>
+                        <div class="template-gallery">
+                            <div class="template-card" data-template="curved-organic" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #fff; border-radius: 15px; border: 2px solid #eee; overflow: hidden; position: relative;"><div style="position: absolute; top: -10px; right: -10px; width: 20px; height: 20px; background: #FF6B00; border-radius: 50%; opacity: 0.2;"></div></div><div class="template-name">Curved Organic</div><div class="template-category">Soft</div></div>
+                            <div class="template-card" data-template="geometric-slice" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #000; clip-path: polygon(0 0, 100% 0, 100% 60%, 0 100%);"></div><div class="template-name">Geometric Slice</div><div class="template-category">Sharp</div></div>
+                        </div>
+                        <div class="template-gallery">
+                            <div class="template-card" data-template="vintage-ticket" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #fef9e7; border: 1px solid #d4c4a8; position: relative;"><div style="position: absolute; width: 10px; height: 10px; background: #fff; border-radius: 50%; top: 50%; margin-top: -5px; left: -6px; border: 1px solid #d4c4a8;"></div><div style="position: absolute; width: 10px; height: 10px; background: #fff; border-radius: 50%; top: 50%; margin-top: -5px; right: -6px; border: 1px solid #d4c4a8;"></div></div><div class="template-name">Vintage Ticket</div><div class="template-category">Retro</div></div>
+                            <div class="template-card" data-template="futuristic-glass" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #121212; border: 1px solid #FF6B00; box-shadow: inset 0 0 10px rgba(255,107,0,0.2);"></div><div class="template-name">Futuristic Glass</div><div class="template-category">Digital</div></div>
+                        </div>
+                        <div class="template-gallery">
+                            <div class="template-card" data-template="stamp-quality" onclick="selectTemplate(this)"><div class="template-preview-mini" style="background: #fff; border: 4px solid #f0f0f0; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel'; font-size: 6px; font-weight: 900; color: rgba(255,107,0,0.1);">STAMP</div><div class="template-name">Stamp Quality</div><div class="template-category">Premium</div></div>
+                        </div>
                     </div>
 
                     <!-- Typography Tab -->
@@ -753,15 +838,18 @@
                         </div>
                     </div>
 
-                    <button class="btn-generate" onclick="generateEngine()">🚀 GENERATE SECURE ENGINE</button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                        <button class="btn-generate" style="margin-top: 0; background: linear-gradient(135deg, #00c853, #64dd17);" onclick="generateEngine()">🔗 GENERATE UNIQUE LINK</button>
+                        <button class="btn-generate" style="margin-top: 0;" onclick="generateEngine()">🚀 GENERATE ENGINE FILE</button>
+                    </div>
                     
                     <div class="result-area" id="resultArea">
-                        <div class="result-title">✓ ENGINE CREATED SUCCESSFULLY</div>
-                        <p style="font-size: 11px; color: #888; text-align: center; margin-bottom: 15px;">Your branded receipt engine is ready! Share or download below.</p>
+                        <div class="result-title">✓ ENGINE & UNIQUE LINK CREATED</div>
+                        <p style="font-size: 11px; color: #888; text-align: center; margin-bottom: 15px;">Your branded receipt engine and unique shareable link are ready!</p>
                         
-                        <div class="share-link-box">
-                            <div style="font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 5px;">Shareable Link</div>
-                            <div class="share-link" id="shareLink"></div>
+                        <div class="share-link-box" style="border: 2px solid var(--accent);">
+                            <div style="font-size: 9px; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; font-weight: 900;">🚀 YOUR UNIQUE HOSTED LINK (GitHub Pages Compatible)</div>
+                            <div class="share-link" id="shareLink" style="font-size: 12px; font-weight: 700;"></div>
                         </div>
                         <button class="copy-btn" onclick="copyShareLink()">📋 Copy Share Link</button>
                         <button class="copy-btn" onclick="openGeneratedEngine()" style="background: var(--accent); margin-bottom: 10px;">🌐 Open Engine in New Tab</button>
@@ -831,7 +919,12 @@
             'education-academy': { name: 'Education Academy', category: 'Education' },
             'transport-logistics': { name: 'Transport', category: 'Logistics' },
             'real-estate': { name: 'Real Estate', category: 'Property' },
-            'event-planning': { name: 'Event Planning', category: 'Events' }
+            'event-planning': { name: 'Event Planning', category: 'Events' },
+            'curved-organic': { name: 'Curved Organic', category: 'Artistic' },
+            'geometric-slice': { name: 'Geometric Slice', category: 'Bold' },
+            'vintage-ticket': { name: 'Vintage Ticket', category: 'Retro' },
+            'futuristic-glass': { name: 'Futuristic Glass', category: 'Tech' },
+            'stamp-quality': { name: 'Stamp Quality', category: 'Premium' }
         };
 
         let currentTemplate = 'modern-tech';
@@ -1113,6 +1206,29 @@
                 ${mainContentCloseHtml}
                 <div class="security-tag" data-template="${currentTemplate}" data-brand="${btoa(brandName)}" data-timestamp="${Date.now()}"></div>
             `;
+
+            // Adaptive Template Logic
+            if (currentTemplate === 'geometric-slice') {
+                const header = preview.querySelector('.receipt-header');
+                if (header) {
+                    header.style.background = secondary;
+                    header.style.color = getContrastColor(secondary);
+                }
+            }
+            if (currentTemplate === 'vintage-ticket') {
+                const brand = preview.querySelector('.brand-name');
+                if (brand) {
+                    brand.style.color = primary;
+                    brand.style.borderColor = primary;
+                }
+            }
+            if (currentTemplate === 'futuristic-glass') {
+                const docBadge = preview.querySelector('.doc-type-badge');
+                if (docBadge) {
+                    docBadge.style.borderColor = primary;
+                    docBadge.style.boxShadow = `0 0 15px ${primary}`;
+                }
+            }
         }
 
         // ===== URL ENCODING/DECODING =====
@@ -1214,10 +1330,19 @@
 
             // Generate shareable link
             const encoded = encodeConfigToURL(config);
-            const baseUrl = window.location.origin + window.location.pathname;
+            // Use current page URL without hash for GitHub Pages compatibility
+            const baseUrl = window.location.href.split('#')[0];
             generatedEngineURL = baseUrl + '#' + encoded;
             
             document.getElementById('shareLink').textContent = generatedEngineURL;
+            
+            // Update button text to show success
+            const uniqueLinkBtn = document.querySelector('button[onclick="generateEngine()"]');
+            if (uniqueLinkBtn) {
+                const originalText = uniqueLinkBtn.innerHTML;
+                uniqueLinkBtn.innerHTML = "✅ LINK GENERATED!";
+                setTimeout(() => { uniqueLinkBtn.innerHTML = originalText; }, 2000);
+            }
             
             // Generate the full engine HTML
             const engineHTML = generateFullEngineHTML(config);
