@@ -1227,7 +1227,7 @@
                     <div class="message-text">${footer}</div>
                 </div>
                 <footer class="receipt-footer">
-                    <div class="footer-brand">${logoHtml}</div>
+                    <div class="footer-brand">${logoDisplay}</div>
                     <div class="footer-contact">${rc} | ${address} | ${tel}</div>
                 </footer>
             `;
@@ -1271,11 +1271,38 @@
             }
         }
 
-        // ===== URL ENCODING/DECODING =====
+        // ===== URL ENCODING/DECODING (Optimized) =====
+        const KEY_MAP = {
+            brandName: 'bn', logoUrl: 'lu', tagline: 'tg', tel: 'ph', rcNumber: 'rc', tinNumber: 'tn',
+            address: 'ad', email: 'em', bankName: 'bk', accName: 'an', accNumber: 'ac',
+            defaultPayment: 'dp', defaultTerms: 'dt', footerNote: 'fn', docType: 'dtp',
+            currency: 'cy', primaryColor: 'pc', secondaryColor: 'sc', vatRate: 'vr',
+            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts'
+        };
+
+        function compressConfig(config) {
+            const compressed = {};
+            for (let key in config) {
+                const shortKey = KEY_MAP[key] || key;
+                compressed[shortKey] = config[key];
+            }
+            return compressed;
+        }
+
+        function decompressConfig(compressed) {
+            const config = {};
+            const REVERSE_MAP = Object.fromEntries(Object.entries(KEY_MAP).map(([k, v]) => [v, k]));
+            for (let shortKey in compressed) {
+                const key = REVERSE_MAP[shortKey] || shortKey;
+                config[key] = compressed[shortKey];
+            }
+            return config;
+        }
+
         function encodeConfigToURL(config) {
             try {
-                const json = JSON.stringify(config);
-                // Use UTF-8 safe base64 encoding
+                const compressed = compressConfig(config);
+                const json = JSON.stringify(compressed);
                 const utf8Bytes = new TextEncoder().encode(json);
                 let binary = "";
                 for (let i = 0; i < utf8Bytes.byteLength; i++) {
@@ -1296,7 +1323,8 @@
                     bytes[i] = binary.charCodeAt(i);
                 }
                 const json = new TextDecoder().decode(bytes);
-                return JSON.parse(json);
+                const compressed = JSON.parse(json);
+                return decompressConfig(compressed);
             } catch(e) {
                 console.error("Decoding error:", e);
                 return null;

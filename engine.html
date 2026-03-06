@@ -887,6 +887,24 @@
             addItem();
         };
 
+        const KEY_MAP = {
+            brandName: 'bn', logoUrl: 'lu', tagline: 'tg', tel: 'ph', rcNumber: 'rc', tinNumber: 'tn',
+            address: 'ad', email: 'em', bankName: 'bk', accName: 'an', accNumber: 'ac',
+            defaultPayment: 'dp', defaultTerms: 'dt', footerNote: 'fn', docType: 'dtp',
+            currency: 'cy', primaryColor: 'pc', secondaryColor: 'sc', vatRate: 'vr',
+            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts'
+        };
+
+        function decompressConfig(compressed) {
+            const config = {};
+            const REVERSE_MAP = Object.fromEntries(Object.entries(KEY_MAP).map(([k, v]) => [v, k]));
+            for (let shortKey in compressed) {
+                const key = REVERSE_MAP[shortKey] || shortKey;
+                config[key] = compressed[shortKey];
+            }
+            return config;
+        }
+
         function decodeConfigFromURL(encoded) {
             try {
                 // Handle potential brand-name prefix (slug_BASE64)
@@ -897,7 +915,8 @@
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
                 const json = new TextDecoder().decode(bytes);
-                return JSON.parse(json);
+                const compressed = JSON.parse(json);
+                return decompressConfig(compressed);
             } catch(e) {
                 console.error("Decoding error:", e);
                 return null;
