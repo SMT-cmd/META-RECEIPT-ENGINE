@@ -626,6 +626,7 @@
                     <div class="form-tab" onclick="switchTab('templates')">Templates</div>
                     <div class="form-tab" onclick="switchTab('typography')">Typography</div>
                     <div class="form-tab" onclick="switchTab('colors')">Colors</div>
+                    <div class="form-tab" onclick="switchTab('deploy')">🚀 Deploy</div>
                 </div>
 
                 <div class="form-content">
@@ -633,14 +634,22 @@
                     <div class="form-section active" id="tab-identity">
                         <div class="section-title">Business Information</div>
                         <div class="input-group"><label>Brand Name</label><input type="text" id="brandName" placeholder="e.g. Tech Solutions Ltd" oninput="updatePreview()"></div>
+                        <div class="input-group"><label>Logo Image URL (Optional)</label><input type="text" id="logoUrl" placeholder="https://example.com/logo.png" oninput="updatePreview()"></div>
                         <div class="input-group"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="e.g. Innovation for Tomorrow" oninput="updatePreview()"></div>
                         <div class="input-row">
                             <div class="input-group"><label>Phone</label><input type="text" id="tel" placeholder="+234 814 081 3999" oninput="updatePreview()"></div>
                             <div class="input-group"><label>RC Number</label><input type="text" id="rcNumber" placeholder="RC 913487" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>TIN Number</label><input type="text" id="tinNumber" placeholder="TIN 12345678-0001" oninput="updatePreview()"></div>
                         </div>
                         <div class="input-group"><label>Business Address</label><textarea id="address" rows="2" placeholder="5 Otigba Street, Computer Village, Ikeja, Lagos" oninput="updatePreview()"></textarea></div>
                         <div class="input-group"><label>Email / Website</label><input type="text" id="email" placeholder="info@yourcompany.com" oninput="updatePreview()"></div>
-                        <div class="input-group"><label>Payment Details</label><textarea id="defaultPayment" rows="2" placeholder="GTBank | Your Company | 0123456789" oninput="updatePreview()"></textarea></div>
+                        <div class="section-title" style="margin-top: 20px;">Bank Transfer Details</div>
+                        <div class="input-row">
+                            <div class="input-group"><label>Bank Name</label><input type="text" id="bankName" placeholder="e.g. GTBank" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>Account Name</label><input type="text" id="accName" placeholder="e.g. Tech Solutions Ltd" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>Account Number</label><input type="text" id="accNumber" placeholder="e.g. 0123456789" oninput="updatePreview()"></div>
+                        </div>
+                        <div class="input-group"><label>Other Payment Details</label><textarea id="defaultPayment" rows="2" placeholder="e.g. PayPal, Cash, etc." oninput="updatePreview()"></textarea></div>
                         <div class="input-group"><label>Terms & Conditions</label><textarea id="defaultTerms" rows="2" placeholder="Goods once sold are not returnable..." oninput="updatePreview()"></textarea></div>
                         <div class="input-group"><label>Footer Message</label><input type="text" id="footerNote" placeholder="Thank you for your patronage!" oninput="updatePreview()"></div>
                         
@@ -838,9 +847,28 @@
                         </div>
                     </div>
 
+                    <!-- Deploy Tab -->
+                    <div class="form-section" id="tab-deploy">
+                        <div class="section-title">GitHub Pages Deployment</div>
+                        <div style="background: rgba(255,107,0,0.1); padding: 15px; border-radius: 10px; border: 1px solid var(--primary); margin-bottom: 20px;">
+                            <p style="font-size: 13px; color: var(--primary); font-weight: 700; margin-bottom: 10px;">No Firebase/Database Needed!</p>
+                            <p style="font-size: 11px; line-height: 1.5;">This engine stores all your brand data directly inside the URL. To use it permanently:</p>
+                        </div>
+                        <ol style="font-size: 11px; line-height: 1.8; color: #ccc; padding-left: 20px;">
+                            <li>Rename this file to <strong>index.html</strong></li>
+                            <li>Create a new repository on <strong>GitHub</strong></li>
+                            <li>Upload your <strong>index.html</strong> to that repository</li>
+                            <li>Go to <strong>Settings > Pages</strong> and enable it</li>
+                            <li>Once hosted, open your link, customize it, and click <strong>GENERATE UNIQUE LINK</strong></li>
+                        </ol>
+                        <div style="margin-top: 20px; padding: 10px; background: rgba(0,212,255,0.1); border-radius: 8px; border: 1px solid var(--accent);">
+                            <p style="font-size: 10px; color: var(--accent);">Your link will look like this: <br><span style="opacity:0.7">https://username.github.io/repo/#CONFIG_DATA</span></p>
+                        </div>
+                    </div>
+
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
-                        <button class="btn-generate" style="margin-top: 0; background: linear-gradient(135deg, #00c853, #64dd17);" onclick="generateEngine()">🔗 GENERATE UNIQUE LINK</button>
-                        <button class="btn-generate" style="margin-top: 0;" onclick="generateEngine()">🚀 GENERATE ENGINE FILE</button>
+                        <button class="btn-generate" id="btnGenLink" style="margin-top: 0; background: linear-gradient(135deg, #00c853, #64dd17);" onclick="generateEngine('link')">🔗 GENERATE UNIQUE LINK</button>
+                        <button class="btn-generate" id="btnGenFile" style="margin-top: 0;" onclick="generateEngine('file')">🚀 GENERATE ENGINE FILE</button>
                     </div>
                     
                     <div class="result-area" id="resultArea">
@@ -1020,11 +1048,22 @@
         function updatePreview() {
             const brandName = document.getElementById('brandName').value || 'YOUR BRAND';
             const tagline = document.getElementById('tagline').value || 'Your Tagline Here';
+            const logoUrl = document.getElementById('logoUrl').value;
             const tel = document.getElementById('tel').value || '+234 000 000 0000';
             const rc = document.getElementById('rcNumber').value || 'RC XXXXXX';
+            const tin = document.getElementById('tinNumber').value;
             const address = document.getElementById('address').value || 'Your Business Address';
             const email = document.getElementById('email').value || 'email@yourcompany.com';
-            const payment = document.getElementById('defaultPayment').value || 'Bank: Your Bank | Account: 0000000000';
+            
+            // Build structured payment for preview
+            const bName = document.getElementById('bankName').value;
+            const aNum = document.getElementById('accNumber').value;
+            let paymentHtml = '';
+            if (bName && aNum) {
+                paymentHtml += `BANK: ${bName} | ACC NO: ${aNum}\n`;
+            }
+            paymentHtml += document.getElementById('defaultPayment').value || 'Payment Details Here';
+            
             const terms = document.getElementById('defaultTerms').value || 'Goods once sold are not returnable.';
             const footer = document.getElementById('footerNote').value || 'Thank you for your patronage!';
             const docType = document.getElementById('docType').value || 'INVOICE';
@@ -1033,7 +1072,7 @@
             const secondary = document.getElementById('secondaryColor').value || '#1A1A1A';
             const stampStatus = document.getElementById('stampStatus').value || 'PAID';
 
-            const logoHtml = formatLogo(brandName, primary, secondary);
+            const logoDisplay = logoUrl ? `<img src="${logoUrl}" style="max-height: 50px; max-width: 150px; object-fit: contain;">` : formatLogo(brandName, primary, secondary);
             const today = new Date().toISOString().split('T')[0];
             const now = new Date();
             const timeStr = now.toTimeString().split(' ')[0];
@@ -1057,10 +1096,11 @@
                 <header class="receipt-header">
                     <div class="header-content">
                         <div class="brand-block">
-                            <div class="brand-name">${logoHtml}</div>
+                            <div class="brand-name">${logoDisplay}</div>
                             <div class="brand-tagline">${tagline}</div>
                             <div class="brand-contact">
                                 <div><strong>RC:</strong> ${rc}</div>
+                                ${tin ? `<div><strong>TIN:</strong> ${tin}</div>` : ''}
                                 <div><strong>Address:</strong> ${address}</div>
                                 <div><strong>Tel:</strong> ${tel}</div>
                             </div>
@@ -1233,16 +1273,32 @@
 
         // ===== URL ENCODING/DECODING =====
         function encodeConfigToURL(config) {
-            const json = JSON.stringify(config);
-            const compressed = btoa(json);
-            return compressed;
+            try {
+                const json = JSON.stringify(config);
+                // Use UTF-8 safe base64 encoding
+                const utf8Bytes = new TextEncoder().encode(json);
+                let binary = "";
+                for (let i = 0; i < utf8Bytes.byteLength; i++) {
+                    binary += String.fromCharCode(utf8Bytes[i]);
+                }
+                return btoa(binary);
+            } catch (e) {
+                console.error("Encoding error:", e);
+                return btoa(JSON.stringify({error: "Encoding failed"}));
+            }
         }
 
         function decodeConfigFromURL(encoded) {
             try {
-                const json = atob(encoded);
+                const binary = atob(encoded);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                const json = new TextDecoder().decode(bytes);
                 return JSON.parse(json);
             } catch(e) {
+                console.error("Decoding error:", e);
                 return null;
             }
         }
@@ -1252,23 +1308,29 @@
             if (hash) {
                 const config = decodeConfigFromURL(hash);
                 if (config) {
-                    document.getElementById('brandName').value = config.brandName || '';
-                    document.getElementById('tagline').value = config.tagline || '';
-                    document.getElementById('tel').value = config.tel || '';
-                    document.getElementById('rcNumber').value = config.rcNumber || '';
-                    document.getElementById('address').value = config.address || '';
-                    document.getElementById('email').value = config.email || '';
-                    document.getElementById('defaultPayment').value = config.defaultPayment || '';
-                    document.getElementById('defaultTerms').value = config.defaultTerms || '';
-                    document.getElementById('footerNote').value = config.footerNote || '';
-                    document.getElementById('docType').value = config.docType || 'INVOICE';
-                    document.getElementById('currency').value = config.currency || '₦';
-                    document.getElementById('primaryColor').value = config.primaryColor || '#FF6B00';
-                    document.getElementById('secondaryColor').value = config.secondaryColor || '#1A1A1A';
-                    document.getElementById('vatRate').value = config.vatRate || '7.5';
-                    document.getElementById('stampStatus').value = config.stampStatus || 'PAID';
+                    // Update all form fields
+                    if (document.getElementById('brandName')) document.getElementById('brandName').value = config.brandName || '';
+                    if (document.getElementById('logoUrl')) document.getElementById('logoUrl').value = config.logoUrl || '';
+                    if (document.getElementById('tagline')) document.getElementById('tagline').value = config.tagline || '';
+                    if (document.getElementById('tel')) document.getElementById('tel').value = config.tel || '';
+                    if (document.getElementById('rcNumber')) document.getElementById('rcNumber').value = config.rcNumber || '';
+                    if (document.getElementById('tinNumber')) document.getElementById('tinNumber').value = config.tinNumber || '';
+                    if (document.getElementById('address')) document.getElementById('address').value = config.address || '';
+                    if (document.getElementById('email')) document.getElementById('email').value = config.email || '';
+                    if (document.getElementById('bankName')) document.getElementById('bankName').value = config.bankName || '';
+                    if (document.getElementById('accName')) document.getElementById('accName').value = config.accName || '';
+                    if (document.getElementById('accNumber')) document.getElementById('accNumber').value = config.accNumber || '';
+                    if (document.getElementById('defaultPayment')) document.getElementById('defaultPayment').value = config.defaultPayment || '';
+                    if (document.getElementById('defaultTerms')) document.getElementById('defaultTerms').value = config.defaultTerms || '';
+                    if (document.getElementById('footerNote')) document.getElementById('footerNote').value = config.footerNote || '';
+                    if (document.getElementById('docType')) document.getElementById('docType').value = config.docType || 'INVOICE';
+                    if (document.getElementById('currency')) document.getElementById('currency').value = config.currency || '₦';
+                    if (document.getElementById('primaryColor')) document.getElementById('primaryColor').value = config.primaryColor || '#FF6B00';
+                    if (document.getElementById('secondaryColor')) document.getElementById('secondaryColor').value = config.secondaryColor || '#1A1A1A';
+                    if (document.getElementById('vatRate')) document.getElementById('vatRate').value = config.vatRate || '7.5';
+                    if (document.getElementById('stampStatus')) document.getElementById('stampStatus').value = config.stampStatus || 'PAID';
                     
-                    if (config.template && templates[config.template]) {
+                    if (config.template) {
                         currentTemplate = config.template;
                         document.querySelectorAll('.template-card').forEach(c => {
                             c.classList.toggle('active', c.dataset.template === config.template);
@@ -1304,56 +1366,78 @@
         }
 
         // ===== ENGINE GENERATION =====
-        function generateEngine() {
-            const config = {
-                brandName: document.getElementById('brandName').value,
-                tagline: document.getElementById('tagline').value,
-                tel: document.getElementById('tel').value,
-                rcNumber: document.getElementById('rcNumber').value,
-                address: document.getElementById('address').value,
-                email: document.getElementById('email').value,
-                defaultPayment: document.getElementById('defaultPayment').value,
-                defaultTerms: document.getElementById('defaultTerms').value,
-                footerNote: document.getElementById('footerNote').value,
-                docType: document.getElementById('docType').value,
-                currency: document.getElementById('currency').value,
-                primaryColor: document.getElementById('primaryColor').value,
-                secondaryColor: document.getElementById('secondaryColor').value,
-                vatRate: document.getElementById('vatRate').value,
-                stampStatus: document.getElementById('stampStatus').value,
-                fontFamily: currentFont,
-                template: currentTemplate,
-                logoStyle: currentLogoStyle,
-                timestamp: Date.now(),
-                version: '4.0-SECURE'
-            };
+        function generateEngine(type = 'link') {
+            try {
+                const brandName = document.getElementById('brandName').value || 'Brand';
+                const config = {
+                    brandName: brandName,
+                    logoUrl: document.getElementById('logoUrl').value,
+                    tagline: document.getElementById('tagline').value,
+                    tel: document.getElementById('tel').value,
+                    rcNumber: document.getElementById('rcNumber').value,
+                    tinNumber: document.getElementById('tinNumber').value,
+                    address: document.getElementById('address').value,
+                    email: document.getElementById('email').value,
+                    bankName: document.getElementById('bankName').value,
+                    accName: document.getElementById('accName').value,
+                    accNumber: document.getElementById('accNumber').value,
+                    defaultPayment: document.getElementById('defaultPayment').value,
+                    defaultTerms: document.getElementById('defaultTerms').value,
+                    footerNote: document.getElementById('footerNote').value,
+                    docType: document.getElementById('docType').value,
+                    currency: document.getElementById('currency').value,
+                    primaryColor: document.getElementById('primaryColor').value,
+                    secondaryColor: document.getElementById('secondaryColor').value,
+                    vatRate: document.getElementById('vatRate').value,
+                    stampStatus: document.getElementById('stampStatus').value,
+                    fontFamily: currentFont,
+                    template: currentTemplate,
+                    logoStyle: currentLogoStyle,
+                    timestamp: Date.now(),
+                    version: '4.0-SECURE'
+                };
 
-            // Generate shareable link
-            const encoded = encodeConfigToURL(config);
-            // Use current page URL without hash for GitHub Pages compatibility
-            const baseUrl = window.location.href.split('#')[0];
-            generatedEngineURL = baseUrl + '#' + encoded;
-            
-            document.getElementById('shareLink').textContent = generatedEngineURL;
-            
-            // Update button text to show success
-            const uniqueLinkBtn = document.querySelector('button[onclick="generateEngine()"]');
-            if (uniqueLinkBtn) {
-                const originalText = uniqueLinkBtn.innerHTML;
-                uniqueLinkBtn.innerHTML = "✅ LINK GENERATED!";
-                setTimeout(() => { uniqueLinkBtn.innerHTML = originalText; }, 2000);
+                // Generate shareable link
+                const encoded = encodeConfigToURL(config);
+                // Create a branded prefix for the link
+                const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+                const baseUrl = window.location.href.split('/').slice(0, -1).join('/') + '/engine.html';
+                
+                // The hash will look like #brand-name_BASE64
+                generatedEngineURL = baseUrl + '#' + brandSlug + '_' + encoded;
+                
+                document.getElementById('shareLink').textContent = generatedEngineURL;
+                
+                // Show feedback on the specific button clicked
+                const btnId = type === 'link' ? 'btnGenLink' : 'btnGenFile';
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = "✅ SUCCESS!";
+                    setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+                }
+                
+                // If it's the file download option
+                if (type === 'file') {
+                    const engineHTML = generateFullEngineHTML(config);
+                    const blob = new Blob([engineHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${brandSlug}-engine.html`;
+                    a.click();
+                }
+                
+                // Show result area
+                document.getElementById('resultArea').classList.add('show');
+                document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+                
+                // Save to localStorage
+                localStorage.setItem('meta_receipt_engine_config', JSON.stringify(config));
+            } catch (err) {
+                console.error("Generation failed:", err);
+                alert("Generation failed! Check console for details.");
             }
-            
-            // Generate the full engine HTML
-            const engineHTML = generateFullEngineHTML(config);
-            document.getElementById('templateCode').textContent = engineHTML;
-            
-            // Show result area
-            document.getElementById('resultArea').classList.add('show');
-            document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
-            
-            // Save to localStorage
-            localStorage.setItem('meta_receipt_engine_config', JSON.stringify(config));
         }
 
         function generateFullEngineHTML(config) {
@@ -1525,6 +1609,33 @@
         @media print { body { background: white; padding: 0; margin: 0; } .control-panel, .panel-toggle, .dashboard-overlay { display: none !important; } .receipt-container { box-shadow: none; width: 210mm; height: 297mm; margin: 0; page-break-after: always; } .receipt-container:last-child { page-break-after: auto; } @page { size: A4; margin: 0; } }
         @media screen { .receipt-container { margin: 20px auto; } }
         @media screen and (max-width: 768px) { .receipt-container { width: 210mm; min-width: 210mm; transform: scale(0.45); transform-origin: top center; margin-bottom: -450px; } body { overflow-x: hidden; } .control-panel { width: 94vw; right: 3vw; left: 3vw; top: 70px; } .panel-toggle { top: 10px; right: 10px; } }
+
+        /* ARTISTIC TEMPLATE OVERRIDES */
+        .tpl-curved-organic { border-radius: 40px !important; }
+        .tpl-curved-organic .receipt-header { border-bottom: 2px dashed #eee !important; background: transparent !important; color: #1a1a1a !important; }
+        .tpl-curved-organic .info-section { background: #f9f9f9 !important; border-radius: 25px !important; margin: 20px 35px !important; border: none !important; }
+        .tpl-curved-organic .items-table { border-spacing: 0 15px !important; border-collapse: separate !important; }
+        .tpl-curved-organic .items-table td { background: white !important; border-radius: 20px !important; box-shadow: 0 5px 15px rgba(0,0,0,0.05) !important; border: none !important; }
+        .tpl-curved-organic .totals-box { background: var(--brand-secondary) !important; border-radius: 30px !important; color: white !important; border: none !important; }
+
+        .tpl-geometric-slice { border: 2px solid #000 !important; }
+        .tpl-geometric-slice .receipt-header { background: #000 !important; color: white !important; padding: 60px 40px !important; clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%) !important; }
+        .tpl-geometric-slice .info-section { background: white !important; border-bottom: 4px solid #000 !important; margin-top: -30px !important; }
+        .tpl-geometric-slice .items-table th { border: 2px solid #000 !important; background: var(--brand-primary) !important; color: #000 !important; }
+        .tpl-geometric-slice .items-table td { border: 2px solid #000 !important; }
+
+        .tpl-vintage-ticket { background: #fef9e7 !important; border: 2px solid #d4c4a8 !important; }
+        .tpl-vintage-ticket .receipt-header { border-bottom: 2px dashed #d4c4a8 !important; background: transparent !important; color: #7d6b5d !important; }
+        .tpl-vintage-ticket .items-table th { background: transparent !important; color: #a69076 !important; border-bottom: 1px solid #d4c4a8 !important; }
+        .tpl-vintage-ticket .items-table td { border-bottom: 1px dotted #d4c4a8 !important; }
+
+        .tpl-futuristic-glass { background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%) !important; color: #fff !important; }
+        .tpl-futuristic-glass .receipt-header { background: rgba(255,255,255,0.02) !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; }
+        .tpl-futuristic-glass .doc-type { box-shadow: 0 0 15px var(--brand-primary) !important; }
+
+        .tpl-stamp-quality { border: 15px solid #f0f0f0 !important; }
+        .tpl-stamp-quality .receipt-header { border-bottom: none !important; }
+        .tpl-stamp-quality .doc-type { border-top: 2px solid #1a1a1a !important; border-bottom: 2px solid #1a1a1a !important; background: transparent !important; color: #1a1a1a !important; border-radius: 0 !important; }
     <\/style>
 </head>
 <body>
