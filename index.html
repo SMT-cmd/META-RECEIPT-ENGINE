@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>META-RECEIPT ENGINE PRO | Ultimate Template System</title>
+    <title>METAFORGE ENGINE | Professional Document System</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B00">
     <style>
         :root { --primary: #FF6B00; --secondary: #1A1A1A; --dark: #0F0F0F; --light: #F5F5F5; --gray: #4A4A4A; --accent: #00D4FF; }
         * { box-sizing: border-box; }
@@ -605,16 +607,38 @@
         .tpl-stamp-quality .total-value.grand { color: var(--tpl-primary, #FF6B00); }
         .tpl-stamp-quality .receipt-footer { background: #fff; color: #aaa; border-top: 1px solid #eee; }
 
-        @media print { body { background: white; } .form-panel, .preview-header-bar { display: none; } .preview-container { box-shadow: none; border: none; padding: 0; } .a4-preview { box-shadow: none; margin: 0; width: 100%; } }
+        /* PWA Install Banner */
+        .pwa-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1A1A1A; border: 1px solid var(--primary); border-radius: 12px; padding: 15px 25px; display: none; align-items: center; gap: 20px; z-index: 10000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: calc(100% - 40px); max-width: 500px; }
+        .pwa-banner.show { display: flex; animation: slideUp 0.5s ease; }
+        .pwa-info { flex: 1; }
+        .pwa-title { font-weight: 700; color: white; margin-bottom: 4px; }
+        .pwa-desc { font-size: 12px; color: #aaa; }
+        .pwa-btn { padding: 8px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+        
+        /* iOS Safari Banner */
+        .ios-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; color: black; border-radius: 12px; padding: 20px; display: none; flex-direction: column; align-items: center; text-align: center; z-index: 10000; box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: calc(100% - 40px); max-width: 400px; }
+        .ios-banner.show { display: flex; animation: slideUp 0.5s ease; }
+        .ios-icon { font-size: 24px; margin-bottom: 10px; }
+        .ios-close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; color: #888; }
+        
+        /* Auth Modal */
+        .auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 20000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .auth-modal.show { display: flex; }
+        .auth-container { background: #1A1A1A; border: 1px solid var(--primary); border-radius: 20px; padding: 30px; width: 100%; max-width: 400px; }
+        .auth-title { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--primary); margin-bottom: 20px; text-align: center; }
+        
+        @keyframes slideUp { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
+
+        @media print { body { background: white; } .form-panel, .preview-header-bar, .pwa-banner, .ios-banner, .auth-modal { display: none !important; } .preview-container { box-shadow: none; border: none; padding: 0; } .a4-preview { box-shadow: none; margin: 0; width: 100%; } }
     </style>
 <base target="_blank">
 </head>
 <body>
-    <div class="security-tag" data-security="true" data-timestamp="" data-signature="META-RECEIPT-ENGINE-PRO-v4.0-SECURE"></div>
+    <div class="security-tag" data-security="true" data-timestamp="" data-signature="METAFORGE-ENGINE-v4.0-SECURE"></div>
     
     <div class="container">
         <header>
-            <h1>META-RECEIPT ENGINE PRO</h1>
+            <h1>METAFORGE ENGINE</h1>
             <p class="subtitle">30 Professional Templates | Shareable Links | Full-Featured Engine Generator</p>
         </header>
 
@@ -879,8 +903,11 @@
                             <div style="font-size: 9px; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; font-weight: 900;">🚀 YOUR UNIQUE HOSTED LINK (GitHub Pages Compatible)</div>
                             <div class="share-link" id="shareLink" style="font-size: 12px; font-weight: 700;"></div>
                         </div>
-                        <button class="copy-btn" onclick="copyShareLink()">📋 Copy Share Link</button>
-                        <button class="copy-btn" onclick="openGeneratedEngine()" style="background: var(--accent); margin-bottom: 10px;">🌐 Open Engine in New Tab</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button class="copy-btn" onclick="copyShareLink()">📋 Copy Full Link</button>
+                            <button class="copy-btn" id="btnShorten" style="background: var(--accent);" onclick="shortenURL()">🔗 Shorten Link</button>
+                        </div>
+                        <button class="copy-btn" onclick="openGeneratedEngine()" style="background: #28a745; margin-bottom: 10px;">🌐 Open Engine in New Tab</button>
                         
                         <div class="template-export">
                             <div class="export-header">
@@ -911,7 +938,182 @@
         </div>
     </div>
 
-    <div class="security-watermark">SECURE • META-RECEIPT-ENGINE-PRO v4.0 • PROTECTED</div>
+    <div class="security-watermark">SECURE • METAFORGE-ENGINE v4.0 • PROTECTED</div>
+
+    <!-- PWA Banners -->
+    <div id="pwaBanner" class="pwa-banner">
+        <div class="pwa-info">
+            <div class="pwa-title">Install Receipt Engine</div>
+            <div class="pwa-desc">Access your engine directly from your home screen.</div>
+        </div>
+        <button id="pwaInstallBtn" class="pwa-btn">Install</button>
+    </div>
+
+    <div id="iosBanner" class="ios-banner">
+        <span class="ios-close" onclick="this.parentElement.classList.remove('show')">✕</span>
+        <div class="ios-icon">📲</div>
+        <div class="pwa-title" style="color: black;">Install on iOS</div>
+        <div class="pwa-desc" style="color: #666;">Tap <span style="font-weight:700;">Share</span> then <span style="font-weight:700;">Add to Home Screen</span> to install this app.</div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="auth-modal">
+        <div class="auth-container">
+            <div class="auth-title">Authentication Required</div>
+            <div id="authForm">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="authEmail" placeholder="you@example.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="authPassword" placeholder="••••••••">
+                </div>
+                <button class="btn-generate" onclick="handleAuth()">Sign Up / Log In</button>
+            </div>
+            <div id="authLoading" style="display: none; text-align: center; color: var(--primary);">
+                Authenticating...
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs (Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+        import { getFirestore, collection, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw", 
+            authDomain: "metaforge-6afdf.firebaseapp.com", 
+            projectId: "metaforge-6afdf", 
+            storageBucket: "metaforge-6afdf.firebasestorage.app", 
+            messagingSenderId: "261172077627", 
+            appId: "1:261172077627:web:cb3cec74be2dbcb1d6281e", 
+            measurementId: "G-E2FZPZR3F7" 
+        }; 
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let deferredPrompt;
+        let currentUser = null;
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('SW registered:', reg);
+                }).catch(err => {
+                    console.log('SW registration failed:', err);
+                });
+            });
+        }
+
+        // PWA Install Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwaBanner').classList.add('show');
+        });
+
+        document.getElementById('pwaInstallBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('pwaBanner').classList.remove('show');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        // iOS Feature Detection
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) {
+            document.getElementById('iosBanner').classList.add('show');
+        }
+
+        // Authentication Logic
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (!user && window.location.hash) {
+                document.getElementById('authModal').classList.add('show');
+            } else if (user) {
+                document.getElementById('authModal').classList.remove('show');
+            }
+        });
+
+        // Expose to window for UI access
+        window.handleAuth = async function() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) return alert("Email and password required");
+
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('authLoading').style.display = 'block';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password)
+                    .catch(() => createUserWithEmailAndPassword(auth, email, password));
+            } catch (err) {
+                alert(err.message);
+                document.getElementById('authForm').style.display = 'block';
+                document.getElementById('authLoading').style.display = 'none';
+            }
+        };
+
+        // URL Shortening Integration
+        window.shortenURL = async function() {
+            if (!currentUser) {
+                document.getElementById('authModal').classList.add('show');
+                return;
+            }
+
+            const longUrl = window.generatedEngineURL;
+            const btn = document.getElementById('btnShorten');
+            btn.textContent = "Shortening...";
+            btn.disabled = true;
+
+            try {
+                const idToken = await currentUser.getIdToken();
+                // Correct region and project ID for Cloud Functions
+                const response = await fetch('https://us-central1-metaforge-6afdf.cloudfunctions.net/shorten', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ url: longUrl })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('shareLink').textContent = data.shortUrl;
+                    btn.textContent = "DONE!";
+                    
+                    const shortDocRef = doc(db, "short_urls", data.code);
+                    await updateDoc(shortDocRef, {
+                        device_fingerprints: arrayUnion(navigator.userAgent)
+                    }).catch(() => {});
+                } else {
+                    throw new Error("Shortening failed");
+                }
+            } catch (err) {
+                alert("Error: " + err.message);
+                btn.textContent = "Retry";
+                btn.disabled = false;
+            }
+        };
+    </script>
 
     <script>
         // ===== CONFIGURATION =====
@@ -1334,7 +1536,11 @@
         function loadFromURL() {
             const hash = window.location.hash.slice(1);
             if (hash) {
-                const config = decodeConfigFromURL(hash);
+                // Handle potential brand-name prefix (slug_BASE64)
+                const parts = hash.split('_');
+                const actualBase64 = parts.length > 1 ? parts[1] : parts[0];
+                
+                const config = decodeConfigFromURL(actualBase64);
                 if (config) {
                     // Update all form fields
                     if (document.getElementById('brandName')) document.getElementById('brandName').value = config.brandName || '';
@@ -2176,6 +2382,40 @@
         function openGeneratedEngine() {
             if (generatedEngineURL) {
                 window.open(generatedEngineURL, '_blank');
+            }
+        }
+
+        async function shortenURL() {
+            if (!generatedEngineURL) return alert('Generate a link first!');
+            const btn = document.getElementById('btnShorten');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Shortening...';
+            btn.disabled = true;
+            
+            try {
+                // Using is.gd API (no CORS proxy needed for simple GET if handled correctly, but let's use a public proxy for safety)
+                const apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(generatedEngineURL)}`;
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`);
+                const data = await response.json();
+                const result = JSON.parse(data.contents);
+                
+                if (result.shorturl) {
+                    generatedEngineURL = result.shorturl;
+                    document.getElementById('shareLink').textContent = generatedEngineURL;
+                    btn.innerHTML = '✅ Shortened!';
+                    alert('URL shortened successfully!');
+                } else {
+                    throw new Error(result.errormessage || 'Failed to shorten');
+                }
+            } catch (error) {
+                console.error('Shorten error:', error);
+                alert('Could not shorten URL. The full link is still available to copy.');
+                btn.innerHTML = '❌ Failed';
+            } finally {
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
             }
         }
 

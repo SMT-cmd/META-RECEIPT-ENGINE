@@ -9,6 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B00">
 
     <style>
         :root {
@@ -680,6 +682,7 @@
         <button class="btn btn-success" onclick="saveImage()">🖼️ Download Image</button>
         <button class="btn btn-info" onclick="shareDocument()">🔗 Share Document</button>
         <button class="btn btn-secondary" onclick="window.print()">🖨️ Direct Print</button>
+        <button class="btn btn-info" id="installBtn" style="display: none; background: #6f42c1;" onclick="installPWA()">📲 Install as App</button>
 
         <div class="control-group">
             <label class="control-label">Authorized Signature</label>
@@ -724,6 +727,25 @@
             </div>
         </div>
     </div>
+
+    <!-- PWA Install Popup -->
+    <div id="pwaPopup" style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 10000; display: none; align-items: center; justify-content: space-between; border-left: 5px solid var(--brand-primary); animation: slideUp 0.5s ease-out;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 30px;">📲</div>
+            <div>
+                <div style="font-weight: 800; font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--brand-dark);">INSTALL AS APP</div>
+                <div style="font-size: 11px; color: #666;">Operate this engine like a professional app on your home screen.</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" style="margin: 0; padding: 8px 15px; width: auto; font-size: 11px;" onclick="installPWA()">Install</button>
+            <button class="btn btn-secondary" style="margin: 0; padding: 8px 15px; width: auto; font-size: 11px; background: #eee; color: #333;" onclick="closePWAPopup()">Later</button>
+        </div>
+    </div>
+
+    <style>
+        @keyframes slideUp { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
 
     <div class="receipt-container" id="receipt">
         <div class="page-watermark" id="watermark">BRAND NAME</div>
@@ -885,7 +907,35 @@
             document.getElementById('receiptDate').valueAsDate = new Date();
             refreshStamp();
             addItem();
+            registerServiceWorker();
         };
+
+        let deferredPrompt;
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    console.log('Service Worker Registered');
+                });
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) installBtn.style.display = 'flex';
+        });
+
+        async function installPWA() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            document.getElementById('installBtn').style.display = 'none';
+        }
 
         const KEY_MAP = {
             brandName: 'bn', logoUrl: 'lu', tagline: 'tg', tel: 'ph', rcNumber: 'rc', tinNumber: 'tn',
