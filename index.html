@@ -1401,7 +1401,11 @@
                 const encoded = encodeConfigToURL(config);
                 // Create a branded prefix for the link
                 const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
-                const baseUrl = window.location.href.split('/').slice(0, -1).join('/') + '/engine.html';
+                
+                // Get current URL parts to construct engine path
+                const currentUrl = window.location.href.split('#')[0];
+                const lastSlash = currentUrl.lastIndexOf('/');
+                const baseUrl = currentUrl.substring(0, lastSlash + 1) + 'engine.html';
                 
                 // The hash will look like #brand-name_BASE64
                 generatedEngineURL = baseUrl + '#' + brandSlug + '_' + encoded;
