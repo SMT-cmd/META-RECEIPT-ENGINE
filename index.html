@@ -516,10 +516,6 @@
                 </button>
             </div>
             <div class="demo-viewport">
-                <div class="watermark-overlay">
-                    <div class="watermark-text">METAFORGE ENGINE</div>
-                    <div class="lock-badge">🔒 CUSTOM ITEMS LOCKED IN DEMO</div>
-                </div>
                 <iframe id="demoFrame" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
@@ -1034,7 +1030,7 @@
                 ts: Date.now() 
             };
             const encoded = btoa(JSON.stringify(config));
-            document.getElementById('demoFrame').src = window.location.origin + '/engine/#' + encoded;
+            document.getElementById('demoFrame').src = window.location.origin + '/demo.html#' + encoded;
         };
         refreshDemo();
 
