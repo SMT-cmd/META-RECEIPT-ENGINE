@@ -2,7 +2,7 @@
   "name": "METAFORGE ENGINE",
   "short_name": "MetaForge",
   "description": "Professional serverless document generation system.",
-  "start_url": "index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
