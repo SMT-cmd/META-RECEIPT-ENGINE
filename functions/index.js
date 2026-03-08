@@ -16,8 +16,19 @@ function generateCode() {
  * POST /shorten
  * Accepts { "url": "..." }
  * Returns { "code": "...", "shortUrl": "..." }
+ * Note: Anonymous creation allowed for the Creator. 
+ * Ownership is claimed by the first user who signs up via the link.
  */
 exports.shorten = functions.https.onRequest(async (req, res) => {
+  // Add CORS headers
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Methods', 'POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.set('Access-Control-Max-Age', '3600');
+    return res.status(204).send('');
+  }
+
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
   }
@@ -27,32 +38,26 @@ exports.shorten = functions.https.onRequest(async (req, res) => {
     return res.status(400).send("URL is required");
   }
 
-  // Auth check (required by prompt)
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Unauthorized");
-  }
-  const idToken = authHeader.split("Bearer ")[1];
-  
   try {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const email = decodedToken.email;
-    const uid = decodedToken.uid;
-
     const code = generateCode();
     const shortDoc = db.collection("short_urls").doc(code);
 
     await shortDoc.set({
       original_url: url,
-      owner_email: email,
-      owner_uid: uid,
+      owner_email: null, // To be claimed by the end-user
+      owner_uid: null,
       created_at: admin.firestore.FieldValue.serverTimestamp(),
-      device_fingerprints: [] // To be updated by client
+      device_fingerprints: []
     });
+
+    // Determine the base URL for the redirect
+    // In production, this would be your custom domain or firebase app domain
+    const projectId = process.env.GCLOUD_PROJECT || "metaforge-6afdf";
+    const shortUrl = `https://us-central1-${projectId}.cloudfunctions.net/redirect/${code}`;
 
     return res.status(200).json({
       code: code,
-      shortUrl: `https://${process.env.FUNCTION_REGION}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/redirect/${code}`
+      shortUrl: shortUrl
     });
   } catch (error) {
     console.error("Error shortening URL:", error);
@@ -76,9 +81,12 @@ exports.redirect = functions.https.onRequest(async (req, res) => {
       return res.status(404).send("URL not found");
     }
 
-    const originalUrl = doc.data().original_url;
-    // The prompt says "last successfully fetched redirect target" should be cached by SW.
-    // We'll set headers to allow caching if needed, but 301 is usually cached by browsers.
+    let originalUrl = doc.data().original_url;
+    // Append the short code to the hash so engine.html can detect it's a claimable link
+    // The client expects #brandSlug_BASE64_sc=ABC123
+    const separator = originalUrl.includes("#") ? "_" : "#";
+    originalUrl += `${separator}sc=${code}`;
+    
     res.set("Cache-Control", "public, max-age=3600");
     return res.redirect(301, originalUrl);
   } catch (error) {
