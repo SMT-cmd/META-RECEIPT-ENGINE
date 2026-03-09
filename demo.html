@@ -127,6 +127,43 @@
         .tpl-minimalist-pro .receipt-header { border-bottom: 1px solid #eee; }
         .tpl-minimalist-pro .brand-name { font-weight: 300; letter-spacing: 5px; }
 
+        .tpl-clean-air { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 30px; }
+        .tpl-clean-air .receipt-header { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; margin: 20px; padding: 20px; }
+        .tpl-clean-air .doc-type-badge { background: var(--tpl-primary, #4299e1); color: white; border-radius: 50px; }
+        .tpl-clean-air .items-table th { background: transparent; color: #4a5568; }
+        .tpl-clean-air .items-table td { background: #f7fafc; border-radius: 8px; border: none; }
+        .tpl-clean-air .totals-box { background: linear-gradient(135deg, var(--tpl-primary, #4299e1) 0%, var(--tpl-secondary, #1a365d) 100%); color: white; }
+
+        .tpl-neo-brutalist { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0 #000; }
+        .tpl-neo-brutalist .receipt-header { border-bottom: 4px solid #000; }
+        .tpl-neo-brutalist .brand-name { text-transform: uppercase; }
+        .tpl-neo-brutalist .doc-type-badge { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+        .tpl-neo-brutalist .items-table { border: 3px solid #000; }
+        .tpl-neo-brutalist .items-table th { background: #000; color: white; }
+        .tpl-neo-brutalist .items-table td { border-bottom: 2px solid #000; }
+        .tpl-neo-brutalist .totals-box { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+
+        .tpl-art-deco { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 100%); border: 3px solid var(--tpl-primary, #C9A961); position: relative; }
+        .tpl-art-deco .brand-name { letter-spacing: 5px; }
+        .tpl-art-deco .doc-type-badge { border: 2px solid var(--tpl-primary, #C9A961); letter-spacing: 4px; }
+        .tpl-art-deco .items-table th { background: var(--tpl-secondary, #2C2C2C); color: var(--tpl-primary, #C9A961); letter-spacing: 2px; }
+        .tpl-art-deco .totals-box { border: 2px solid var(--tpl-primary, #C9A961); text-align: center; }
+        .tpl-art-deco .total-value.grand { color: var(--tpl-primary, #C9A961); }
+
+        .tpl-retro-wave { font-family: 'Orbitron', sans-serif; background: linear-gradient(180deg, #2d1b4e 0%, #1a0b2e 100%); color: #fff; position: relative; overflow: hidden; }
+        .tpl-retro-wave .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-retro-wave .brand-name { text-shadow: 0 0 20px #ff00ff; }
+        .tpl-retro-wave .doc-type-badge { background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000; }
+        .tpl-retro-wave .items-table th { background: rgba(255,0,255,0.2); color: #00ffff; }
+        .tpl-retro-wave .items-table td { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-retro-wave .totals-box { background: rgba(0,255,255,0.1); border: 1px solid #00ffff; }
+
+        .tpl-japanese-minimal { font-family: 'Inter', sans-serif; background: #fafafa; }
+        .tpl-japanese-minimal .brand-name { letter-spacing: 8px; }
+        .tpl-japanese-minimal .doc-type-badge { font-size: 48px; font-weight: 100; color: var(--tpl-primary, #E74C3C); opacity: 0.3; background: transparent; }
+        .tpl-japanese-minimal .items-table th { border-bottom: 1px solid #000; background: transparent; font-weight: 400; }
+        .tpl-japanese-minimal .total-value.grand { color: var(--tpl-primary, #E74C3C); font-weight: 100; }
+
         @media (max-width: 768px) {
             .receipt-container { transform: scale(0.4); margin-top: -300px; }
         }
@@ -253,19 +290,33 @@
             const hash = window.location.hash.slice(1);
             if (!hash) return;
             try {
-                const config = JSON.parse(atob(hash));
+                // Support UTF-8 in base64
+                const binary = atob(hash);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const json = new TextDecoder().decode(bytes);
+                const config = JSON.parse(json);
                 
                 document.getElementById('brandNameDisplay').textContent = config.bn || 'METAFORGE ELITE';
                 document.getElementById('watermark').textContent = (config.bn || 'METAFORGE').toUpperCase();
                 document.getElementById('rcDisplay').textContent = config.rc || 'RC 000000';
                 document.getElementById('telDisplay').textContent = config.ph || '+234 000 000 000';
                 document.getElementById('stampAuthority').textContent = (config.bn || 'METAFORGE').toUpperCase();
+                document.getElementById('docTypeDisplay').textContent = config.dtp || 'INVOICE';
                 
                 const root = document.documentElement;
                 root.style.setProperty('--brand-primary', config.pc || '#9B5DE5');
+                root.style.setProperty('--tpl-primary', config.pc || '#9B5DE5');
+                root.style.setProperty('--tpl-secondary', config.sc || '#1A1A1A');
                 
                 const receipt = document.getElementById('receipt');
-                receipt.className = 'receipt-container tpl-' + (config.tp || 'modern-tech');
+                // Remove existing tpl classes
+                receipt.classList.forEach(cls => {
+                    if (cls.startsWith('tpl-')) receipt.classList.remove(cls);
+                });
+                receipt.classList.add('tpl-' + (config.tp || 'modern-tech'));
+                
+                if (config.ff) receipt.style.fontFamily = config.ff;
                 
                 document.getElementById('currentDate').textContent = new Date().toISOString().split('T')[0];
             } catch (e) {

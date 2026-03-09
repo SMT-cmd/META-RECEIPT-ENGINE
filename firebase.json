@@ -1,0 +1,36 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/r/**",
+        "function": "redirect"
+      },
+      {
+        "source": "/shorten",
+        "function": "shorten"
+      },
+      {
+        "source": "/demo",
+        "destination": "/demo.html"
+      },
+      {
+        "source": "/admin",
+        "destination": "/admin.html"
+      },
+      {
+        "source": "/creator",
+        "destination": "/creator.html"
+      },
+      {
+        "source": "/engine/**",
+        "destination": "/engine/index.html"
+      }
+    ]
+  }
+}
