@@ -3,166 +3,774 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SKILLFORGE | Creator Engine Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>METAFORGE ENGINE | Professional Document System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="manifest" href="../manifest.json">
-    <meta name="theme-color" content="#D4AF37">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B00">
     <style>
-        :root { 
-            --primary: #D4AF37; 
-            --secondary: #2C1810; 
-            --dark: #120A07; 
-            --light: #FAF9F6; 
-            --accent: #E5C27D;
-            --border: rgba(212, 175, 55, 0.2);
-            --glass: rgba(255, 255, 255, 0.03);
+        .auth-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+            z-index: 10000;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
+        .auth-modal.show {
+            display: flex;
+        }
+        .auth-box {
+            background: #1a1a2e;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid var(--primary);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+        .auth-box h2 { font-family: 'Orbitron', sans-serif; margin-bottom: 10px; font-size: 24px; }
+        .auth-box p { color: #888; margin-bottom: 30px; font-size: 14px; }
+
+        :root { --primary: #FF6B00; --secondary: #1A1A1A; --dark: #0F0F0F; --light: #F5F5F5; --gray: #4A4A4A; --accent: #00D4FF; }
         * { box-sizing: border-box; }
-        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+        body { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0f0f0f 100%); color: white; font-family: 'Rajdhani', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
         .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 40px 20px; background: linear-gradient(135deg, rgba(212,175,55,0.05) 0%, transparent 100%); border-bottom: 1px solid var(--border); margin-bottom: 40px; }
-        h1 { font-family: 'Cinzel', serif; font-size: clamp(24px, 4vw, 42px); letter-spacing: 4px; color: var(--primary); text-transform: uppercase; margin: 0 0 10px 0; }
-        .subtitle { color: #888; font-size: 13px; letter-spacing: 2px; font-family: 'Playfair Display', serif; font-style: italic; }
-        .main-grid { display: grid; grid-template-columns: 420px 1fr; gap: 30px; }
-        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+        header { text-align: center; padding: 30px 20px; background: linear-gradient(135deg, rgba(255,107,0,0.1) 0%, transparent 100%); border-bottom: 2px solid rgba(255,107,0,0.3); margin-bottom: 30px; }
+        h1 { font-family: 'Orbitron', sans-serif; font-size: clamp(28px, 5vw, 48px); letter-spacing: 6px; background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-transform: uppercase; margin: 0 0 10px 0; }
+        .subtitle { color: #888; font-size: 14px; letter-spacing: 2px; }
+        .main-grid { display: grid; grid-template-columns: 400px 1fr; gap: 25px; }
+        /* Mobile Optimization Overhaul */
+        @media (max-width: 1200px) { 
+            .main-grid { grid-template-columns: 1fr; } 
+            .container { padding: 10px; }
+            .preview-panel { position: relative; top: 0; margin-top: 30px; }
+        }
         
-        /* Form Panel */
-        .form-panel { background: var(--glass); border-radius: 25px; border: 1px solid var(--border); backdrop-filter: blur(30px); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
-        .form-tabs { display: flex; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
-        .form-tab { flex: 1; min-width: 80px; padding: 15px 5px; text-align: center; cursor: pointer; font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s; border-bottom: 3px solid transparent; font-weight: 700; }
-        .form-tab:hover { background: rgba(212,175,55,0.05); }
-        .form-tab.active { border-bottom-color: var(--primary); background: rgba(212,175,55,0.1); color: var(--primary); }
-        .form-content { padding: 25px; overflow-y: auto; flex: 1; }
+        @media (max-width: 768px) {
+            header { padding: 20px 10px; margin-bottom: 20px; }
+            h1 { font-size: 24px; letter-spacing: 2px; }
+            .form-tab { padding: 12px 5px; font-size: 9px; }
+            .form-content { padding: 15px; }
+            .input-row, .input-row-3 { grid-template-columns: 1fr; }
+            .color-section { grid-template-columns: 1fr; }
+            .a4-preview { transform: scale(0.4); transform-origin: top center; margin-bottom: -500px; width: 210mm; }
+            .preview-container { padding: 10px; overflow-x: hidden; }
+            .preview-header-bar { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+            .preview-actions { justify-content: center; }
+            .btn-generate { padding: 15px; font-size: 12px; }
+        }
+
+        @media (max-width: 480px) {
+            .template-gallery { grid-template-columns: 1fr; }
+            .typo-gallery { grid-template-columns: 1fr; }
+            .logo-style-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .form-panel { background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
+        .form-tabs { display: flex; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+        .form-tab { flex: 1; padding: 15px 8px; text-align: center; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s; border-bottom: 3px solid transparent; }
+        .form-tab:hover { background: rgba(255,107,0,0.1); }
+        .form-tab.active { border-bottom-color: var(--primary); background: rgba(255,107,0,0.15); color: var(--primary); }
+        .form-content { padding: 20px; overflow-y: auto; flex: 1; }
         .form-section { display: none; }
         .form-section.active { display: block; }
-        .section-title { font-family: 'Cinzel', serif; font-size: 11px; color: var(--primary); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 15px; }
-        .section-title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+        .section-title { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--primary); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
+        .section-title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,107,0,0.5), transparent); }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; color: #aaa; font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 10px 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: white; font-family: 'Rajdhani', sans-serif; font-size: 13px; outline: none; transition: all 0.3s; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); background: rgba(0,0,0,0.6); box-shadow: 0 0 15px rgba(255,107,0,0.2); }
+        .input-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .input-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .color-section { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+        .color-box { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        input[type="color"] { height: 45px; padding: 3px; cursor: pointer; border-radius: 8px; }
+        .color-presets { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
+        .color-dot { width: 100%; aspect-ratio: 1; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .color-dot:hover { transform: scale(1.15); }
+        .color-dot.active { border-color: white; box-shadow: 0 0 8px currentColor; }
         
-        .input-group { margin-bottom: 18px; }
-        label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; color: #aaa; font-weight: 600; }
-        input, select, textarea { width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; color: white; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: 0.3s; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary); background: rgba(0,0,0,0.5); box-shadow: 0 0 15px var(--primary-glow); }
+        /* Template Gallery */
+        .template-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        .template-card { background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+        .template-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,107,0,0.2); }
+        .template-card.active { border-color: var(--primary); background: rgba(255,107,0,0.1); }
+        .template-card.active::after { content: "✓"; position: absolute; top: 4px; right: 6px; background: var(--primary); color: white; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+        .template-preview-mini { height: 50px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 7px; color: #333; position: relative; overflow: hidden; }
+        .template-name { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .template-category { font-size: 7px; color: #888; margin-top: 2px; }
         
-        /* Requests Table */
-        .requests-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .requests-table th { text-align: left; font-size: 10px; color: var(--primary); text-transform: uppercase; padding: 10px; border-bottom: 1px solid var(--border); }
-        .requests-table td { padding: 12px 10px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .request-status { padding: 4px 8px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-        .status-pending { background: rgba(212, 175, 55, 0.2); color: var(--primary); }
-        .status-completed { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+        /* Typography */
+        .typo-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px; }
+        .typo-option { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .typo-option:hover { border-color: var(--primary); }
+        .typo-option.active { border-color: var(--primary); background: rgba(255,107,0,0.1); }
+        .typo-sample { font-size: 14px; margin-bottom: 4px; }
+        .typo-name { font-size: 8px; color: #888; text-transform: uppercase; }
+        
+        /* Logo Styles */
+        .logo-style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .logo-style-opt { padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; text-align: center; font-size: 10px; transition: all 0.2s; }
+        .logo-style-opt:hover { border-color: var(--primary); }
+        .logo-style-opt.active { border-color: var(--primary); background: rgba(255,107,0,0.15); }
+        
+        /* Preview Panel */
+        .preview-panel { position: sticky; top: 20px; }
+        .preview-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 10px; }
+        .preview-title { font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--primary); }
+        .preview-actions { display: flex; gap: 10px; }
+        .preview-btn { padding: 8px 15px; background: rgba(255,107,0,0.2); border: 1px solid var(--primary); border-radius: 6px; color: var(--primary); font-family: 'Orbitron', sans-serif; font-size: 10px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+        .preview-btn:hover { background: var(--primary); color: white; }
+        .preview-container { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: auto; max-height: 85vh; }
+        
+        /* A4 Receipt Preview */
+        .a4-preview { width: 210mm; min-height: 297mm; margin: 0 auto; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        
+        /* Generate Button */
+        .btn-generate { width: 100%; padding: 18px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; border: none; border-radius: 12px; font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 3px; margin-top: 20px; transition: all 0.3s; box-shadow: 0 10px 30px rgba(255, 107, 0, 0.3); }
+        .btn-generate:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255, 107, 0, 0.5); }
+        
+        /* Result Area */
+        .result-area { margin-top: 20px; padding: 20px; background: rgba(40, 167, 69, 0.1); border: 1px dashed #28a745; border-radius: 12px; display: none; }
+        .result-area.show { display: block; }
+        .result-title { color: #28a745; font-family: 'Orbitron', sans-serif; font-size: 13px; margin-bottom: 15px; text-align: center; }
+        .share-link-box { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .share-link { font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--accent); word-break: break-all; }
+        .copy-btn { width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: white; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+        .template-export { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 15px; margin-top: 15px; }
+        .export-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .export-title { font-size: 10px; color: #aaa; text-transform: uppercase; }
+        .export-btn { padding: 6px 12px; background: var(--primary); border: none; border-radius: 4px; color: white; font-size: 10px; cursor: pointer; }
+        .export-code { background: #0a0a0a; border: 1px solid #333; border-radius: 6px; padding: 12px; font-family: 'Fira Code', monospace; font-size: 9px; color: #888; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
+        
+        /* Security */
+        .security-watermark { position: fixed; bottom: 10px; right: 10px; font-size: 8px; color: rgba(255,255,255,0.1); pointer-events: none; z-index: 9999; }
+        .security-tag { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 
-        /* Existing Styles Adaptations */
-        .btn-generate { background: linear-gradient(135deg, var(--primary), var(--accent)); color: var(--secondary); font-family: 'Cinzel', serif; font-weight: 700; border-radius: 50px; }
-        .auth-container { background: var(--secondary); border: 1px solid var(--primary); }
-        .auth-btn { background: var(--primary); color: var(--secondary); font-family: 'Cinzel', serif; font-weight: 700; border-radius: 50px; }
-        .powered-link { color: var(--primary); }
-        .stat-card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; }
-        .template-card.active { border-color: var(--primary); background: rgba(212,175,55,0.1); }
-        .template-card.active::after { background: var(--primary); color: var(--secondary); }
+        /* ======== 30 TEMPLATE STYLES FOR LIVE PREVIEW ======== */
+        
+        /* Base A4 Receipt Structure */
+        .receipt-container { width: 210mm; min-height: 297mm; margin: 0 auto; background: white; position: relative; display: flex; flex-direction: column; color: #1a1a1a; font-size: 12px; }
+        .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Orbitron', sans-serif; font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }
+        .security-layer { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--tpl-primary, #FF6B00) 0.5px, transparent 0.5px); background-size: 25px 25px; opacity: 0.03; pointer-events: none; z-index: 1; }
+        
+        /* Receipt Header */
+        .receipt-header { padding: 25px 35px; position: relative; z-index: 2; flex-shrink: 0; }
+        .header-content { display: flex; justify-content: space-between; align-items: flex-start; }
+        .brand-block { }
+        .brand-name { font-size: 28px; font-weight: 900; letter-spacing: 2px; }
+        .brand-tagline { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; opacity: 0.8; }
+        .brand-contact { font-size: 10px; line-height: 1.6; margin-top: 10px; }
+        .brand-contact strong { margin-right: 5px; }
+        .doc-type-badge { padding: 12px 25px; font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 3px; text-align: center; }
+        
+        /* Info Section */
+        .info-section { padding: 20px 35px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; position: relative; z-index: 2; flex-shrink: 0; }
+        .info-block { display: flex; flex-direction: column; gap: 4px; }
+        .info-block.full-width { grid-column: 1 / -1; }
+        .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+        .info-value { font-size: 13px; font-weight: 600; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 6px; border: 1px dashed rgba(0,0,0,0.1); }
+        
+        /* Items Section */
+        .items-section { padding: 20px 35px; flex: 1; position: relative; z-index: 2; }
+        .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .section-line { flex: 1; height: 2px; }
+        .section-title { font-family: 'Orbitron', sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700; }
+        .items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .items-table th { padding: 12px 10px; text-align: left; font-family: 'Orbitron', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+        .items-table th:nth-child(1) { width: 8%; text-align: center; }
+        .items-table th:nth-child(2) { width: 44%; }
+        .items-table th:nth-child(3) { width: 12%; text-align: center; }
+        .items-table th:nth-child(4) { width: 18%; text-align: right; }
+        .items-table th:nth-child(5) { width: 18%; text-align: right; }
+        .items-table td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.1); vertical-align: top; }
+        .items-table tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+        
+        /* Bottom Section */
+        .bottom-section { padding: 0 35px 20px; display: grid; grid-template-columns: 1fr 280px; gap: 25px; position: relative; z-index: 2; flex-shrink: 0; }
+        .words-box { padding: 15px; border-radius: 0 8px 8px 0; }
+        .words-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 5px; }
+        .words-value { font-size: 13px; font-weight: 600; font-style: italic; }
+        
+        /* Totals */
+        .totals-box { width: 100%; border-radius: 8px; padding: 15px; }
+        .total-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 12px; }
+        .total-row:last-child { border-bottom: none; border-top: 3px solid; margin-top: 8px; padding-top: 10px; }
+        .total-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+        .total-value { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; }
+        .total-value.grand { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 800; }
+        
+        /* Signature Section */
+        .signature-section { padding: 0 35px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; position: relative; z-index: 2; flex-shrink: 0; }
+        .signature-box { border-top: 2px solid; padding-top: 10px; position: relative; }
+        .signature-line { height: 35px; border-bottom: 1px dashed #ccc; margin-bottom: 8px; }
+        .signature-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+        
+        /* Digital Stamp */
+        .digital-stamp { position: absolute; top: -30px; right: 10px; width: 120px; height: 120px; transform: rotate(-15deg); opacity: 0.9; z-index: 10; pointer-events: none; }
+        .stamp-outer { position: absolute; inset: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.95); box-shadow: 0 0 0 3px rgba(0,0,0,0.05), 0 0 15px rgba(0,0,0,0.1); }
+        .stamp-inner { position: absolute; inset: 5px; border-radius: 50%; border-style: dashed; }
+        .stamp-watermark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.04; font-family: 'Orbitron', sans-serif; font-size: 35px; font-weight: 900; transform: rotate(-15deg); }
+        .stamp-content { position: relative; z-index: 10; text-align: center; padding: 6px; }
+        .stamp-star { font-size: 8px; margin-bottom: 2px; letter-spacing: 2px; }
+        .stamp-status { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; line-height: 1.2; margin: 2px 0; }
+        .stamp-divider { width: 70%; height: 2px; margin: 3px auto; }
+        .stamp-date { font-family: 'Roboto Mono', monospace; font-size: 8px; font-weight: 700; }
+        .stamp-time { font-family: 'Roboto Mono', monospace; font-size: 7px; }
+        .stamp-authority { font-size: 7px; margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; font-family: 'Orbitron', sans-serif; }
+        
+        /* Footer */
+        .footer-message { text-align: center; padding: 15px 35px; position: relative; z-index: 2; flex-shrink: 0; }
+        .message-text { font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
+        .receipt-footer { padding: 15px 35px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; flex-shrink: 0; margin-top: auto; }
+        .footer-brand { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 2px; }
+        .footer-contact { font-size: 10px; letter-spacing: 1px; }
+
+        /* ===== TEMPLATE 1: MODERN TECH ===== */
+        .tpl-modern-tech { font-family: 'Rajdhani', sans-serif; }
+        .tpl-modern-tech .receipt-header { background: var(--tpl-secondary, #1A1A1A); color: white; }
+        .tpl-modern-tech .header-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .brand-name span { color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .brand-contact strong { color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .doc-type-badge { background: var(--tpl-primary, #FF6B00); color: white; transform: rotate(-3deg); box-shadow: 0 10px 30px rgba(255,107,0,0.4); }
+        .tpl-modern-tech .info-section { background: #f5f5f5; border-bottom: 3px solid var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .section-line { background: linear-gradient(to right, var(--tpl-primary, #FF6B00), transparent); }
+        .tpl-modern-tech .items-table th { background: var(--tpl-secondary, #1A1A1A); color: white; }
+        .tpl-modern-tech .words-box { background: rgba(255,107,0,0.05); border-left: 4px solid var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .totals-box { background: #f5f5f5; border: 2px solid var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .total-row:last-child { border-color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .total-value.grand { color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .signature-box { border-color: var(--tpl-secondary, #1A1A1A); }
+        .tpl-modern-tech .stamp-outer { border: 3px solid var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .stamp-inner { border-color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .stamp-status { color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .stamp-divider { background: linear-gradient(to right, transparent, var(--tpl-primary, #FF6B00), transparent); }
+        .tpl-modern-tech .footer-message { background: #f5f5f5; border-top: 3px solid var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .message-text { color: var(--tpl-primary, #FF6B00); }
+        .tpl-modern-tech .receipt-footer { background: var(--tpl-secondary, #1A1A1A); color: white; }
+        .tpl-modern-tech .footer-brand span { color: var(--tpl-primary, #FF6B00); }
+
+        /* ===== TEMPLATE 2: MINIMALIST PRO ===== */
+        .tpl-minimalist-pro { font-family: 'Inter', sans-serif; }
+        .tpl-minimalist-pro .receipt-header { background: white; color: var(--tpl-secondary, #1A1A1A); border-bottom: 1px solid #eee; }
+        .tpl-minimalist-pro .brand-name { font-weight: 300; letter-spacing: 8px; }
+        .tpl-minimalist-pro .doc-type-badge { border: 1px solid var(--tpl-primary, #FF6B00); color: var(--tpl-primary, #FF6B00); font-weight: 500; }
+        .tpl-minimalist-pro .info-section { background: white; }
+        .tpl-minimalist-pro .info-label { color: #888; }
+        .tpl-minimalist-pro .items-table th { border-bottom: 2px solid var(--tpl-secondary, #1A1A1A); background: transparent; color: var(--tpl-secondary, #1A1A1A); }
+        .tpl-minimalist-pro .words-box { background: rgba(0,0,0,0.02); border-left: 3px solid var(--tpl-secondary, #1A1A1A); }
+        .tpl-minimalist-pro .totals-box { background: white; border: 1px solid #eee; }
+        .tpl-minimalist-pro .total-value.grand { color: var(--tpl-primary, #FF6B00); font-weight: 300; }
+        .tpl-minimalist-pro .signature-box { border-color: #ddd; }
+        .tpl-minimalist-pro .stamp-outer { border: 2px solid var(--tpl-primary, #FF6B00); }
+        .tpl-minimalist-pro .footer-message { border-top: 1px solid #eee; }
+        .tpl-minimalist-pro .message-text { color: var(--tpl-secondary, #1A1A1A); font-weight: 400; }
+        .tpl-minimalist-pro .receipt-footer { background: white; color: #888; border-top: 1px solid #eee; }
+
+        /* ===== TEMPLATE 3: CORPORATE LUXE ===== */
+        .tpl-corporate-luxe { font-family: 'Playfair Display', serif; background: linear-gradient(135deg, #fff 0%, #fafafa 100%); border: 8px solid var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .receipt-header { background: white; border-bottom: 2px double var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .brand-name { font-style: italic; }
+        .tpl-corporate-luxe .doc-type-badge { background: var(--tpl-primary, #D4AF37); color: white; font-family: 'Inter', sans-serif; }
+        .tpl-corporate-luxe .items-table th { background: var(--tpl-secondary, #1A1A1A); color: var(--tpl-primary, #D4AF37); font-family: 'Inter', sans-serif; }
+        .tpl-corporate-luxe .totals-box { background: rgba(212,175,55,0.1); border: 1px solid var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .total-value.grand { color: var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .stamp-outer { border: 3px solid var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .stamp-status { color: var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .footer-message { border-top: 1px solid var(--tpl-primary, #D4AF37); }
+        .tpl-corporate-luxe .message-text { color: var(--tpl-primary, #D4AF37); }
+
+        /* ===== TEMPLATE 4: CYBER PUNK ===== */
+        .tpl-cyber-punk { font-family: 'Orbitron', monospace; background: #000; color: var(--tpl-primary, #00FF41); border: 2px solid var(--tpl-primary, #00FF41); box-shadow: 0 0 30px rgba(0,255,65,0.3); }
+        .tpl-cyber-punk .receipt-header { background: #000; border-bottom: 1px solid var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .brand-name { text-shadow: 0 0 10px var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .doc-type-badge { border: 1px solid var(--tpl-primary, #00FF41); box-shadow: 0 0 15px var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .info-section { background: rgba(0,255,65,0.05); }
+        .tpl-cyber-punk .items-table th { background: var(--tpl-primary, #00FF41); color: #000; }
+        .tpl-cyber-punk .items-table td { border-bottom: 1px solid rgba(0,255,65,0.3); }
+        .tpl-cyber-punk .totals-box { border: 1px solid var(--tpl-primary, #00FF41); background: rgba(0,255,65,0.05); }
+        .tpl-cyber-punk .total-value.grand { text-shadow: 0 0 20px var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .stamp-outer { border: 3px solid var(--tpl-primary, #00FF41); background: #000; }
+        .tpl-cyber-punk .stamp-status { color: var(--tpl-primary, #00FF41); text-shadow: 0 0 10px var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .footer-message { border-top: 1px solid var(--tpl-primary, #00FF41); }
+        .tpl-cyber-punk .receipt-footer { background: rgba(0,255,65,0.1); border-top: 1px solid var(--tpl-primary, #00FF41); }
+
+        /* ===== TEMPLATE 5: ROYAL ELEGANCE ===== */
+        .tpl-royal-elegance { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #FFFDF5 0%, #FFF8E7 100%); border: 4px double var(--tpl-primary, #8B4513); }
+        .tpl-royal-elegance .receipt-header { border-bottom: 1px solid var(--tpl-primary, #8B4513); text-align: center; }
+        .tpl-royal-elegance .header-content { flex-direction: column; align-items: center; }
+        .tpl-royal-elegance .brand-name { letter-spacing: 4px; }
+        .tpl-royal-elegance .doc-type-badge { border: 2px solid var(--tpl-primary, #8B4513); margin-top: 15px; }
+        .tpl-royal-elegance .items-table th { background: var(--tpl-secondary, #2C1810); color: var(--tpl-primary, #D4AF37); }
+        .tpl-royal-elegance .totals-box { border-top: 2px solid var(--tpl-primary, #8B4513); border-bottom: 2px solid var(--tpl-primary, #8B4513); text-align: center; }
+        .tpl-royal-elegance .total-value.grand { color: var(--tpl-primary, #8B4513); }
+        .tpl-royal-elegance .stamp-outer { border: 3px solid var(--tpl-primary, #8B4513); }
+        .tpl-royal-elegance .stamp-status { color: var(--tpl-primary, #8B4513); }
+
+        /* ===== TEMPLATE 6: CLEAN AIR ===== */
+        .tpl-clean-air { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 30px; }
+        .tpl-clean-air .receipt-header { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; margin: 20px; padding: 20px; }
+        .tpl-clean-air .doc-type-badge { background: var(--tpl-primary, #4299e1); color: white; border-radius: 50px; }
+        .tpl-clean-air .items-table { border-spacing: 0 8px; border-collapse: separate; }
+        .tpl-clean-air .items-table th { background: transparent; color: #4a5568; }
+        .tpl-clean-air .items-table td { background: #f7fafc; border-radius: 8px; border: none; }
+        .tpl-clean-air .totals-box { background: linear-gradient(135deg, var(--tpl-primary, #4299e1) 0%, var(--tpl-secondary, #1a365d) 100%); color: white; }
+        .tpl-clean-air .stamp-outer { border: 3px solid var(--tpl-primary, #4299e1); }
+
+        /* ===== TEMPLATE 7: MIDNIGHT SPECIAL ===== */
+        .tpl-midnight-special { font-family: 'Space Grotesk', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; border-radius: 15px; }
+        .tpl-midnight-special .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-midnight-special .doc-type-badge { background: var(--tpl-primary, #e94560); color: white; border-radius: 8px; }
+        .tpl-midnight-special .items-table th { background: rgba(255,255,255,0.1); color: var(--tpl-primary, #e94560); }
+        .tpl-midnight-special .items-table td { border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
+        .tpl-midnight-special .totals-box { background: rgba(233,69,96,0.1); border-radius: 10px; }
+        .tpl-midnight-special .total-value.grand { color: var(--tpl-primary, #e94560); }
+        .tpl-midnight-special .stamp-outer { border: 3px solid var(--tpl-primary, #e94560); background: rgba(26,26,46,0.95); }
+        .tpl-midnight-special .stamp-status { color: var(--tpl-primary, #e94560); }
+
+        /* ===== TEMPLATE 8: COMPACT SLIP ===== */
+        .tpl-compact-slip { font-family: 'Roboto Mono', monospace; background: #fff; width: 85%; margin: 0 auto; border: 1px dashed #ccc; font-size: 10px; }
+        .tpl-compact-slip .receipt-header { text-align: center; padding: 15px; }
+        .tpl-compact-slip .brand-name { font-size: 18px; }
+        .tpl-compact-slip .items-table { font-size: 9px; }
+        .tpl-compact-slip .items-table th, .tpl-compact-slip .items-table td { padding: 5px; border-bottom: 1px dotted #ccc; }
+        .tpl-compact-slip .totals-box { text-align: center; border-top: 2px solid #000; }
+
+        /* ===== TEMPLATE 9: BOLD STRIPE ===== */
+        .tpl-bold-stripe { font-family: 'Oswald', sans-serif; background: #fff; padding: 0; }
+        .tpl-bold-stripe .receipt-header { background: var(--tpl-primary, #FF6B00); color: white; padding: 30px; }
+        .tpl-bold-stripe .doc-type-badge { float: right; background: white; color: var(--tpl-primary, #FF6B00); }
+        .tpl-bold-stripe .info-section { background: var(--tpl-secondary, #1A1A1A); color: white; }
+        .tpl-bold-stripe .items-table { margin: 20px; width: calc(100% - 40px); }
+        .tpl-bold-stripe .items-table th { background: var(--tpl-secondary, #1A1A1A); color: white; }
+        .tpl-bold-stripe .totals-section { grid-column: 1 / -1; }
+        .tpl-bold-stripe .totals-box { background: var(--tpl-primary, #FF6B00); color: white; border-radius: 0; }
+        .tpl-bold-stripe .receipt-footer { background: var(--tpl-secondary, #1A1A1A); color: white; }
+
+        /* ===== TEMPLATE 10: ART DECO ===== */
+        .tpl-art-deco { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 100%); border: 3px solid var(--tpl-primary, #C9A961); position: relative; }
+        .tpl-art-deco::before, .tpl-art-deco::after { content: "◆"; position: absolute; font-size: 20px; color: var(--tpl-primary, #C9A961); z-index: 5; }
+        .tpl-art-deco::before { top: 10px; left: 10px; }
+        .tpl-art-deco::after { bottom: 10px; right: 10px; }
+        .tpl-art-deco .receipt-header { text-align: center; }
+        .tpl-art-deco .header-content { flex-direction: column; align-items: center; }
+        .tpl-art-deco .brand-name { letter-spacing: 5px; }
+        .tpl-art-deco .doc-type-badge { border: 2px solid var(--tpl-primary, #C9A961); letter-spacing: 4px; }
+        .tpl-art-deco .items-table th { background: var(--tpl-secondary, #2C2C2C); color: var(--tpl-primary, #C9A961); letter-spacing: 2px; }
+        .tpl-art-deco .totals-box { border: 2px solid var(--tpl-primary, #C9A961); text-align: center; }
+        .tpl-art-deco .total-value.grand { color: var(--tpl-primary, #C9A961); }
+
+        /* ===== TEMPLATE 11: NEO BRUTALIST ===== */
+        .tpl-neo-brutalist { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0 #000; }
+        .tpl-neo-brutalist .receipt-header { border-bottom: 4px solid #000; }
+        .tpl-neo-brutalist .brand-name { text-transform: uppercase; }
+        .tpl-neo-brutalist .doc-type-badge { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+        .tpl-neo-brutalist .items-table { border: 3px solid #000; }
+        .tpl-neo-brutalist .items-table th { background: #000; color: white; }
+        .tpl-neo-brutalist .items-table td { border-bottom: 2px solid #000; }
+        .tpl-neo-brutalist .totals-box { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+        .tpl-neo-brutalist .stamp-outer { border: 4px solid #000; box-shadow: 4px 4px 0 #000; }
+
+        /* ===== TEMPLATE 12: JAPANESE MINIMAL ===== */
+        .tpl-japanese-minimal { font-family: 'Inter', sans-serif; background: #fafafa; }
+        .tpl-japanese-minimal .receipt-header { padding-bottom: 30px; }
+        .tpl-japanese-minimal .header-content { align-items: flex-start; }
+        .tpl-japanese-minimal .brand-block { writing-mode: vertical-rl; text-orientation: mixed; margin-right: 30px; }
+        .tpl-japanese-minimal .brand-name { letter-spacing: 8px; }
+        .tpl-japanese-minimal .doc-info { flex: 1; text-align: right; }
+        .tpl-japanese-minimal .doc-type-badge { font-size: 48px; font-weight: 100; color: var(--tpl-primary, #E74C3C); opacity: 0.3; background: transparent; }
+        .tpl-japanese-minimal .items-table th { border-bottom: 1px solid #000; background: transparent; font-weight: 400; }
+        .tpl-japanese-minimal .totals-section { text-align: right; }
+        .tpl-japanese-minimal .total-value.grand { color: var(--tpl-primary, #E74C3C); font-weight: 100; }
+
+        /* ===== TEMPLATE 13: SWISS DESIGN ===== */
+        .tpl-swiss-design { font-family: 'Inter', sans-serif; background: #fff; display: grid; grid-template-columns: 180px 1fr; }
+        .tpl-swiss-design .sidebar { background: var(--tpl-primary, #FF0000); color: white; padding: 30px; margin: 0; display: flex; flex-direction: column; justify-content: space-between; min-height: 297mm; }
+        .tpl-swiss-design .sidebar .brand-name { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 18px; }
+        .tpl-swiss-design .sidebar .doc-type-badge { font-size: 36px; font-weight: 900; opacity: 0.2; background: transparent; padding: 0; }
+        .tpl-swiss-design .main-content { padding: 30px; }
+        .tpl-swiss-design .items-table th { background: #000; color: white; font-size: 8px; }
+        .tpl-swiss-design .totals-section { border-top: 4px solid var(--tpl-primary, #FF0000); padding-top: 20px; }
+        .tpl-swiss-design .total-value.grand { color: var(--tpl-primary, #FF0000); }
+
+        /* ===== TEMPLATE 14: RETRO WAVE ===== */
+        .tpl-retro-wave { font-family: 'Orbitron', sans-serif; background: linear-gradient(180deg, #2d1b4e 0%, #1a0b2e 100%); color: #fff; position: relative; overflow: hidden; }
+        .tpl-retro-wave::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff); }
+        .tpl-retro-wave .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-retro-wave .brand-name { text-shadow: 0 0 20px #ff00ff; }
+        .tpl-retro-wave .doc-type-badge { background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000; }
+        .tpl-retro-wave .items-table th { background: rgba(255,0,255,0.2); color: #00ffff; }
+        .tpl-retro-wave .items-table td { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-retro-wave .totals-box { background: rgba(0,255,255,0.1); border: 1px solid #00ffff; }
+        .tpl-retro-wave .total-value.grand { background: linear-gradient(90deg, #ff00ff, #00ffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* ===== TEMPLATE 15: NATURE ORGANIC ===== */
+        .tpl-nature-organic { font-family: 'Lora', serif; background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%); border: 2px solid var(--tpl-primary, #558B2F); }
+        .tpl-nature-organic .receipt-header { text-align: center; }
+        .tpl-nature-organic .header-content { flex-direction: column; align-items: center; }
+        .tpl-nature-organic .brand-name { color: var(--tpl-secondary, #33691E); }
+        .tpl-nature-organic .doc-type-badge { background: var(--tpl-primary, #558B2F); color: white; font-family: 'Poppins', sans-serif; letter-spacing: 2px; }
+        .tpl-nature-organic .items-table th { background: var(--tpl-primary, #558B2F); color: white; font-family: 'Poppins', sans-serif; }
+        .tpl-nature-organic .items-table td { border-bottom: 1px solid #c5e1a5; }
+        .tpl-nature-organic .totals-box { background: rgba(85,139,47,0.1); border-radius: 10px; }
+        .tpl-nature-organic .total-value.grand { color: var(--tpl-primary, #558B2F); }
+
+        /* ===== TEMPLATE 16: PHARMACY MEDICAL ===== */
+        .tpl-pharmacy-medical { font-family: 'Inter', sans-serif; background: #fff; border: 3px solid var(--tpl-primary, #0066CC); }
+        .tpl-pharmacy-medical .receipt-header { border-bottom: 2px solid var(--tpl-primary, #0066CC); }
+        .tpl-pharmacy-medical .brand-section { display: flex; align-items: center; gap: 15px; }
+        .tpl-pharmacy-medical .cross-icon { width: 40px; height: 40px; background: var(--tpl-primary, #0066CC); position: relative; }
+        .tpl-pharmacy-medical .cross-icon::before, .tpl-pharmacy-medical .cross-icon::after { content: ""; position: absolute; background: white; }
+        .tpl-pharmacy-medical .cross-icon::before { width: 60%; height: 20%; top: 40%; left: 20%; }
+        .tpl-pharmacy-medical .cross-icon::after { width: 20%; height: 60%; top: 20%; left: 40%; }
+        .tpl-pharmacy-medical .brand-name { color: var(--tpl-primary, #0066CC); }
+        .tpl-pharmacy-medical .doc-type-badge { background: var(--tpl-primary, #0066CC); color: white; }
+        .tpl-pharmacy-medical .items-table th { background: var(--tpl-primary, #0066CC); color: white; }
+        .tpl-pharmacy-medical .items-table td { border-bottom: 1px solid #e3f2fd; }
+        .tpl-pharmacy-medical .totals-box { background: #e3f2fd; border-left: 4px solid var(--tpl-primary, #0066CC); }
+        .tpl-pharmacy-medical .total-value.grand { color: var(--tpl-primary, #0066CC); }
+
+        /* ===== TEMPLATE 17: BAKERY SWEET ===== */
+        .tpl-bakery-sweet { font-family: 'Dancing Script', cursive; background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 3px dashed var(--tpl-primary, #FF6B9D); position: relative; }
+        .tpl-bakery-sweet::before { content: "🧁"; position: absolute; top: 10px; right: 20px; font-size: 40px; opacity: 0.3; z-index: 5; }
+        .tpl-bakery-sweet .receipt-header { text-align: center; }
+        .tpl-bakery-sweet .header-content { flex-direction: column; align-items: center; }
+        .tpl-bakery-sweet .brand-name { font-size: 36px; color: var(--tpl-primary, #FF6B9D); }
+        .tpl-bakery-sweet .doc-type-badge { background: var(--tpl-primary, #FF6B9D); color: white; font-family: 'Poppins', sans-serif; border-radius: 20px; }
+        .tpl-bakery-sweet .items-table { font-family: 'Poppins', sans-serif; }
+        .tpl-bakery-sweet .items-table th { background: var(--tpl-primary, #FF6B9D); color: white; }
+        .tpl-bakery-sweet .items-table td { border-bottom: 1px solid #ffcdd2; }
+        .tpl-bakery-sweet .totals-box { background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(255,107,157,0.2); }
+        .tpl-bakery-sweet .total-value.grand { color: var(--tpl-primary, #FF6B9D); }
+
+        /* ===== TEMPLATE 18: GARAGE WORKSHOP ===== */
+        .tpl-garage-workshop { font-family: 'Oswald', sans-serif; background: #1a1a1a; color: #fff; border: 4px solid var(--tpl-primary, #FF6600); background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,102,0,0.03) 10px, rgba(255,102,0,0.03) 20px); }
+        .tpl-garage-workshop .receipt-header { border-bottom: 2px solid var(--tpl-primary, #FF6600); }
+        .tpl-garage-workshop .brand-name { text-transform: uppercase; letter-spacing: 3px; }
+        .tpl-garage-workshop .doc-type-badge { background: var(--tpl-primary, #FF6600); color: #000; clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%); }
+        .tpl-garage-workshop .items-table th { background: var(--tpl-primary, #FF6600); color: #000; text-transform: uppercase; }
+        .tpl-garage-workshop .items-table td { border-bottom: 1px solid #333; }
+        .tpl-garage-workshop .totals-box { background: var(--tpl-primary, #FF6600); color: #000; clip-path: polygon(0% 0%, 100% 0%, 98% 100%, 2% 100%); }
+        .tpl-garage-workshop .stamp-outer { border: 3px solid var(--tpl-primary, #FF6600); background: #1a1a1a; }
+        .tpl-garage-workshop .stamp-status { color: var(--tpl-primary, #FF6600); }
+
+        /* ===== TEMPLATE 19: FASHION BOUTIQUE ===== */
+        .tpl-fashion-boutique { font-family: 'Raleway', sans-serif; background: #fff; position: relative; }
+        .tpl-fashion-boutique::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: linear-gradient(90deg, var(--tpl-primary, #000), var(--tpl-secondary, #333), var(--tpl-primary, #000)); }
+        .tpl-fashion-boutique .receipt-header { text-align: center; padding-top: 40px; }
+        .tpl-fashion-boutique .header-content { flex-direction: column; align-items: center; }
+        .tpl-fashion-boutique .brand-name { font-weight: 300; letter-spacing: 12px; text-transform: uppercase; }
+        .tpl-fashion-boutique .doc-type-badge { border: 1px solid #000; letter-spacing: 4px; font-weight: 400; }
+        .tpl-fashion-boutique .items-table th { border-bottom: 1px solid #000; font-weight: 500; letter-spacing: 2px; }
+        .tpl-fashion-boutique .items-table td { border-bottom: 1px solid #eee; padding: 15px 10px; }
+        .tpl-fashion-boutique .totals-section { text-align: right; }
+        .tpl-fashion-boutique .total-value.grand { font-weight: 300; }
+
+        /* ===== TEMPLATE 20: STARTUP MODERN ===== */
+        .tpl-startup-modern { font-family: 'Sora', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; }
+        .tpl-startup-modern .receipt-header { padding-bottom: 25px; }
+        .tpl-startup-modern .doc-type-badge { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 50px; }
+        .tpl-startup-modern .items-table { border-spacing: 0 8px; border-collapse: separate; }
+        .tpl-startup-modern .items-table th { background: rgba(255,255,255,0.1); }
+        .tpl-startup-modern .items-table td { background: rgba(255,255,255,0.05); border: none; }
+        .tpl-startup-modern .totals-box { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border-radius: 15px; }
+
+        /* ===== NEW TEMPLATE 21: CONSTRUCTION INDUSTRIAL ===== */
+        .tpl-construction-industrial { font-family: 'Oswald', sans-serif; background: #f4f4f4; border: 5px solid var(--tpl-primary, #F4A460); }
+        .tpl-construction-industrial .receipt-header { background: var(--tpl-secondary, #8B4513); color: white; padding: 30px; border-bottom: 5px solid var(--tpl-primary, #F4A460); }
+        .tpl-construction-industrial .brand-name { text-transform: uppercase; letter-spacing: 4px; }
+        .tpl-construction-industrial .doc-type-badge { background: var(--tpl-primary, #F4A460); color: #000; clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%); padding: 15px 40px; }
+        .tpl-construction-industrial .items-table th { background: var(--tpl-secondary, #8B4513); color: white; text-transform: uppercase; }
+        .tpl-construction-industrial .totals-box { background: var(--tpl-primary, #F4A460); color: #000; }
+        .tpl-construction-industrial .receipt-footer { background: var(--tpl-secondary, #8B4513); color: white; }
+
+        /* ===== NEW TEMPLATE 22: LEGAL PROFESSIONAL ===== */
+        .tpl-legal-professional { font-family: 'Cinzel', serif; background: #fff; border: 3px solid var(--tpl-secondary, #1a1a1a); }
+        .tpl-legal-professional .receipt-header { text-align: center; border-bottom: 3px double var(--tpl-secondary, #1a1a1a); padding: 30px; }
+        .tpl-legal-professional .header-content { flex-direction: column; align-items: center; }
+        .tpl-legal-professional .brand-name { font-size: 24px; letter-spacing: 6px; }
+        .tpl-legal-professional .doc-type-badge { border: 2px solid var(--tpl-primary, #8B0000); color: var(--tpl-primary, #8B0000); font-weight: 700; }
+        .tpl-legal-professional .items-table th { background: var(--tpl-secondary, #1a1a1a); color: white; }
+        .tpl-legal-professional .totals-box { border: 2px solid var(--tpl-secondary, #1a1a1a); }
+        .tpl-legal-professional .total-value.grand { color: var(--tpl-primary, #8B0000); }
+        .tpl-legal-professional .stamp-outer { border: 3px solid var(--tpl-primary, #8B0000); }
+        .tpl-legal-professional .stamp-status { color: var(--tpl-primary, #8B0000); }
+
+        /* ===== NEW TEMPLATE 23: SALON BEAUTY ===== */
+        .tpl-salon-beauty { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #ffeef8 0%, #ffe0f0 100%); border: 3px solid var(--tpl-primary, #FF69B4); }
+        .tpl-salon-beauty .receipt-header { text-align: center; background: var(--tpl-primary, #FF69B4); color: white; padding: 25px; }
+        .tpl-salon-beauty .header-content { flex-direction: column; align-items: center; }
+        .tpl-salon-beauty .brand-name { font-family: 'Dancing Script', cursive; font-size: 36px; }
+        .tpl-salon-beauty .doc-type-badge { background: white; color: var(--tpl-primary, #FF69B4); border-radius: 30px; }
+        .tpl-salon-beauty .items-table th { background: var(--tpl-primary, #FF69B4); color: white; }
+        .tpl-salon-beauty .totals-box { background: white; border: 2px solid var(--tpl-primary, #FF69B4); border-radius: 15px; }
+        .tpl-salon-beauty .total-value.grand { color: var(--tpl-primary, #FF69B4); }
+
+        /* ===== NEW TEMPLATE 24: RESTAURANT DINER ===== */
+        .tpl-restaurant-diner { font-family: 'Lora', serif; background: #fff; border: 4px dotted var(--tpl-primary, #D2691E); }
+        .tpl-restaurant-diner .receipt-header { text-align: center; padding: 25px; border-bottom: 2px dashed var(--tpl-primary, #D2691E); }
+        .tpl-restaurant-diner .header-content { flex-direction: column; align-items: center; }
+        .tpl-restaurant-diner .brand-name { font-family: 'Playfair Display', serif; font-size: 32px; font-style: italic; }
+        .tpl-restaurant-diner .doc-type-badge { background: var(--tpl-primary, #D2691E); color: white; font-family: 'Oswald', sans-serif; }
+        .tpl-restaurant-diner .items-table th { background: var(--tpl-primary, #D2691E); color: white; }
+        .tpl-restaurant-diner .items-table td { border-bottom: 1px dashed #ddd; }
+        .tpl-restaurant-diner .totals-box { background: #fff8f0; border: 2px solid var(--tpl-primary, #D2691E); }
+        .tpl-restaurant-diner .total-value.grand { color: var(--tpl-primary, #D2691E); }
+
+        /* ===== NEW TEMPLATE 25: FITNESS GYM ===== */
+        .tpl-fitness-gym { font-family: 'Oswald', sans-serif; background: #111; color: white; border: 4px solid var(--tpl-primary, #00FF00); }
+        .tpl-fitness-gym .receipt-header { border-bottom: 3px solid var(--tpl-primary, #00FF00); }
+        .tpl-fitness-gym .brand-name { text-transform: uppercase; letter-spacing: 5px; }
+        .tpl-fitness-gym .doc-type-badge { background: var(--tpl-primary, #00FF00); color: #000; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); }
+        .tpl-fitness-gym .items-table th { background: var(--tpl-primary, #00FF00); color: #000; text-transform: uppercase; }
+        .tpl-fitness-gym .items-table td { border-bottom: 1px solid #333; }
+        .tpl-fitness-gym .totals-box { background: var(--tpl-primary, #00FF00); color: #000; }
+        .tpl-fitness-gym .stamp-outer { border: 3px solid var(--tpl-primary, #00FF00); background: #111; }
+        .tpl-fitness-gym .stamp-status { color: var(--tpl-primary, #00FF00); }
+
+        /* ===== NEW TEMPLATE 26: HOTEL RESORT ===== */
+        .tpl-hotel-resort { font-family: 'Playfair Display', serif; background: linear-gradient(135deg, #fff 0%, #f8f4e8 100%); border: 3px solid var(--tpl-primary, #B8860B); }
+        .tpl-hotel-resort .receipt-header { text-align: center; border-bottom: 2px solid var(--tpl-primary, #B8860B); padding: 30px; }
+        .tpl-hotel-resort .header-content { flex-direction: column; align-items: center; }
+        .tpl-hotel-resort .brand-name { font-size: 28px; letter-spacing: 4px; }
+        .tpl-hotel-resort .doc-type-badge { background: var(--tpl-primary, #B8860B); color: white; font-family: 'Cinzel', serif; }
+        .tpl-hotel-resort .items-table th { background: var(--tpl-primary, #B8860B); color: white; }
+        .tpl-hotel-resort .totals-box { background: rgba(184,134,11,0.1); border: 1px solid var(--tpl-primary, #B8860B); }
+        .tpl-hotel-resort .total-value.grand { color: var(--tpl-primary, #B8860B); }
+
+        /* ===== NEW TEMPLATE 27: EDUCATION ACADEMY ===== */
+        .tpl-education-academy { font-family: 'Inter', sans-serif; background: #fff; border: 3px solid var(--tpl-primary, #4169E1); }
+        .tpl-education-academy .receipt-header { background: var(--tpl-primary, #4169E1); color: white; padding: 25px; }
+        .tpl-education-academy .doc-type-badge { background: white; color: var(--tpl-primary, #4169E1); border-radius: 8px; }
+        .tpl-education-academy .items-table th { background: var(--tpl-primary, #4169E1); color: white; }
+        .tpl-education-academy .items-table td { border-bottom: 1px solid #e0e8ff; }
+        .tpl-education-academy .totals-box { background: #f0f4ff; border-left: 5px solid var(--tpl-primary, #4169E1); }
+        .tpl-education-academy .total-value.grand { color: var(--tpl-primary, #4169E1); }
+
+        /* ===== NEW TEMPLATE 28: TRANSPORT LOGISTICS ===== */
+        .tpl-transport-logistics { font-family: 'Rajdhani', sans-serif; background: #fff; border: 3px solid var(--tpl-secondary, #2F4F4F); }
+        .tpl-transport-logistics .receipt-header { background: var(--tpl-secondary, #2F4F4F); color: white; padding: 25px; border-bottom: 5px solid var(--tpl-primary, #FFD700); }
+        .tpl-transport-logistics .brand-name { text-transform: uppercase; }
+        .tpl-transport-logistics .doc-type-badge { background: var(--tpl-primary, #FFD700); color: #000; }
+        .tpl-transport-logistics .items-table th { background: var(--tpl-secondary, #2F4F4F); color: white; }
+        .tpl-transport-logistics .totals-box { background: var(--tpl-primary, #FFD700); color: #000; }
+
+        /* ===== NEW TEMPLATE 29: REAL ESTATE ===== */
+        .tpl-real-estate { font-family: 'Cinzel', serif; background: #fff; border: 4px double var(--tpl-primary, #8B4513); }
+        .tpl-real-estate .receipt-header { text-align: center; padding: 30px; }
+        .tpl-real-estate .header-content { flex-direction: column; align-items: center; }
+        .tpl-real-estate .brand-name { font-size: 26px; letter-spacing: 5px; }
+        .tpl-real-estate .doc-type-badge { border: 3px solid var(--tpl-primary, #8B4513); color: var(--tpl-primary, #8B4513); }
+        .tpl-real-estate .items-table th { background: var(--tpl-primary, #8B4513); color: white; }
+        .tpl-real-estate .totals-box { border: 2px solid var(--tpl-primary, #8B4513); background: #fffaf0; }
+        .tpl-real-estate .total-value.grand { color: var(--tpl-primary, #8B4513); }
+
+        /* ===== NEW TEMPLATE 30: EVENT PLANNING ===== */
+        .tpl-event-planning { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%); border: 3px solid var(--tpl-primary, #FF1493); }
+        .tpl-event-planning .receipt-header { text-align: center; background: var(--tpl-primary, #FF1493); color: white; padding: 25px; clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%); padding-bottom: 40px; }
+        .tpl-event-planning .header-content { flex-direction: column; align-items: center; }
+        .tpl-event-planning .brand-name { font-family: 'Dancing Script', cursive; font-size: 38px; }
+        .tpl-event-planning .doc-type-badge { background: white; color: var(--tpl-primary, #FF1493); border-radius: 25px; margin-top: 10px; }
+        .tpl-event-planning .items-table th { background: var(--tpl-primary, #FF1493); color: white; }
+        .tpl-event-planning .totals-box { background: white; border: 2px solid var(--tpl-primary, #FF1493); border-radius: 15px; box-shadow: 0 5px 20px rgba(255,20,147,0.2); }
+        .tpl-event-planning .total-value.grand { color: var(--tpl-primary, #FF1493); }
+
+        /* ===== UNIQUE & ARTISTIC (31-35) ===== */
+        /* 31. CURVED ORGANIC */
+        .tpl-curved-organic { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 40px; }
+        .tpl-curved-organic .receipt-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding-bottom: 30px; border-bottom: 2px dashed #eee; background: transparent; color: #1a1a1a; }
+        .tpl-curved-organic .header-content { flex-direction: column; align-items: center; }
+        .tpl-curved-organic .doc-type-badge { background: var(--tpl-primary, #FF6B00); color: white; border-radius: 50px; margin-top: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .tpl-curved-organic .info-section { background: #f9f9f9; border-radius: 25px; margin: 30px; border: none; }
+        .tpl-curved-organic .items-table { border-spacing: 0 15px; border-collapse: separate; }
+        .tpl-curved-organic .items-table th { background: transparent; color: #999; }
+        .tpl-curved-organic .items-table td { background: white; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: none; }
+        .tpl-curved-organic .totals-box { background: var(--tpl-secondary, #1A1A1A); border-radius: 30px; color: white; border: none; }
+        .tpl-curved-organic .total-label { color: rgba(255,255,255,0.7); }
+        .tpl-curved-organic .total-value { color: white; }
+        .tpl-curved-organic .total-value.grand { color: var(--tpl-primary, #FF6B00); font-size: 24px; }
+        .tpl-curved-organic .receipt-footer { background: #fff; color: #888; border-top: 1px solid #eee; }
+
+        /* 32. GEOMETRIC SLICE */
+        .tpl-geometric-slice { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 2px solid #000; }
+        .tpl-geometric-slice .receipt-header { background: #000; color: white; padding: 60px 40px; clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%); min-height: 220px; }
+        .tpl-geometric-slice .doc-type-badge { font-size: 60px; font-weight: 900; opacity: 0.1; background: transparent; position: absolute; top: 10px; right: 20px; transform: none; box-shadow: none; }
+        .tpl-geometric-slice .info-section { background: white; border-bottom: 4px solid #000; margin-top: -30px; }
+        .tpl-geometric-slice .items-table th { border: 2px solid #000; background: var(--tpl-primary, #FF6B00); color: #000; }
+        .tpl-geometric-slice .items-table td { border: 2px solid #000; }
+        .tpl-geometric-slice .totals-box { border: 4px solid #000; border-radius: 0; background: #fff; display: grid; grid-template-columns: 1fr; gap: 0; padding: 0; }
+        .tpl-geometric-slice .total-row { padding: 10px 15px; border-bottom: 2px solid #000; }
+        .tpl-geometric-slice .total-row:last-child { background: #000; color: white; border-top: none; margin-top: 0; }
+        .tpl-geometric-slice .total-value.grand { color: var(--tpl-primary, #FF6B00); }
+        .tpl-geometric-slice .receipt-footer { background: #f0f0f0; border-top: 2px solid #000; }
+
+        /* 33. VINTAGE TICKET */
+        .tpl-vintage-ticket { font-family: 'Roboto Mono', monospace; background: #fef9e7; border: 2px solid #d4c4a8; }
+        .tpl-vintage-ticket::before, .tpl-vintage-ticket::after { content: ""; position: absolute; width: 40px; height: 40px; background: #f5f5f5; border-radius: 50%; top: 50%; margin-top: -20px; border: 2px solid #d4c4a8; z-index: 10; }
+        .tpl-vintage-ticket::before { left: -22px; }
+        .tpl-vintage-ticket::after { right: -22px; }
+        .tpl-vintage-ticket .receipt-header { text-align: center; border-bottom: 2px dashed #d4c4a8; background: transparent; color: #7d6b5d; }
+        .tpl-vintage-ticket .header-content { flex-direction: column; align-items: center; }
+        .tpl-vintage-ticket .brand-name { border: 2px solid var(--tpl-primary, #7d6b5d); color: var(--tpl-primary, #7d6b5d); padding: 10px 20px; display: inline-block; }
+        .tpl-vintage-ticket .doc-type-badge { font-size: 14px; letter-spacing: 5px; color: #a69076; background: transparent; transform: none; box-shadow: none; margin-top: 15px; }
+        .tpl-vintage-ticket .info-section { background: transparent; border-bottom: 1px solid #d4c4a8; }
+        .tpl-vintage-ticket .items-table th { background: transparent; color: #a69076; border-bottom: 1px solid #d4c4a8; }
+        .tpl-vintage-ticket .items-table td { border-bottom: 1px dotted #d4c4a8; }
+        .tpl-vintage-ticket .totals-box { border: none; background: transparent; }
+        .tpl-vintage-ticket .total-row { border-bottom: 1px dashed #d4c4a8; }
+        .tpl-vintage-ticket .total-row:last-child { border-top: 2px dashed #d4c4a8; margin-top: 15px; }
+        .tpl-vintage-ticket .total-value.grand { font-size: 28px; text-decoration: underline double; color: #c0392b; }
+        .tpl-vintage-ticket .receipt-footer { background: #fef9e7; color: #a69076; border-top: 2px dashed #d4c4a8; }
+
+        /* 34. FUTURISTIC GLASS */
+        .tpl-futuristic-glass { font-family: 'Rajdhani', sans-serif; background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .receipt-header { background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .brand-name { color: var(--tpl-primary, #FF6B00); text-shadow: 0 0 15px var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .doc-type-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--tpl-primary, #FF6B00); color: white; transform: none; box-shadow: 0 0 10px var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .info-section { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .items-table th { background: rgba(255,255,255,0.05); color: var(--tpl-primary, #FF6B00); }
+        .tpl-futuristic-glass .items-table td { border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); }
+        .tpl-futuristic-glass .totals-box { background: linear-gradient(135deg, var(--tpl-primary, #FF6B00), var(--tpl-secondary, #1A1A1A)); border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tpl-futuristic-glass .total-label, .tpl-futuristic-glass .total-value { color: white; }
+        .tpl-futuristic-glass .receipt-footer { background: #121212; border-top: 1px solid rgba(255,255,255,0.1); color: #888; }
+
+        /* 35. STAMP QUALITY */
+        .tpl-stamp-quality { font-family: 'Cinzel', serif; background: #fff; border: 15px solid #f0f0f0; }
+        .tpl-stamp-quality::after { content: "CERTIFIED"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 120px; color: var(--tpl-primary, #FF6B00); opacity: 0.03; font-weight: 900; pointer-events: none; }
+        .tpl-stamp-quality .receipt-header { text-align: center; background: transparent; color: #1a1a1a; border-bottom: none; }
+        .tpl-stamp-quality .header-content { flex-direction: column; align-items: center; }
+        .tpl-stamp-quality .brand-name { letter-spacing: 5px; }
+        .tpl-stamp-quality .doc-type-badge { border-top: 2px solid #1a1a1a; border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; transform: none; box-shadow: none; letter-spacing: 10px; width: auto; padding: 10px 50px; }
+        .tpl-stamp-quality .info-section { background: transparent; border-bottom: 1px solid #eee; }
+        .tpl-stamp-quality .items-table th { border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; }
+        .tpl-stamp-quality .totals-box { border: 4px double var(--tpl-primary, #FF6B00); background: transparent; }
+        .tpl-stamp-quality .total-value.grand { color: var(--tpl-primary, #FF6B00); }
+        .tpl-stamp-quality .receipt-footer { background: #fff; color: #aaa; border-top: 1px solid #eee; }
+
+        /* PWA Install Banner */
+        .pwa-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1A1A1A; border: 1px solid var(--primary); border-radius: 12px; padding: 15px 25px; display: none; align-items: center; gap: 20px; z-index: 10000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: calc(100% - 40px); max-width: 500px; }
+        .pwa-banner.show { display: flex; animation: slideUp 0.5s ease; }
+        .pwa-info { flex: 1; }
+        .pwa-title { font-weight: 700; color: white; margin-bottom: 4px; }
+        .pwa-desc { font-size: 12px; color: #aaa; }
+        .pwa-btn { padding: 8px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; }
+        
+        /* iOS Safari Banner */
+        .ios-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; color: black; border-radius: 12px; padding: 20px; display: none; flex-direction: column; align-items: center; text-align: center; z-index: 10000; box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: calc(100% - 40px); max-width: 400px; }
+        .ios-banner.show { display: flex; animation: slideUp 0.5s ease; }
+        .ios-icon { font-size: 24px; margin-bottom: 10px; }
+        .ios-close { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; color: #888; }
+        
+        /* Auth Modal */
+        .auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 20000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .auth-modal.show { display: flex; }
+        .auth-container { background: #1A1A1A; border: 1px solid var(--primary); border-radius: 20px; padding: 30px; width: 100%; max-width: 400px; }
+        .auth-title { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--primary); margin-bottom: 20px; text-align: center; }
+        
+        @keyframes slideUp { from { transform: translate(-50%, 100%); } to { transform: translate(-50%, 0); } }
+
+        @media print { body { background: white; } .form-panel, .preview-header-bar, .pwa-banner, .ios-banner, .auth-modal { display: none !important; } .preview-container { box-shadow: none; border: none; padding: 0; } .a4-preview { box-shadow: none; margin: 0; width: 100%; } }
     </style>
 <base target="_blank">
 </head>
 <body>
-    <div class="security-tag" data-security="true" data-timestamp="" data-signature="SKILLFORGE-CREATOR-v1.0"></div>
+    <div class="security-tag" data-security="true" data-timestamp="" data-signature="METAFORGE-ENGINE-v4.0-SECURE"></div>
     
     <div class="container">
         <header>
-            <h1>SKILLFORGE CREATOR</h1>
-            <p class="subtitle">Crafting Digital Legacies for Professional Organizations</p>
+            <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px;">
+                <button class="preview-btn" id="adminBtn" style="display: none; background: var(--secondary); border-color: var(--secondary); color: white;" onclick="window.location.href='../admin.html'">Admin Dashboard</button>
+                <button class="preview-btn" id="logoutBtn" style="display: none;" onclick="handleLogout()">Logout</button>
+            </div>
+            <h1>METAFORGE ENGINE</h1>
+            <p class="subtitle">30 Professional Templates | Shareable Links | Full-Featured Engine Generator</p>
         </header>
 
         <div class="main-grid">
             <!-- Form Panel -->
             <div class="form-panel">
                 <div class="form-tabs">
-                    <div class="form-tab active" id="tab-btn-identity" onclick="switchTab('identity')">Identity</div>
-                    <div class="form-tab" id="tab-btn-templates" onclick="switchTab('templates')">Templates</div>
-                    <div class="form-tab" id="tab-btn-typography" onclick="switchTab('typography')">Fonts</div>
-                    <div class="form-tab" id="tab-btn-colors" onclick="switchTab('colors')">Colors</div>
-                    <div class="form-tab" id="tab-btn-requests" onclick="switchTab('requests')">Requests</div>
-                    <div class="form-tab" id="tab-btn-history" onclick="switchTab('history')">History</div>
+                    <div class="form-tab active" onclick="switchTab('identity')">Identity</div>
+                    <div class="form-tab" onclick="switchTab('templates')">Templates</div>
+                    <div class="form-tab" onclick="switchTab('typography')">Typography</div>
+                    <div class="form-tab" onclick="switchTab('colors')">Colors</div>
+                    <div class="form-tab" onclick="switchTab('deploy')">🚀 Deploy</div>
                 </div>
 
                 <div class="form-content">
                     <!-- Identity Tab -->
                     <div class="form-section active" id="tab-identity">
-                        <div class="section-title">Brand Identity</div>
-                        <div class="input-group"><label>Brand Name</label><input type="text" id="brandName" placeholder="e.g. Skillforge Digital" oninput="updatePreview()"></div>
-                        <div class="input-group"><label>Tagline / Motto</label><input type="text" id="tagline" placeholder="e.g. Elevate Your Legacy" oninput="updatePreview()"></div>
+                        <div class="section-title">Business Information</div>
+                        <div class="input-group"><label>Brand Name</label><input type="text" id="brandName" placeholder="e.g. Tech Solutions Ltd" oninput="updatePreview()"></div>
+                        <div class="input-group"><label>Logo Image URL (Optional)</label><input type="text" id="logoUrl" placeholder="https://example.com/logo.png" oninput="updatePreview()"></div>
+                        <div class="input-group"><label>Tagline / Slogan</label><input type="text" id="tagline" placeholder="e.g. Innovation for Tomorrow" oninput="updatePreview()"></div>
                         <div class="input-row">
                             <div class="input-group"><label>Phone</label><input type="text" id="tel" placeholder="+234 814 081 3999" oninput="updatePreview()"></div>
-                            <div class="input-group"><label>RC/BN Number</label><input type="text" id="rcNumber" placeholder="RC 913487" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>RC Number</label><input type="text" id="rcNumber" placeholder="RC 913487" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>TIN Number</label><input type="text" id="tinNumber" placeholder="TIN 12345678-0001" oninput="updatePreview()"></div>
                         </div>
-                        <div class="input-group"><label>Primary Office Address</label><textarea id="address" rows="2" placeholder="Lagos, Nigeria" oninput="updatePreview()"></textarea></div>
-                        <div class="section-title" style="margin-top: 20px;">Financial Details</div>
+                        <div class="input-group"><label>Business Address</label><textarea id="address" rows="2" placeholder="5 Otigba Street, Computer Village, Ikeja, Lagos" oninput="updatePreview()"></textarea></div>
+                        <div class="input-group"><label>Email / Website</label><input type="text" id="email" placeholder="info@yourcompany.com" oninput="updatePreview()"></div>
+                        <div class="section-title" style="margin-top: 20px;">Bank Transfer Details</div>
                         <div class="input-row">
-                            <div class="input-group"><label>Bank Name</label><input type="text" id="bankName" oninput="updatePreview()"></div>
-                            <div class="input-group"><label>Acc Number</label><input type="text" id="accNumber" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>Bank Name</label><input type="text" id="bankName" placeholder="e.g. GTBank" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>Account Name</label><input type="text" id="accName" placeholder="e.g. Tech Solutions Ltd" oninput="updatePreview()"></div>
+                            <div class="input-group"><label>Account Number</label><input type="text" id="accNumber" placeholder="e.g. 0123456789" oninput="updatePreview()"></div>
                         </div>
-                        <div class="input-group">
-                            <label>Document Class</label>
-                            <select id="docType" onchange="updatePreview()">
-                                <option value="DOCUMENT">DOCUMENT</option>
-                                <option value="INVOICE">INVOICE</option>
-                                <option value="RECEIPT">RECEIPT</option>
-                                <option value="CERTIFICATE">CERTIFICATE</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Requests Tab -->
-                    <div class="form-section" id="tab-requests">
-                        <div class="section-title">Incoming Engine Requests</div>
-                        <div id="requestsList">
-                            <table class="requests-table">
-                                <thead>
-                                    <tr>
-                                        <th>Brand</th>
-                                        <th>Email</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="requestsTableBody">
-                                    <!-- Dynamic requests will be injected here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Billing Tab -->
-                    <div class="form-section" id="tab-billing">
-                        <div class="section-title">Subscription & Billing</div>
-                        <div class="input-group">
-                            <label>Active Plan</label>
-                            <select id="billingPlan" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; font-family: inherit;">
-                                <option value="free">Free Trial (Ends 2026-03-21)</option>
-                                <option value="daily">Daily Plan (₦500/day)</option>
-                                <option value="weekly">Weekly Plan (₦2,500/week)</option>
-                                <option value="monthly">Monthly Plan (₦8,000/month)</option>
-                                <option value="yearly">Yearly Plan (₦75,000/year)</option>
-                            </select>
-                        </div>
-                        <div class="input-group" style="margin-top: 20px;">
-                            <label>Billing Status</label>
-                            <div style="background: rgba(40, 167, 69, 0.15); padding: 20px; border-radius: 12px; border: 1px solid #28a745; color: #28a745; font-weight: 700; text-align: center; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 1px;">
-                                ACCOUNT ACTIVE
+                        <div class="input-group"><label>Other Payment Details</label><textarea id="defaultPayment" rows="2" placeholder="e.g. PayPal, Cash, etc." oninput="updatePreview()"></textarea></div>
+                        <div class="input-group"><label>Terms & Conditions</label><textarea id="defaultTerms" rows="2" placeholder="Goods once sold are not returnable..." oninput="updatePreview()"></textarea></div>
+                        <div class="input-group"><label>Footer Message</label><input type="text" id="footerNote" placeholder="Thank you for your patronage!" oninput="updatePreview()"></div>
+                        
+                        <div class="section-title" style="margin-top: 20px;">Document Settings</div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>Document Type</label>
+                                <select id="docType" onchange="updatePreview()">
+                                    <option value="INVOICE">INVOICE</option>
+                                    <option value="RECEIPT">RECEIPT</option>
+                                    <option value="ESTIMATE">ESTIMATE</option>
+                                    <option value="QUOTATION">QUOTATION</option>
+                                    <option value="PROFORMA">PROFORMA INVOICE</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Currency</label>
+                                <select id="currency" onchange="updatePreview()">
+                                    <option value="₦">Naira (₦)</option>
+                                    <option value="$">Dollar ($)</option>
+                                    <option value="€">Euro (€)</option>
+                                    <option value="£">Pound (£)</option>
+                                    <option value="₹">Rupee (₹)</option>
+                                </select>
                             </div>
                         </div>
-                        <div style="margin-top: 25px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
-                            <div style="font-size: 11px; color: #888; margin-bottom: 15px; line-height: 1.6;">
-                                Manage your subscription, view invoices, and update payment methods securely.
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>VAT Rate (%)</label>
+                                <input type="number" id="vatRate" value="7.5" min="0" max="100" step="0.5" oninput="updatePreview()">
                             </div>
-                            <button class="btn-generate" style="width: 100%; margin: 0; background: #28a745; font-size: 10px;">OPEN BILLING PORTAL</button>
+                            <div class="input-group">
+                                <label>Stamp Status</label>
+                                <select id="stampStatus" onchange="updatePreview()">
+                                    <option value="PAID">PAID</option>
+                                    <option value="APPROVED">APPROVED</option>
+                                    <option value="PROCESSED">PROCESSED</option>
+                                    <option value="VERIFIED">VERIFIED</option>
+                                </select>
+                            </div>
                         </div>
-                        <p style="font-size: 9px; color: #555; text-align: center; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px;">
-                            Payments secured by Paystack & Flutterwave
-                        </p>
                     </div>
 
-                    <!-- Generate Tab -->
+                    <!-- Templates Tab -->
                     <div class="form-section" id="tab-templates">
                         <div class="section-title">Corporate (1-3)</div>
                         <div class="template-gallery">
@@ -316,14 +924,6 @@
                         </div>
                     </div>
 
-                    <!-- History Tab -->
-                    <div class="form-section" id="tab-history">
-                        <div class="section-title">Created Engines</div>
-                        <div id="historyList" class="history-list">
-                            <p style="text-align: center; color: #888; font-size: 12px; padding: 20px;">No engines created yet.</p>
-                        </div>
-                    </div>
-
                     <!-- Deploy Tab -->
                     <div class="form-section" id="tab-deploy">
                         <div class="section-title">GitHub Pages Deployment</div>
@@ -357,13 +957,10 @@
                             <div class="share-link" id="shareLink" style="font-size: 12px; font-weight: 700;"></div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button class="copy-btn" onclick="window.copyText(window.generatedEngineURL)">📋 Copy Full Link</button>
-                            <button class="copy-btn" id="btnShorten" style="background: var(--accent);" onclick="window.shortenURL()">🔗 Shorten Link</button>
+                            <button class="copy-btn" onclick="copyShareLink()">📋 Copy Full Link</button>
+                            <button class="copy-btn" id="btnShorten" style="background: var(--accent);" onclick="shortenURL()">🔗 Shorten Link</button>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button class="copy-btn" onclick="window.open(window.generatedEngineURL, '_blank')" style="background: #28a745;">🌐 Test Engine</button>
-                            <button class="copy-btn" onclick="window.copyText(document.getElementById('shareLink').textContent)" style="background: #007bff;">🔗 Share Link</button>
-                        </div>
+                        <button class="copy-btn" onclick="openGeneratedEngine()" style="background: #28a745; margin-bottom: 10px;">🌐 Open Engine in New Tab</button>
                         
                         <div class="template-export">
                             <div class="export-header">
@@ -412,61 +1009,33 @@
         <div class="pwa-desc" style="color: #666;">Tap <span style="font-weight:700;">Share</span> then <span style="font-weight:700;">Add to Home Screen</span> to install this app.</div>
     </div>
 
-    <!-- Powered By Footer (for preview) -->
-    <style>
-        .powered-by-footer { margin-top: 40px; padding: 20px 35px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1px; }
-        .powered-link { color: var(--tpl-primary, #FF6B00); text-decoration: none; font-weight: 700; }
-
-        /* Auth Modal */
-        .auth-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-        .auth-container { background: #1a1a2e; border: 1px solid var(--primary); padding: 40px; border-radius: 20px; width: 400px; text-align: center; box-shadow: 0 20px 60px rgba(255,107,0,0.2); }
-        .auth-title { font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; }
-        .auth-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-family: 'Orbitron', sans-serif; cursor: pointer; margin-top: 20px; font-size: 12px; }
-        
-        /* Maintenance Toggle */
-        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-        .status-active { background: #28a745; color: white; }
-        .status-maintenance { background: #dc3545; color: white; }
-        .toggle-maintenance { background: #6c757d; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer; margin-left: 10px; }
-
-        /* Request Notification */
-        .request-notification { position: fixed; top: 20px; right: 20px; background: var(--accent); color: #000; padding: 15px 25px; border-radius: 10px; font-weight: 700; font-family: 'Orbitron', sans-serif; box-shadow: 0 10px 30px rgba(0,212,255,0.4); display: none; z-index: 10001; animation: slideInRight 0.5s ease; cursor: pointer; }
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    </style>
-</head>
-<body>
-    <div id="authModal" class="auth-modal">
+    <!-- Auth Modal -->
+    <div id="authModal" class="auth-modal show">
         <div class="auth-container">
-            <div class="auth-title" id="authTitle">CREATOR LOGIN</div>
+            <div class="auth-title">Creator Login</div>
+            <p style="color: #888; text-align: center; margin-top: -15px; margin-bottom: 25px; font-size: 13px;">Authorized Personnel Only</p>
             <div id="authForm">
                 <div class="input-group">
                     <label>Email Address</label>
-                    <input type="email" id="authEmail" placeholder="you@metaforge.website">
+                    <input type="email" id="authEmail" placeholder="admin@metaforge.com">
                 </div>
-                <div class="input-group" id="passGroup">
+                <div class="input-group">
                     <label>Password</label>
                     <input type="password" id="authPassword" placeholder="••••••••">
                 </div>
-                <button class="auth-btn" id="authSubmit" onclick="handleAuth()">LOGIN TO PANEL</button>
-                
-                <div style="margin-top: 20px; font-size: 11px; display: flex; justify-content: space-between;">
-                    <a href="javascript:void(0)" onclick="switchAuthMode('signup')" id="toggleSignup" style="color: var(--accent); text-decoration: none;">Create Account</a>
-                    <a href="javascript:void(0)" onclick="switchAuthMode('forgot')" id="toggleForgot" style="color: #888; text-decoration: none;">Forgot Password?</a>
-                </div>
+                <button class="btn-generate" onclick="handleAuth()">Sign In</button>
             </div>
-            <div id="authLoading" style="display: none; color: var(--primary); margin-top: 20px;">Processing...</div>
+            <div id="authLoading" style="display: none; text-align: center; color: var(--primary);">
+                <p>Verifying Credentials...</p>
+            </div>
         </div>
-    </div>
-
-    <div id="requestNotif" class="request-notification" onclick="showRequests()">
-        🔔 NEW ENGINE REQUEST RECEIVED!
     </div>
 
     <!-- Firebase SDKs (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-        import { getFirestore, collection, doc, updateDoc, getDoc, setDoc, onSnapshot, query, orderBy, addDoc, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+        import { getFirestore, collection, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 
         const firebaseConfig = { 
@@ -484,149 +1053,13 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        let deferredPrompt;
         let currentUser = null;
-        let authMode = 'login'; // login, signup, forgot
-
-        // Creator Panel Auth Logic
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (!user) {
-                document.getElementById('authModal').style.display = 'flex';
-            } else {
-                document.getElementById('authModal').style.display = 'none';
-                listenForRequests();
-                loadCreatorHistory();
-            }
-        });
-
-        window.switchAuthMode = function(mode) {
-            authMode = mode;
-            const title = document.getElementById('authTitle');
-            const submit = document.getElementById('authSubmit');
-            const passGroup = document.getElementById('passGroup');
-            const toggleSignup = document.getElementById('toggleSignup');
-            const toggleForgot = document.getElementById('toggleForgot');
-
-            if (mode === 'signup') {
-                title.textContent = 'CREATE ACCOUNT';
-                submit.textContent = 'REGISTER NOW';
-                passGroup.style.display = 'block';
-                toggleSignup.textContent = 'Already have account? Login';
-                toggleSignup.onclick = () => switchAuthMode('login');
-                toggleForgot.style.display = 'none';
-            } else if (mode === 'forgot') {
-                title.textContent = 'RESET PASSWORD';
-                submit.textContent = 'SEND RESET LINK';
-                passGroup.style.display = 'none';
-                toggleSignup.textContent = 'Back to Login';
-                toggleSignup.onclick = () => switchAuthMode('login');
-                toggleForgot.style.display = 'none';
-            } else {
-                title.textContent = 'CREATOR LOGIN';
-                submit.textContent = 'LOGIN TO PANEL';
-                passGroup.style.display = 'block';
-                toggleSignup.textContent = 'Create Account';
-                toggleSignup.onclick = () => switchAuthMode('signup');
-                toggleForgot.style.display = 'block';
-                toggleForgot.onclick = () => switchAuthMode('forgot');
-            }
-        };
-
-        window.handleAuth = async function() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            
-            if (!email) return alert("Email required");
-            if (authMode !== 'forgot' && !password) return alert("Password required");
-
-            document.getElementById('authForm').style.display = 'none';
-            document.getElementById('authLoading').style.display = 'block';
-
-            try {
-                if (authMode === 'login') {
-                    await signInWithEmailAndPassword(auth, email, password);
-                } else if (authMode === 'signup') {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                } else if (authMode === 'forgot') {
-                    await sendPasswordResetEmail(auth, email);
-                    alert("Password reset email sent! Check your inbox.");
-                    switchAuthMode('login');
-                }
-            } catch (err) {
-                alert("Auth Failed: " + err.message);
-                document.getElementById('authForm').style.display = 'block';
-                document.getElementById('authLoading').style.display = 'none';
-            }
-        };
-
-        // Listen for new requests from landing page
-        function listenForRequests() {
-            const q = query(collection(db, "engine_requests"), orderBy("timestamp", "desc"), limit(50));
-            onSnapshot(q, (snapshot) => {
-                const tbody = document.getElementById('requestsTableBody');
-                if(!tbody) return;
-                tbody.innerHTML = '';
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${data.brandName}</td>
-                        <td>${data.email}</td>
-                        <td>
-                            <button class="copy-btn" style="padding: 5px 10px; font-size: 10px;" onclick="window.copyText('${data.email}')">Copy Email</button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const notif = document.getElementById('requestNotif');
-                        if (notif) {
-                            notif.style.display = 'block';
-                            setTimeout(() => notif.style.display = 'none', 10000);
-                        }
-                    }
-                });
-            });
-        }
-
-        async function loadCreatorHistory() {
-            if (!currentUser) return;
-            const historyRef = collection(db, "creator_history");
-            const q = query(historyRef, orderBy("timestamp", "desc"));
-            onSnapshot(q, (snapshot) => {
-                const historyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                // We'll expose this to the regular script scope
-                window.creatorHistory = historyData;
-                if (typeof renderHistory === 'function') renderHistory(historyData);
-            });
-        }
-
-        window.toggleEngineStatus = async function(code, currentStatus) {
-            const newStatus = currentStatus === 'active' ? 'maintenance' : 'active';
-            if (confirm(`Change engine status to ${newStatus.toUpperCase()}?`)) {
-                try {
-                    // Update the status in short_urls
-                    await updateDoc(doc(db, "short_urls", code), { status: newStatus });
-                    
-                    // Also find and update the creator_history entry
-                    const historyRef = collection(db, "creator_history");
-                    const q = query(historyRef); // You'd ideally filter by code but for now we'll just update short_urls
-                    // In a real app, you'd store the creator_history doc ID or use the code as ID
-                    
-                    alert(`Engine ${code} is now ${newStatus.toUpperCase()}`);
-                } catch (e) {
-                    alert("Error updating status: " + e.message);
-                }
-            }
-        };
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('../sw.js').then(reg => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
                     console.log('SW registered:', reg);
                 }).catch(err => {
                     console.log('SW registration failed:', err);
@@ -634,46 +1067,120 @@
             });
         }
 
-        // URL Shortening Integration (CLOUDSAVE VERSION)
-        window.shortenURL = async function() {
-            if (!window.generatedEngineURL) return alert('Generate a link first!');
-            const btn = document.getElementById('btnShorten');
-            btn.innerHTML = '⏳ Shortening...';
-            btn.disabled = true;
-            
+        // PWA Install Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwaBanner').classList.add('show');
+        });
+
+        document.getElementById('pwaInstallBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('pwaBanner').classList.remove('show');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        // iOS Feature Detection
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        };
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) {
+            document.getElementById('iosBanner').classList.add('show');
+        }
+
+        // Strict Authentication Gate
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                // If user is logged in, hide the modal and show nav buttons
+                document.getElementById('authModal').classList.remove('show');
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('adminBtn').style.display = 'block';
+            } else {
+                // If user is not logged in, show the modal and block content
+                document.getElementById('authModal').classList.add('show');
+                document.getElementById('logoutBtn').style.display = 'none';
+                document.getElementById('adminBtn').style.display = 'none';
+            }
+        });
+
+        // Expose to window for UI access
+        window.handleAuth = async function() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            if (!email || !password) return alert("Email and password are required.");
+
+            document.getElementById('authForm').style.display = 'none';
+            document.getElementById('authLoading').style.display = 'block';
+
             try {
+                // Try to sign in (Login Only)
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error(error);
+                let msg = "Login failed. Please check your credentials.";
+                if (error.code === 'auth/user-not-found') msg = "Account not found. Access is restricted to authorized personnel.";
+                if (error.code === 'auth/wrong-password') msg = "Invalid password.";
+                alert(msg);
+            } finally {
+                document.getElementById('authForm').style.display = 'block';
+                document.getElementById('authLoading').style.display = 'none';
+            }
+        };
+
+        window.handleLogout = async function() {
+            if (confirm("Are you sure you want to logout?")) {
+                await signOut(auth);
+            }
+        };
+
+        // URL Shortening Integration
+        window.shortenURL = async function() {
+            if (!currentUser) {
+                document.getElementById('authModal').classList.add('show');
+                return;
+            }
+
+            const longUrl = window.generatedEngineURL;
+            const btn = document.getElementById('btnShorten');
+            btn.textContent = "Shortening...";
+            btn.disabled = true;
+
+            try {
+                const idToken = await currentUser.getIdToken();
                 const response = await fetch('https://us-central1-metaforge-6afdf.cloudfunctions.net/shorten', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: window.generatedEngineURL })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ url: longUrl })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('shareLink').textContent = data.shortUrl;
-                    btn.innerHTML = '✅ Shortened!';
+                    btn.textContent = "DONE!";
                     
-                    if (currentUser) {
-                        await addDoc(collection(db, "creator_history"), {
-                            brandName: document.getElementById('brandName').value,
-                            code: data.code,
-                            shortUrl: data.shortUrl,
-                            configData: window.generatedEngineURL.split('#')[1],
-                            timestamp: Date.now(),
-                            status: 'active'
-                        });
-                        await updateDoc(doc(db, "short_urls", data.code), { status: 'active' });
-                    }
+                    const shortDocRef = doc(db, "short_urls", data.code);
+                    await updateDoc(shortDocRef, {
+                        device_fingerprints: arrayUnion(navigator.userAgent)
+                    }).catch(() => {});
                 } else {
-                    throw new Error('Shortening failed');
+                    throw new Error("Shortening failed");
                 }
-            } catch (error) {
-                console.error('Shorten error:', error);
-                alert('Cloud save failed. Link is functional but not saved to your history.');
-                document.getElementById('shareLink').textContent = window.generatedEngineURL;
-                btn.innerHTML = '❌ Failed';
-            } finally {
-                setTimeout(() => { btn.innerHTML = 'SHORTEN LINK'; btn.disabled = false; }, 3000);
+            } catch (err) {
+                alert("Error: " + err.message);
+                btn.textContent = "Retry";
+                btn.disabled = false;
             }
         };
     </script>
@@ -836,10 +1343,6 @@
             const primary = document.getElementById('primaryColor').value || '#FF6B00';
             const secondary = document.getElementById('secondaryColor').value || '#1A1A1A';
             const stampStatus = document.getElementById('stampStatus').value || 'PAID';
-            
-            const instagram = document.getElementById('instagram').value;
-            const twitter = document.getElementById('twitter').value;
-            const website = document.getElementById('website').value;
 
             const logoDisplay = logoUrl ? `<img src="${logoUrl}" style="max-height: 50px; max-width: 150px; object-fit: contain;">` : formatLogo(brandName, primary, secondary);
             const today = new Date().toISOString().split('T')[0];
@@ -872,9 +1375,6 @@
                                 ${tin ? `<div><strong>TIN:</strong> ${tin}</div>` : ''}
                                 <div><strong>Address:</strong> ${address}</div>
                                 <div><strong>Tel:</strong> ${tel}</div>
-                                ${instagram ? `<div><strong>IG:</strong> ${instagram}</div>` : ''}
-                                ${twitter ? `<div><strong>X:</strong> ${twitter}</div>` : ''}
-                                ${website ? `<div><strong>WEB:</strong> ${website}</div>` : ''}
                             </div>
                         </div>
                         <div class="doc-type-badge">${docType}</div>
@@ -1002,10 +1502,6 @@
                     <div class="footer-brand">${logoDisplay}</div>
                     <div class="footer-contact">${rc} | ${address} | ${tel}</div>
                 </footer>
-                <div class="powered-by-footer">
-                    <div>Powered by <a href="https://skillforgedigital.com.ng" class="powered-link">skillforgedigital.com.ng</a></div>
-                    <div>Generated by <a href="https://metaforge.website" class="powered-link">metaforge.website</a></div>
-                </div>
             `;
 
             preview.innerHTML = `
@@ -1053,8 +1549,7 @@
             address: 'ad', email: 'em', bankName: 'bk', accName: 'an', accNumber: 'ac',
             defaultPayment: 'dp', defaultTerms: 'dt', footerNote: 'fn', docType: 'dtp',
             currency: 'cy', primaryColor: 'pc', secondaryColor: 'sc', vatRate: 'vr',
-            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts',
-            instagram: 'ig', twitter: 'tw', website: 'wb'
+            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts'
         };
 
         function compressConfig(config) {
@@ -1126,9 +1621,6 @@
                     if (document.getElementById('tinNumber')) document.getElementById('tinNumber').value = config.tinNumber || '';
                     if (document.getElementById('address')) document.getElementById('address').value = config.address || '';
                     if (document.getElementById('email')) document.getElementById('email').value = config.email || '';
-                    if (document.getElementById('instagram')) document.getElementById('instagram').value = config.instagram || '';
-                    if (document.getElementById('twitter')) document.getElementById('twitter').value = config.twitter || '';
-                    if (document.getElementById('website')) document.getElementById('website').value = config.website || '';
                     if (document.getElementById('bankName')) document.getElementById('bankName').value = config.bankName || '';
                     if (document.getElementById('accName')) document.getElementById('accName').value = config.accName || '';
                     if (document.getElementById('accNumber')) document.getElementById('accNumber').value = config.accNumber || '';
@@ -1190,9 +1682,6 @@
                     tinNumber: document.getElementById('tinNumber').value,
                     address: document.getElementById('address').value,
                     email: document.getElementById('email').value,
-                    instagram: document.getElementById('instagram').value,
-                    twitter: document.getElementById('twitter').value,
-                    website: document.getElementById('website').value,
                     bankName: document.getElementById('bankName').value,
                     accName: document.getElementById('accName').value,
                     accNumber: document.getElementById('accNumber').value,
@@ -1214,21 +1703,43 @@
 
                 // Generate shareable link
                 const encoded = encodeConfigToURL(config);
+                // Create a branded prefix for the link
                 const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
                 
-                // Point to /engine/ instead of engine.html
-                const baseUrl = window.location.origin + '/engine/';
+                // Get current URL parts to construct engine path
+                const currentUrl = window.location.href.split('#')[0];
+                const lastSlash = currentUrl.lastIndexOf('/');
+                const baseUrl = currentUrl.substring(0, lastSlash + 1) + 'engine.html';
                 
+                // The hash will look like #brand-name_BASE64
                 generatedEngineURL = baseUrl + '#' + brandSlug + '_' + encoded;
                 window.generatedEngineURL = generatedEngineURL; // Expose for shortenURL
-
-                // Trigger Automatic Shortening if user is logged in
-                if (type === 'link') {
-                    document.getElementById('resultArea').classList.add('show');
-                    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
-                    document.getElementById('shareLink').textContent = "Shortening link automatically...";
-                    window.shortenURL(); // Call the modular shortenURL function
+                
+                document.getElementById('shareLink').textContent = generatedEngineURL;
+                
+                // Show feedback on the specific button clicked
+                const btnId = type === 'link' ? 'btnGenLink' : 'btnGenFile';
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = "✅ SUCCESS!";
+                    setTimeout(() => { btn.innerHTML = originalText; }, 2000);
                 }
+                
+                // If it's the file download option
+                if (type === 'file') {
+                    const engineHTML = generateFullEngineHTML(config);
+                    const blob = new Blob([engineHTML], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${brandSlug}-engine.html`;
+                    a.click();
+                }
+                
+                // Show result area
+                document.getElementById('resultArea').classList.add('show');
+                document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
                 
                 // Save to localStorage
                 localStorage.setItem('meta_receipt_engine_config', JSON.stringify(config));
@@ -1536,10 +2047,9 @@
                     </div>
                 </div>
                 <div class="doc-type" id="docTypeDisplay">${config.docType}</div>
-                    </div>
-                    <div id="qrCode" style="margin-top: 15px; display: flex; justify-content: flex-end;"></div>
-                    <div class="header-accent"></div>
-                </header>
+            </div>
+            <div class="header-accent"></div>
+        </header>
         
         <section class="info-section">
             <div class="info-block full-width">
@@ -1702,20 +2212,6 @@
             const status = document.getElementById('stampStatusSelect').value;
             document.getElementById('stampAuthority').textContent = name;
             document.getElementById('stampStatusText').textContent = status;
-        }
-
-        function initQR() {
-            const qrUrl = "${config.website || 'https://metaforgeengine.web.app'}";
-            if (qrUrl) {
-                new QRCode(document.getElementById("qrCode"), {
-                    text: qrUrl,
-                    width: 100,
-                    height: 100,
-                    colorDark: "${primary}",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-            }
         }
         
         function refreshStamp() {
@@ -1940,100 +2436,25 @@
         addItem();
         renderHistory();
         displaySignature();
-        initQR();
     <\/script>
 </body>
 </html>`;
         }
 
-        // URL Shortening Integration (NO AUTH REQUIRED FOR CREATOR)
-        window.shortenURL = async function() {
-            if (!window.generatedEngineURL) return alert('Generate a link first!');
-            const btn = document.getElementById('btnShorten');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Shortening...';
-            btn.disabled = true;
-            
-            try {
-                // Ensure we are hitting the correct Cloud Function URL
-                const response = await fetch('https://us-central1-metaforge-6afdf.cloudfunctions.net/shorten', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: window.generatedEngineURL })
+        // ===== UTILITY FUNCTIONS =====
+        function copyShareLink() {
+            if (generatedEngineURL) {
+                navigator.clipboard.writeText(generatedEngineURL).then(() => {
+                    alert('Share link copied to clipboard!');
                 });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    window.generatedEngineURL = data.shortUrl;
-                    document.getElementById('shareLink').textContent = data.shortUrl;
-                    btn.innerHTML = '✅ Shortened!';
-                    saveEngineToHistory(data.code, data.shortUrl);
-                } else {
-                    const errorData = await response.text();
-                    throw new Error(errorData || 'Shortening failed');
-                }
-            } catch (error) {
-                console.error('Shorten error:', error);
-                
-                // Detailed error for local file issues
-                if (window.location.protocol === 'file:') {
-                    alert('⚠️ Local File Restriction: Browsers often block Cloud Function requests when running from a file path. Please try running this via a local server (like Live Server) or deploy it to GitHub Pages.');
-                } else {
-                    alert('Could not shorten URL (Server Error: ' + error.message + '). The full link below is still functional!');
-                }
-                
-                document.getElementById('shareLink').textContent = window.generatedEngineURL;
-                btn.innerHTML = '❌ Failed';
-            } finally {
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }, 3000);
             }
-        };
-
-        // History Management (Cloud-side)
-        function renderHistory(historyData = []) {
-            const container = document.getElementById('historyList');
-            if (!historyData.length) {
-                container.innerHTML = '<p style="text-align: center; color: #888; font-size: 12px; padding: 20px;">No engines created yet.</p>';
-                return;
-            }
-            container.innerHTML = historyData.map(h => {
-                const status = h.status || 'active';
-                return `
-                <div class="history-item">
-                    <div class="history-header">
-                        <div class="history-brand">${h.brandName}</div>
-                        <div class="history-date">${new Date(h.timestamp).toLocaleDateString()}</div>
-                    </div>
-                    <div style="font-size: 11px; color: var(--accent); font-family: monospace; margin-bottom: 5px;">CODE: ${h.code}</div>
-                    <div style="font-size: 10px; color: #666; word-break: break-all; margin-bottom: 10px;">${h.shortUrl}</div>
-                    <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-                        <span class="status-badge status-${status}">${status}</span>
-                        <button class="toggle-maintenance" onclick="toggleEngineStatus('${h.code}', '${status}')">
-                            ${status === 'active' ? 'Shut Down' : 'Activate'}
-                        </button>
-                    </div>
-                    <div class="history-actions">
-                        <button class="history-btn" onclick="editEngine('${h.configData}')">Edit</button>
-                        <button class="history-btn" onclick="window.open('${h.shortUrl}', '_blank')">Test</button>
-                        <button class="history-btn" onclick="copyText('${h.shortUrl}')">Copy</button>
-                    </div>
-                </div>
-            `}).join('');
         }
 
-        window.editEngine = function(configData) {
-            if (!configData) return;
-            window.location.hash = configData;
-            loadFromURL();
-            switchTab('identity');
-        };
-
-        window.copyText = function(text) {
-            navigator.clipboard.writeText(text).then(() => alert('Copied!'));
-        };
+        function openGeneratedEngine() {
+            if (generatedEngineURL) {
+                window.open(generatedEngineURL, '_blank');
+            }
+        }
 
         function copyTemplate() {
             const code = document.getElementById('templateCode').textContent;
