@@ -6,7 +6,8 @@
     <title>METAFORGE | Interactive Demo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
     
@@ -286,6 +287,45 @@
     </div>
 
     <script>
+        // CONFIGURATION: Must match creator.html template list exactly
+        const templates = {
+            'modern-tech': { name: 'Modern Tech', category: 'Corporate' },
+            'minimalist-pro': { name: 'Minimalist Pro', category: 'Corporate' },
+            'corporate-luxe': { name: 'Corporate Luxe', category: 'Premium' },
+            'legal-professional': { name: 'Legal Professional', category: 'Professional' },
+            'cyber-punk': { name: 'Cyber Punk', category: 'Tech' },
+            'retro-wave': { name: 'Retro Wave', category: 'Creative' },
+            'neo-brutalist': { name: 'Neo Brutalist', category: 'Bold' },
+            'startup-modern': { name: 'Startup Modern', category: 'Tech' },
+            'royal-elegance': { name: 'Royal Elegance', category: 'Classic' },
+            'art-deco': { name: 'Art Deco', category: 'Vintage' },
+            'fashion-boutique': { name: 'Fashion Boutique', category: 'Retail' },
+            'hotel-resort': { name: 'Hotel Resort', category: 'Hospitality' },
+            'clean-air': { name: 'Clean Air', category: 'Minimal' },
+            'swiss-design': { name: 'Swiss Design', category: 'Professional' },
+            'japanese-minimal': { name: 'Japanese Minimal', category: 'Zen' },
+            'compact-slip': { name: 'Compact Slip', category: 'Quick' },
+            'midnight-special': { name: 'Midnight Special', category: 'Dark' },
+            'garage-workshop': { name: 'Garage Workshop', category: 'Industrial' },
+            'bold-stripe': { name: 'Bold Stripe', category: 'Modern' },
+            'fitness-gym': { name: 'Fitness Gym', category: 'Sports' },
+            'pharmacy-medical': { name: 'Pharmacy Medical', category: 'Medical' },
+            'bakery-sweet': { name: 'Bakery Sweet', category: 'Food' },
+            'nature-organic': { name: 'Nature Organic', category: 'Eco' },
+            'salon-beauty': { name: 'Salon Beauty', category: 'Beauty' },
+            'restaurant-diner': { name: 'Restaurant Diner', category: 'Food' },
+            'construction-industrial': { name: 'Construction', category: 'Industrial' },
+            'education-academy': { name: 'Education Academy', category: 'Education' },
+            'transport-logistics': { name: 'Transport', category: 'Logistics' },
+            'real-estate': { name: 'Real Estate', category: 'Property' },
+            'event-planning': { name: 'Event Planning', category: 'Events' },
+            'curved-organic': { name: 'Curved Organic', category: 'Artistic' },
+            'geometric-slice': { name: 'Geometric Slice', category: 'Bold' },
+            'vintage-ticket': { name: 'Vintage Ticket', category: 'Retro' },
+            'futuristic-glass': { name: 'Futuristic Glass', category: 'Tech' },
+            'stamp-quality': { name: 'Stamp Quality', category: 'Premium' }
+        };
+
         function refresh() {
             const hash = window.location.hash.slice(1);
             if (!hash) return;
@@ -305,18 +345,34 @@
                 document.getElementById('docTypeDisplay').textContent = config.dtp || 'INVOICE';
                 
                 const root = document.documentElement;
-                root.style.setProperty('--brand-primary', config.pc || '#9B5DE5');
-                root.style.setProperty('--tpl-primary', config.pc || '#9B5DE5');
-                root.style.setProperty('--tpl-secondary', config.sc || '#1A1A1A');
+                const primary = config.pc || '#9B5DE5';
+                const secondary = config.sc || '#1A1A1A';
+                
+                root.style.setProperty('--brand-primary', primary);
+                root.style.setProperty('--tpl-primary', primary);
+                root.style.setProperty('--tpl-secondary', secondary);
                 
                 const receipt = document.getElementById('receipt');
                 // Remove existing tpl classes
                 receipt.classList.forEach(cls => {
                     if (cls.startsWith('tpl-')) receipt.classList.remove(cls);
                 });
-                receipt.classList.add('tpl-' + (config.tp || 'modern-tech'));
+                
+                // Fallback if template is missing or invalid
+                const templateName = config.tp && templates[config.tp] ? config.tp : 'modern-tech';
+                receipt.classList.add('tpl-' + templateName);
                 
                 if (config.ff) receipt.style.fontFamily = config.ff;
+                
+                // Apply specific template overrides via JS if CSS alone isn't enough (mirrors creator.html logic)
+                if (templateName === 'geometric-slice') {
+                    const header = receipt.querySelector('.receipt-header');
+                    if (header) {
+                        header.style.background = secondary;
+                        // Simple contrast check
+                        header.style.color = '#ffffff'; 
+                    }
+                }
                 
                 document.getElementById('currentDate').textContent = new Date().toISOString().split('T')[0];
             } catch (e) {

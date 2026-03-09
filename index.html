@@ -6,7 +6,8 @@
     <title>METAFORGE | Elite Digital Document Infrastructure</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"></noscript>
     <link rel="manifest" href="manifest.json">
     <style>
         :root { 
@@ -652,7 +653,7 @@
             <div class="footer-col">
                 <h4>Company</h4>
                 <ul class="footer-links">
-                    <li><a href="#about">About MetaForge</a></li>
+                    <li><a href="about/index.html">About MetaForge</a></li>
                     <li><a href="#contact">Contact Elite Support</a></li>
                     <li><a href="#careers">Authority Careers</a></li>
                 </ul>
@@ -1132,6 +1133,55 @@
         };
 
         window.printDemo = () => document.getElementById('demoFrame').contentWindow.print();
+    </script>
+    <div class="cookie-popup" id="cookiePopup">
+        <div class="cookie-content">
+            <h3>🍪 Cookie Authority</h3>
+            <p>We use cookies to ensure the integrity of your digital infrastructure and enhance your experience.</p>
+            <div class="cookie-btns">
+                <button onclick="acceptCookies()" class="btn btn-primary" style="padding: 10px 20px; font-size: 12px;">ACCEPT</button>
+                <button onclick="rejectCookies()" class="btn btn-outline" style="padding: 10px 20px; font-size: 12px;">DECLINE</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .cookie-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(10, 5, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            padding: 25px;
+            border-radius: 20px;
+            z-index: 10000;
+            max-width: 350px;
+            display: none;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: slideUp 0.5s ease-out;
+        }
+        .cookie-popup.show { display: block; }
+        .cookie-content h3 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; margin-bottom: 10px; color: var(--primary); }
+        .cookie-content p { font-size: 12px; opacity: 0.7; margin-bottom: 20px; line-height: 1.5; }
+        .cookie-btns { display: flex; gap: 10px; }
+    </style>
+
+    <script>
+        function checkCookies() {
+            if (!localStorage.getItem('metaforge_cookies')) {
+                document.getElementById('cookiePopup').classList.add('show');
+            }
+        }
+        function acceptCookies() {
+            localStorage.setItem('metaforge_cookies', 'accepted');
+            document.getElementById('cookiePopup').classList.remove('show');
+        }
+        function rejectCookies() {
+            localStorage.setItem('metaforge_cookies', 'rejected');
+            document.getElementById('cookiePopup').classList.remove('show');
+        }
+        window.addEventListener('load', checkCookies);
     </script>
 </body>
 </html>

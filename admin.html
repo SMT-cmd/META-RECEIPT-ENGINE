@@ -370,7 +370,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Corrected Firebase Config
         const firebaseConfig = { 
@@ -447,7 +447,10 @@
                         <strong style="color: var(--primary);">${data.brandName}</strong> requested a new engine build.
                         <div style="font-size: 11px; color: #666; margin-top: 4px;">${data.timestamp?.toDate().toLocaleString()}</div>
                     </div>
-                    <button class="btn-action" onclick="acknowledgeRequest('${doc.id}')">ACKNOWLEDGE</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-action" onclick="acknowledgeRequest('${doc.id}')">ACKNOWLEDGE</button>
+                        <button class="btn-action" style="border-color: var(--danger); color: var(--danger);" onclick="deleteRequest('${doc.id}')">DELETE</button>
+                    </div>
                 `;
                 feed.appendChild(div);
             });
@@ -479,6 +482,7 @@
                                 ${status === 'active' ? 'SHUTDOWN' : 'RESUME'}
                             </button>
                             <button class="btn-action" onclick="editConfig('${d.id}')">EDIT</button>
+                            <button class="btn-action" style="border-color: var(--danger); color: var(--danger);" onclick="deleteEngine('${d.id}')">DELETE</button>
                         </div>
                     </td>
                 `;
@@ -492,10 +496,24 @@
             logAudit("Acknowledged build request: " + id);
         };
 
+        window.deleteRequest = async (id) => {
+            if(confirm('Delete this request?')) {
+                await deleteDoc(doc(db, "engine_requests", id));
+                logAudit("Deleted build request: " + id);
+            }
+        };
+
         window.toggleStatus = async (id, currentStatus) => {
             const newStatus = currentStatus === 'active' ? 'maintenance' : 'active';
             await updateDoc(doc(db, "short_urls", id), { status: newStatus });
             logAudit(`Changed engine ${id} status to ${newStatus}`);
+        };
+
+        window.deleteEngine = async (id) => {
+            if(confirm('Delete this engine? This action cannot be undone.')) {
+                await deleteDoc(doc(db, "short_urls", id));
+                logAudit("Deleted engine: " + id);
+            }
         };
 
         window.editConfig = async (id) => {
