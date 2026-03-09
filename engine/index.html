@@ -1000,7 +1000,8 @@
             currentUser = user;
             
             const hash = window.location.hash;
-            const scMatch = hash.match(/_sc=([a-zA-Z0-9]{6})$/);
+            // Supports both #brandSlug_BASE64_sc=ABC123 and #sc=ABC123
+            const scMatch = hash.match(/[#_]sc=([a-zA-Z0-9]{6})$/);
             shortCode = scMatch ? scMatch[1] : null;
 
             if (shortCode) {
