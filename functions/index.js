@@ -53,7 +53,8 @@ exports.shorten = functions.https.onRequest(async (req, res) => {
     // Determine the base URL for the redirect
     // In production, this would be your custom domain or firebase app domain
     const projectId = process.env.GCLOUD_PROJECT || "metaforge-6afdf";
-    const shortUrl = `https://us-central1-${projectId}.cloudfunctions.net/redirect/${code}`;
+    // Construct a shorter, cleaner URL
+    const shortUrl = `https://${projectId}.web.app/r/${code}`;
 
     return res.status(200).json({
       code: code,
@@ -84,8 +85,8 @@ exports.redirect = functions.https.onRequest(async (req, res) => {
     let originalUrl = doc.data().original_url;
     // Append the short code to the hash so engine.html can detect it's a claimable link
     // The client expects #brandSlug_BASE64_sc=ABC123
-    const separator = originalUrl.includes("#") ? "_" : "#";
-    originalUrl += `${separator}sc=${code}`;
+    const separator = originalUrl.includes("#") ? "_sc=" : "#sc=";
+    originalUrl += `${separator}${code}`;
     
     res.set("Cache-Control", "public, max-age=3600");
     return res.redirect(301, originalUrl);
