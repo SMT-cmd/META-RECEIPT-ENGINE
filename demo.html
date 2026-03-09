@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaForge Engine Demo</title>
+    <title>METAFORGE | Interactive Demo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,31 +11,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
     
     <style>
-        /* Copied Styles from Engine */
         :root {
-            --brand-primary: #FF6B00;
-            --brand-primary-light: #FF8533;
-            --brand-secondary: #1A1A1A;
-            --brand-dark: #1A1A1A;
+            --brand-primary: #9B5DE5;
+            --brand-primary-light: #B889F0;
+            --brand-secondary: #120A1A;
+            --brand-dark: #0A050F;
             --brand-gray: #4A4A4A;
             --brand-light: #F5F5F5;
-            --brand-blue: #007bff;
-            --brand-green: #28a745;
+            
             --tpl-primary: var(--brand-primary);
             --tpl-secondary: var(--brand-secondary);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: white; font-family: 'Rajdhani', sans-serif; padding: 0; margin: 0; min-height: 100vh; overflow: hidden; }
-        
-        /* Receipt Structure */
-        .receipt-container { width: 100%; height: 100vh; margin: 0; background: white; position: relative; display: flex; flex-direction: column; color: #1a1a1a; font-size: 12px; overflow-y: auto; }
-        .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Orbitron', sans-serif; font-size: 60px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { background: transparent; font-family: 'Inter', sans-serif; padding: 0; margin: 0; min-height: 100vh; overflow: hidden; }
+
+        /* Receipt Container */
+        .receipt-container { width: 210mm; min-height: 297mm; max-height: 297mm; margin: 0 auto; background: white; position: relative; display: flex; flex-direction: column; color: #1a1a1a; font-size: 12px; overflow: hidden; box-sizing: border-box; transform: scale(0.9); transform-origin: top center; }
+        .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Space Grotesk', sans-serif; font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }
         .security-layer { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--brand-primary) 0.5px, transparent 0.5px); background-size: 30px 30px; opacity: 0.04; pointer-events: none; z-index: 1; }
         
-        /* Layout Sections */
         .receipt-header { padding: 25px 35px; position: relative; z-index: 2; flex-shrink: 0; }
         .header-content { display: flex; justify-content: space-between; align-items: flex-start; }
-        .brand-block { color: inherit; }
         .brand-name { font-size: 32px; font-weight: 900; letter-spacing: 2px; }
         .brand-name span { color: var(--brand-primary); }
         .brand-tagline { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; opacity: 0.8; }
@@ -47,7 +44,7 @@
         .info-block { display: flex; flex-direction: column; gap: 4px; }
         .info-block.full-width { grid-column: 1 / -1; }
         .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; color: var(--brand-gray); }
-        .info-input { padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; color: var(--brand-dark); background: white; outline: none; pointer-events: none; }
+        .info-value { padding: 8px 12px; border: 1px solid #eee; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--brand-dark); background: #fafafa; }
         
         .items-section { padding: 20px 35px; flex: 1; position: relative; z-index: 2; }
         .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
@@ -56,81 +53,100 @@
         
         .items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .items-table th { background: var(--brand-dark); color: white; padding: 12px 10px; text-align: left; font-family: 'Orbitron', sans-serif; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-        .items-table th:nth-child(1) { width: 8%; text-align: center; }
-        .items-table th:nth-child(2) { width: 44%; }
-        .items-table th:nth-child(3) { width: 12%; text-align: center; }
-        .items-table th:nth-child(4) { width: 18%; text-align: right; }
-        .items-table th:nth-child(5) { width: 18%; text-align: right; }
-        .items-table td { padding: 10px; border-bottom: 1px solid #e0e0e0; vertical-align: top; height: 45px; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
         .items-table tr:nth-child(even) { background: rgba(0,0,0,0.02); }
         
-        .cell-input { width: 100%; padding: 6px; border: 2px solid transparent; background: transparent; font-family: 'Rajdhani', sans-serif; font-size: 13px; color: var(--brand-dark); outline: none; pointer-events: none; }
-        .cell-input.number { font-family: 'Roboto Mono', monospace; text-align: right; }
-        .cell-input.center { text-align: center; }
-        
-        .bottom-section { padding: 0 35px 20px; display: grid; grid-template-columns: 1fr 320px; gap: 30px; position: relative; z-index: 2; flex-shrink: 0; }
-        .words-box { background: rgba(255,107,0,0.05); border-left: 4px solid var(--brand-primary); padding: 15px; border-radius: 0 8px 8px 0; }
+        .bottom-section { padding: 0 35px 20px; display: grid; grid-template-columns: 1fr 280px; gap: 30px; position: relative; z-index: 2; flex-shrink: 0; }
+        .words-box { background: rgba(155, 93, 229, 0.05); border-left: 4px solid var(--brand-primary); padding: 15px; border-radius: 0 8px 8px 0; }
         .words-label { font-size: 9px; text-transform: uppercase; letter-spacing: 2px; color: var(--brand-gray); font-weight: 700; margin-bottom: 5px; }
-        .words-input { width: 100%; padding: 8px; border: 2px solid transparent; background: white; border-radius: 6px; font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; color: var(--brand-dark); outline: none; pointer-events: none; }
+        .words-value { font-size: 13px; font-weight: 600; color: var(--brand-dark); font-style: italic; }
         
-        .totals-box { width: 100%; background: var(--brand-light); border: 2px solid var(--brand-primary); border-radius: 8px; padding: 15px; }
+        .totals-box { width: 100%; background: var(--brand-light); border: 1px solid var(--brand-primary); border-radius: 8px; padding: 15px; }
         .total-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #ddd; font-size: 12px; }
-        .total-row:last-child { border-bottom: none; border-top: 3px solid var(--brand-primary); margin-top: 8px; padding-top: 10px; }
+        .total-row:last-child { border-bottom: none; border-top: 2px solid var(--brand-primary); margin-top: 8px; padding-top: 10px; }
         .total-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--brand-gray); font-weight: 700; }
         .total-value { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; color: var(--brand-dark); }
-        .total-value.grand { font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--brand-primary); font-weight: 800; }
-        .total-input { width: 120px; padding: 6px 10px; border: 2px solid var(--brand-primary); border-radius: 6px; font-family: 'Roboto Mono', monospace; font-size: 13px; text-align: right; background: white; outline: none; pointer-events: none; }
+        .total-value.grand { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--brand-primary); font-weight: 800; }
 
         .signature-section { padding: 0 35px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; position: relative; z-index: 2; flex-shrink: 0; }
-        .signature-box { border-top: 2px solid var(--brand-dark); padding-top: 10px; position: relative; }
+        .signature-box { border-top: 1px solid #000; padding-top: 10px; position: relative; }
         .signature-line { height: 35px; border-bottom: 1px dashed #ccc; margin-bottom: 8px; }
         .signature-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--brand-gray); font-weight: 700; }
 
-        .footer-message { text-align: center; padding: 15px 35px; background: var(--brand-light); border-top: 3px solid var(--brand-primary); position: relative; z-index: 2; flex-shrink: 0; }
-        .message-text { font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--brand-primary); letter-spacing: 3px; text-transform: uppercase; font-weight: 700; }
-        .receipt-footer { background: var(--brand-dark); padding: 15px 35px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; flex-shrink: 0; margin-top: auto; }
-        .footer-brand { font-family: 'Orbitron', sans-serif; font-size: 14px; color: white; letter-spacing: 2px; }
-        .footer-brand span { color: var(--brand-primary); }
-        .footer-contact { font-size: 10px; color: rgba(255,255,255,0.8); letter-spacing: 1px; }
-
-        /* ======== 35 TEMPLATE STYLES (Partial Set for Demo) ======== */
-        .tpl-modern-tech { font-family: 'Rajdhani', sans-serif; }
-        .tpl-modern-tech .receipt-header { background: var(--tpl-secondary, #1A1A1A); color: white; }
-        .tpl-modern-tech .doc-type-badge { background: var(--tpl-primary, #FF6B00); color: white; transform: rotate(-3deg); box-shadow: 0 10px 30px rgba(255,107,0,0.4); }
+        .digital-stamp { position: absolute; top: -30px; right: 10px; width: 120px; height: 120px; transform: rotate(-15deg); opacity: 0.9; z-index: 10; pointer-events: none; }
+        .stamp-outer { position: absolute; inset: 0; border: 3px solid var(--brand-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.95); box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        .stamp-inner { position: absolute; inset: 5px; border: 1px solid var(--brand-primary); border-radius: 50%; border-style: dashed; }
+        .stamp-content { position: relative; z-index: 10; text-align: center; padding: 6px; }
+        .stamp-status { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 1px; }
         
-        .tpl-minimalist-pro { font-family: 'Inter', sans-serif; }
-        .tpl-minimalist-pro .receipt-header { background: white; color: var(--tpl-secondary, #1A1A1A); border-bottom: 1px solid #eee; }
-        .tpl-minimalist-pro .doc-type-badge { border: 1px solid var(--tpl-primary, #FF6B00); color: var(--tpl-primary, #FF6B00); font-weight: 500; }
+        .footer-message { text-align: center; padding: 15px 35px; background: var(--brand-light); border-top: 1px solid var(--brand-primary); position: relative; z-index: 2; flex-shrink: 0; }
+        .message-text { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--brand-primary); letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+        
+        .demo-lock-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.02);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .demo-lock-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 120px;
+            font-weight: 900;
+            color: rgba(0,0,0,0.03);
+            transform: rotate(-35deg);
+            white-space: nowrap;
+        }
 
-        .tpl-corporate-luxe { font-family: 'Playfair Display', serif; background: linear-gradient(135deg, #fff 0%, #fafafa 100%); border: 8px solid var(--tpl-primary, #D4AF37); }
-        .tpl-corporate-luxe .receipt-header { background: white; border-bottom: 2px double var(--tpl-primary, #D4AF37); }
-        .tpl-corporate-luxe .doc-type-badge { background: var(--tpl-primary, #D4AF37); color: white; font-family: 'Inter', sans-serif; }
+        /* TEMPLATES (Partial for Demo) */
+        .tpl-cyber-punk { background: #000; color: #00FF41; border: 1px solid #00FF41; }
+        .tpl-cyber-punk .receipt-header { border-bottom: 1px solid #00FF41; }
+        .tpl-cyber-punk .doc-type-badge { border: 1px solid #00FF41; color: #00FF41; background: transparent; }
+        .tpl-cyber-punk .info-value { background: rgba(0,255,65,0.1); border-color: #00FF41; color: #00FF41; }
+        .tpl-cyber-punk .items-table th { background: #00FF41; color: #000; }
+        .tpl-cyber-punk .items-table td { border-color: rgba(0,255,65,0.3); }
+        .tpl-cyber-punk .totals-box { background: rgba(0,255,65,0.05); border-color: #00FF41; }
+        .tpl-cyber-punk .total-value.grand { color: #00FF41; text-shadow: 0 0 10px #00FF41; }
+        .tpl-cyber-punk .stamp-outer { border-color: #00FF41; }
+        .tpl-cyber-punk .stamp-status { color: #00FF41; }
 
-        .tpl-cyber-punk { font-family: 'Orbitron', monospace; background: #000; color: var(--tpl-primary, #00FF41); border: 2px solid var(--tpl-primary, #00FF41); box-shadow: 0 0 30px rgba(0,255,65,0.3); }
-        .tpl-cyber-punk .receipt-header { background: #000; border-bottom: 1px solid var(--tpl-primary, #00FF41); }
-        .tpl-cyber-punk .doc-type-badge { border: 1px solid var(--tpl-primary, #00FF41); box-shadow: 0 0 15px var(--tpl-primary, #00FF41); }
+        .tpl-midnight-special { background: #1a1a2e; color: #fff; }
+        .tpl-midnight-special .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-midnight-special .info-value { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #fff; }
+        .tpl-midnight-special .items-table th { background: rgba(255,255,255,0.1); color: var(--tpl-primary); }
+        .tpl-midnight-special .totals-box { background: rgba(255,255,255,0.05); border-color: var(--tpl-primary); }
+        
+        .tpl-royal-elegance { font-family: 'Cinzel', serif; background: #FFFDF5; border: 4px double #8B4513; }
+        .tpl-royal-elegance .receipt-header { border-bottom: 1px solid #8B4513; }
+        .tpl-royal-elegance .items-table th { background: #2C1810; color: #D4AF37; }
+        
+        .tpl-minimalist-pro { font-family: 'Inter', sans-serif; background: #fff; }
+        .tpl-minimalist-pro .receipt-header { border-bottom: 1px solid #eee; }
+        .tpl-minimalist-pro .brand-name { font-weight: 300; letter-spacing: 5px; }
 
-        .tpl-royal-elegance { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #FFFDF5 0%, #FFF8E7 100%); border: 4px double var(--tpl-primary, #8B4513); }
-        .tpl-royal-elegance .receipt-header { border-bottom: 1px solid var(--tpl-primary, #8B4513); text-align: center; }
-        .tpl-royal-elegance .doc-type-badge { border: 2px solid var(--tpl-primary, #8B4513); margin-top: 15px; }
-
-        /* Additional templates can be added here as needed */
+        @media (max-width: 768px) {
+            .receipt-container { transform: scale(0.4); margin-top: -300px; }
+        }
     </style>
 </head>
 <body>
     <div class="receipt-container" id="receipt">
-        <div class="page-watermark" id="watermark">METAFORGE DEMO</div>
+        <div class="demo-lock-overlay"><div class="demo-lock-text">LOCKED DEMO</div></div>
+        <div class="page-watermark" id="watermark">BRAND NAME</div>
         <div class="security-layer"></div>
 
         <header class="receipt-header">
             <div class="header-content">
                 <div class="brand-block">
-                    <div class="brand-name" id="brandNameDisplay">METAFORGE<span>ENGINE</span></div>
-                    <div class="brand-tagline" id="taglineDisplay">Excellence Redefined</div>
-                    <div class="brand-contact" id="contactDisplay">
-                        <div><strong>RC:</strong> <span id="rcDisplay">000000</span></div>
-                        <div><strong>Address:</strong> <span id="addressDisplay">MetaForge Plaza</span></div>
-                        <div><strong>Tel:</strong> <span id="telDisplay">0800-METAFORGE</span></div>
+                    <div class="brand-name" id="brandNameDisplay">BRAND<span>NAME</span></div>
+                    <div class="brand-tagline" id="taglineDisplay">Digital Infrastructure</div>
+                    <div class="brand-contact">
+                        <div><strong>RC:</strong> <span id="rcDisplay">RC 000000</span></div>
+                        <div><strong>Address:</strong> Professional Suite 101, Global Plaza</div>
+                        <div><strong>Tel:</strong> <span id="telDisplay">+234 000 000 000</span></div>
                     </div>
                 </div>
                 <div class="doc-type-badge" id="docTypeDisplay">INVOICE</div>
@@ -139,28 +155,45 @@
 
         <section class="info-section">
             <div class="info-block full-width">
-                <label class="info-label">Client / Customer Name</label>
-                <input type="text" class="info-input" value="Demo Client Ltd">
+                <div class="info-label">Customer Name</div>
+                <div class="info-value">Elite Client Partnership</div>
             </div>
             <div class="info-block">
-                <label class="info-label">Address</label>
-                <input type="text" class="info-input" value="123 Innovation Drive">
+                <div class="info-label">Date</div>
+                <div class="info-value" id="currentDate">2026-03-09</div>
             </div>
             <div class="info-block">
-                <label class="info-label">Date</label>
-                <input type="text" class="info-input" id="receiptDate">
+                <div class="info-label">Reference</div>
+                <div class="info-value">#MF-DEMO-2026</div>
             </div>
         </section>
 
         <section class="items-section">
             <div class="section-header">
                 <div class="section-line"></div>
-                <div class="section-title">Items Purchased</div>
+                <div class="section-title">Services</div>
                 <div class="section-line" style="background: linear-gradient(to left, var(--brand-primary), transparent);"></div>
             </div>
             <table class="items-table">
-                <thead><tr><th>S/N</th><th>Item Description</th><th>Qty</th><th>Price (<span class="currency-symbol">₦</span>)</th><th>Total (<span class="currency-symbol">₦</span>)</th></tr></thead>
-                <tbody id="itemsBody"></tbody>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Qty</th>
+                        <th>Description</th>
+                        <th style="text-align: right;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align: center;">1</td>
+                        <td>Enterprise Infrastructure License (Annual)</td>
+                        <td style="text-align: right;">$ 15,000.00</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;">5</td>
+                        <td>Cloud Deployment Units</td>
+                        <td style="text-align: right;">$ 2,500.00</td>
+                    </tr>
+                </tbody>
             </table>
         </section>
 
@@ -168,134 +201,80 @@
             <div class="words-section">
                 <div class="words-box">
                     <div class="words-label">Amount in Words</div>
-                    <input type="text" class="words-input" id="amountWords">
-                </div>
-                <div class="extra-info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                    <div class="payment-details"><div class="words-label">Payment Details</div><div id="paymentDisplay" style="font-size: 11px; color: #444; line-height: 1.6;"></div></div>
-                    <div class="terms-conditions"><div class="words-label">Terms & Conditions</div><div id="termsDisplay" style="font-size: 11px; color: #444; line-height: 1.6;">Strictly for demonstration purposes.</div></div>
+                    <div class="words-value">Seventeen Thousand Five Hundred Dollars Only</div>
                 </div>
             </div>
             <div class="totals-section">
                 <div class="totals-box">
-                    <div class="total-row"><span class="total-label">Subtotal</span><input type="text" class="total-input" id="subtotal" value="0.00"></div>
-                    <div class="total-row"><span class="total-label">VAT (<span id="vatRateDisplay">7.5</span>%)</span><input type="text" class="total-input" id="vat" value="0.00"></div>
-                    <div class="total-row"><span class="total-label">TOTAL</span><span class="total-value grand" id="grandTotal">₦ 0.00</span></div>
+                    <div class="total-row">
+                        <span class="total-label">Subtotal</span>
+                        <span class="total-value">$ 17,500.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-label">VAT (0%)</span>
+                        <span class="total-value">$ 0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-label">TOTAL</span>
+                        <span class="total-value grand">$ 17,500.00</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <section class="signature-section">
-            <div class="signature-box"><div class="signature-line"></div><div class="signature-label">Customer's Signature</div></div>
-            <div class="signature-box" style="position: relative;">
-                <div class="signature-line"></div><div class="signature-label">Authorized Signature & Stamp</div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">Customer Acceptance</div>
+            </div>
+            <div class="signature-box">
+                <div class="digital-stamp" id="digitalStamp">
+                    <div class="stamp-outer">
+                        <div class="stamp-inner"></div>
+                        <div class="stamp-watermark">✓</div>
+                        <div class="stamp-content">
+                            <div class="stamp-status">DEMO</div>
+                            <div class="stamp-authority" id="stampAuthority">METAFORGE</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="signature-line"></div>
+                <div class="signature-label">Authority Stamp</div>
             </div>
         </section>
 
-        <div class="footer-message"><div class="message-text" id="footerNoteDisplay">Powered by MetaForge Engine</div></div>
-        <footer class="receipt-footer"><div class="footer-brand" id="footerBrand">METAFORGE<span>ENGINE</span></div><div class="footer-contact" id="footerContact">www.metaforge.website</div></footer>
+        <div class="footer-message">
+            <div class="message-text">Generated via MetaForge Interactive Benchmarking Engine</div>
+        </div>
     </div>
 
     <script>
-        // Minimal Logic for Demo
-        const KEY_MAP = {
-            brandName: 'bn', tel: 'ph', rcNumber: 'rc', email: 'em',
-            template: 'tp', primaryColor: 'pc', timestamp: 'ts'
-        };
-
-        function decompressConfig(compressed) {
-            const config = {};
-            const REVERSE_MAP = Object.fromEntries(Object.entries(KEY_MAP).map(([k, v]) => [v, k]));
-            for (let shortKey in compressed) {
-                const key = REVERSE_MAP[shortKey] || shortKey;
-                config[key] = compressed[shortKey];
-            }
-            return config;
-        }
-
-        function decodeConfigFromURL(encoded) {
-            try {
-                const parts = encoded.split('_');
-                const actualBase64 = parts.length > 1 ? parts[1] : parts[0];
-                const binary = atob(actualBase64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const json = new TextDecoder().decode(bytes);
-                const compressed = JSON.parse(json);
-                return decompressConfig(compressed);
-            } catch(e) { return null; }
-        }
-
-        function formatLogo(name, primary) {
-            const words = name.split(' ');
-            return words.map((word, i) => i === 0 ? word : `<span style="color:${primary}">${word}</span>`).join(' ');
-        }
-
-        function getContrastColor(hexcolor) {
-            if (!hexcolor) return '#000000';
-            if (hexcolor.slice(0, 1) === '#') hexcolor = hexcolor.slice(1);
-            if (hexcolor.length === 3) hexcolor = hexcolor.split('').map(h => h + h).join('');
-            const r = parseInt(hexcolor.substr(0, 2), 16);
-            const g = parseInt(hexcolor.substr(2, 2), 16);
-            const b = parseInt(hexcolor.substr(4, 2), 16);
-            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            return (yiq >= 128) ? '#000000' : '#FFFFFF';
-        }
-
-        function applyBranding() {
+        function refresh() {
             const hash = window.location.hash.slice(1);
             if (!hash) return;
-            const config = decodeConfigFromURL(hash);
-            if (!config) return;
-
-            const primary = config.primaryColor || '#FF6B00';
-            const secondary = '#1A1A1A';
-            const root = document.documentElement;
-            
-            root.style.setProperty('--brand-primary', primary);
-            root.style.setProperty('--tpl-primary', primary);
-            root.style.setProperty('--tpl-secondary', secondary);
-
-            document.getElementById('receipt').className = 'receipt-container tpl-' + (config.template || 'modern-tech');
-            document.getElementById('brandNameDisplay').innerHTML = formatLogo(config.brandName || 'METAFORGE', primary);
-            document.getElementById('rcDisplay').textContent = config.rcNumber || '000000';
-            document.getElementById('telDisplay').textContent = config.tel || '';
-            document.getElementById('receiptDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('watermark').textContent = 'PREVIEW MODE';
-            document.getElementById('watermark').style.opacity = '0.08';
-
-            // Demo Items
-            const items = [
-                { desc: 'Premium Consultation', qty: 1, price: 150000 },
-                { desc: 'Digital Infrastructure', qty: 1, price: 350000 },
-                { desc: 'Maintenance License', qty: 1, price: 75000 }
-            ];
-            
-            const tbody = document.getElementById('itemsBody');
-            tbody.innerHTML = '';
-            let subtotal = 0;
-            
-            items.forEach((item, i) => {
-                const total = item.qty * item.price;
-                subtotal += total;
-                const row = `<tr>
-                    <td style="text-align: center;">${i+1}</td>
-                    <td>${item.desc}</td>
-                    <td style="text-align: center;">${item.qty}</td>
-                    <td style="text-align: right;">${item.price.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
-                    <td style="text-align: right;">${total.toLocaleString('en-NG', {minimumFractionDigits: 2})}</td>
-                </tr>`;
-                tbody.innerHTML += row;
-            });
-
-            document.getElementById('subtotal').value = subtotal.toLocaleString('en-NG', {minimumFractionDigits: 2});
-            const vat = subtotal * 0.075;
-            document.getElementById('vat').value = vat.toLocaleString('en-NG', {minimumFractionDigits: 2});
-            document.getElementById('grandTotal').textContent = '₦ ' + (subtotal + vat).toLocaleString('en-NG', {minimumFractionDigits: 2});
-            document.getElementById('amountWords').value = "Five Hundred and Seventy Five Thousand Naira Only";
+            try {
+                const config = JSON.parse(atob(hash));
+                
+                document.getElementById('brandNameDisplay').textContent = config.bn || 'METAFORGE ELITE';
+                document.getElementById('watermark').textContent = (config.bn || 'METAFORGE').toUpperCase();
+                document.getElementById('rcDisplay').textContent = config.rc || 'RC 000000';
+                document.getElementById('telDisplay').textContent = config.ph || '+234 000 000 000';
+                document.getElementById('stampAuthority').textContent = (config.bn || 'METAFORGE').toUpperCase();
+                
+                const root = document.documentElement;
+                root.style.setProperty('--brand-primary', config.pc || '#9B5DE5');
+                
+                const receipt = document.getElementById('receipt');
+                receipt.className = 'receipt-container tpl-' + (config.tp || 'modern-tech');
+                
+                document.getElementById('currentDate').textContent = new Date().toISOString().split('T')[0];
+            } catch (e) {
+                console.error("Demo decode error", e);
+            }
         }
 
-        window.onload = applyBranding;
-        window.onhashchange = applyBranding;
+        window.addEventListener('hashchange', refresh);
+        refresh();
     </script>
 </body>
 </html>
