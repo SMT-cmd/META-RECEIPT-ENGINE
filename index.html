@@ -8,7 +8,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"></noscript>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/metaforge-icon.svg">
+    <meta property="og:title" content="METAFORGE | Elite Digital Document Infrastructure">
+    <meta property="og:description" content="Engineered for elite brands who demand autonomy, ownership, and absolute authority over their financial infrastructure.">
+    <meta property="og:image" content="/metaforge-icon.svg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="/metaforge-icon.svg">
     <style>
         :root { 
             --primary: #9B5DE5; 
@@ -280,68 +287,70 @@
             max-width: 1700px; 
             margin: 0 auto; 
             display: grid; 
-            grid-template-columns: 420px 1fr; 
+            grid-template-columns: 450px 1fr; 
             gap: 40px; 
             align-items: stretch; 
         }
 
         .demo-controls {
             background: var(--glass);
-            padding: 40px;
+            padding: 35px;
             border-radius: 30px;
             border: 1px solid var(--border);
             backdrop-filter: blur(40px);
             display: flex;
             flex-direction: column;
+            gap: 20px;
+            height: 950px;
+            overflow-y: auto;
         }
 
-        .demo-input-group { margin-bottom: 30px; }
-        .demo-input-group label { display: block; font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; font-weight: 700; }
+        .demo-controls::-webkit-scrollbar { width: 5px; }
+        .demo-controls::-webkit-scrollbar-track { background: transparent; }
+        .demo-controls::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        .demo-input-group { margin-bottom: 0; }
+        .demo-input-group label { display: block; font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; font-weight: 700; }
         
         .demo-input { 
             width: 100%; 
-            padding: 18px; 
-            background: rgba(0,0,0,0.4); 
+            padding: 14px 18px; 
+            background: rgba(0,0,0,0.3); 
             border: 1px solid var(--border); 
-            border-radius: 16px; 
+            border-radius: 12px; 
             color: inherit; 
             font-family: 'Inter', sans-serif;
-            font-size: 15px;
+            font-size: 14px;
             transition: var(--transition);
         }
-        [data-theme="light"] .demo-input { background: rgba(255,255,255,0.8); }
-        .demo-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 20px var(--primary-glow); }
+        [data-theme="light"] .demo-input { background: rgba(255,255,255,0.6); }
+        .demo-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 15px var(--primary-glow); }
 
         /* Modern Template Grid for 35 Items */
         .template-grid { 
             display: grid; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 12px; 
-            margin-top: 15px; 
-            max-height: 250px; 
-            overflow-y: auto; 
-            padding-right: 5px; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 10px; 
+            margin-top: 5px; 
         }
-        .template-grid::-webkit-scrollbar { width: 6px; }
-        .template-grid::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-        .template-grid::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
         
         .temp-opt { 
             height: auto; 
-            border-radius: 10px; 
+            border-radius: 12px; 
             cursor: pointer; 
-            border: 2px solid transparent; 
+            border: 1px solid var(--border); 
             transition: 0.3s;
             position: relative;
             overflow: hidden;
-            background: transparent;
-            padding: 5px;
+            background: rgba(255,255,255,0.02);
+            padding: 8px;
+            text-align: center;
         }
-        .temp-opt:hover { transform: translateY(-3px); }
-        .temp-opt.active { border-color: var(--primary); transform: scale(1.05); background: rgba(155, 93, 229, 0.1); box-shadow: 0 0 15px var(--primary-glow); }
+        .temp-opt:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .temp-opt.active { border-color: var(--primary); background: rgba(155, 93, 229, 0.1); box-shadow: 0 0 10px var(--primary-glow); }
         
-        .template-preview-mini { height: 40px; background: white; border-radius: 5px; margin-bottom: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 7px; color: #333; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-        .template-name { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; color: var(--text-light); }
+        .template-preview-mini { height: 35px; background: white; border-radius: 4px; margin-bottom: 6px; position: relative; overflow: hidden; }
+        .template-name { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: inherit; opacity: 0.8; }
 
         .demo-viewport {
             height: 950px;
@@ -352,6 +361,22 @@
             overflow: hidden;
             border: 1px solid var(--border);
             flex-grow: 1;
+        }
+
+        @media (max-width: 1100px) {
+            .demo-container { grid-template-columns: 1fr; }
+            .demo-controls { height: auto; max-height: 600px; }
+            .demo-viewport { height: 800px; }
+        }
+
+        @media (max-width: 768px) {
+            .demo-viewport { height: 600px; }
+            .template-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .demo-viewport { height: 500px; }
+            .template-grid { grid-template-columns: repeat(2, 1fr); }
         }
         iframe { width: 100%; height: 100%; border: none; }
 
@@ -490,6 +515,7 @@
         <a href="#social" class="nav-link mobile-link">Partners</a>
         <a href="#demo" class="nav-link mobile-link">Interactive Demo</a>
         <a href="#request" class="nav-link mobile-link">Request Engine</a>
+        <button class="theme-toggle" id="mobileThemeToggle" style="margin-top: 20px;"></button>
     </div>
 
     <section class="hero">
@@ -569,17 +595,29 @@
                     <input type="text" id="demoPhone" class="demo-input" placeholder="+234 814 081 3999" oninput="refreshDemo()">
                 </div>
                 <div class="demo-input-group">
-                    <label>KINETIC COLOR PROFILE</label>
+                    <label>BRAND COLOR PALETTE</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div style="position: relative;">
-                            <input type="text" id="demoColorPrimary" class="demo-input" placeholder="e.g. red, blue, or #9B5DE5" oninput="updateColorPreview('primary'); refreshDemo()">
+                            <input type="text" id="demoColorPrimary" class="demo-input" placeholder="Primary (e.g. #9B5DE5)" oninput="updateColorPreview('primary'); refreshDemo()">
                             <div id="previewPrimary" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 8px; background: var(--primary);"></div>
                         </div>
                         <div style="position: relative;">
-                            <input type="text" id="demoColorSecondary" class="demo-input" placeholder="e.g. red, blue, or #120A1A" oninput="updateColorPreview('secondary'); refreshDemo()">
+                            <input type="text" id="demoColorSecondary" class="demo-input" placeholder="Secondary (e.g. #120A1A)" oninput="updateColorPreview('secondary'); refreshDemo()">
                             <div id="previewSecondary" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 8px; background: var(--secondary);"></div>
                         </div>
                     </div>
+                </div>
+                <div class="demo-input-group">
+                    <label>TYPOGRAPHY PROFILE</label>
+                    <select id="demoFont" class="demo-input" onchange="refreshDemo()" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239B5DE5%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px top 50%; background-size: 12px auto; padding-right: 40px;">
+                        <option value="'Rajdhani', sans-serif">Rajdhani (Modern Tech)</option>
+                        <option value="'Space Grotesk', sans-serif">Space Grotesk (Bold)</option>
+                        <option value="'Inter', sans-serif">Inter (Clean UI)</option>
+                        <option value="'Playfair Display', serif">Playfair (Classic Luxe)</option>
+                        <option value="'Montserrat', sans-serif">Montserrat (Geometric)</option>
+                        <option value="'Roboto Mono', monospace">Roboto Mono (Developer)</option>
+                        <option value="'Dancing Script', cursive">Dancing Script (Elegant)</option>
+                    </select>
                 </div>
                 <div class="demo-input-group">
                     <label>SELECT INFRASTRUCTURE TEMPLATE</label>
@@ -830,9 +868,10 @@
             const email = document.getElementById('demoEmail').value || 'demo@metaforge.website';
             const pc = document.getElementById('demoColorPrimary').value || '#9B5DE5';
             const sc = document.getElementById('demoColorSecondary').value || '#120A1A';
+            const font = document.getElementById('demoFont').value || "'Rajdhani', sans-serif";
             
             const config = { 
-                bn: brand, ph: ph, rc: rc, em: email, tp: activeTemp, pc: pc, sc: sc,
+                bn: brand, ph: ph, rc: rc, em: email, tp: activeTemp, pc: pc, sc: sc, ff: font,
                 dtp: "INVOICE", locked: true, ts: Date.now() 
             };
             
@@ -881,12 +920,30 @@
         };
 
         const themeBtn = document.getElementById('themeToggle');
+        const mobileThemeBtn = document.getElementById('mobileThemeToggle');
+        
+        function updateTheme(target) {
+            document.body.setAttribute('data-theme', target);
+            themeBtn.textContent = target === 'light' ? '☀️' : '🌙';
+            if (mobileThemeBtn) mobileThemeBtn.textContent = target === 'light' ? '☀️' : '🌙';
+        }
+
         themeBtn.onclick = () => {
             const current = document.body.getAttribute('data-theme');
             const target = current === 'light' ? 'dark' : 'light';
-            document.body.setAttribute('data-theme', target);
-            themeBtn.textContent = target === 'light' ? '☀️' : '🌙';
+            updateTheme(target);
         };
+
+        if (mobileThemeBtn) {
+            mobileThemeBtn.onclick = () => {
+                const current = document.body.getAttribute('data-theme');
+                const target = current === 'light' ? 'dark' : 'light';
+                updateTheme(target);
+            };
+        }
+
+        // Initialize theme icon
+        updateTheme('dark');
 
         // --- FULL 7-DAY DYNAMIC BACKGROUND ENGINE RESTORED ---
         const canvas = document.getElementById('bgCanvas');

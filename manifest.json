@@ -1,18 +1,17 @@
-{
-  "name": "METAFORGE ENGINE",
-  "short_name": "MetaForge",
-  "description": "Professional serverless document generation system.",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#FF6B00",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/1052/1052856.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
-}
+{ 
+   "name": "METAFORGE ENGINE", 
+   "short_name": "Metaforge", 
+   "description": "Professional Document & Receipt System", 
+   "start_url": "/", 
+   "display": "standalone", 
+   "background_color": "#1a1a2e", 
+   "theme_color": "#FF6B00", 
+   "icons": [ 
+     { 
+       "src": "/metaforge-icon.svg", 
+       "sizes": "any", 
+       "type": "image/svg+xml", 
+       "purpose": "any maskable" 
+     } 
+   ] 
+ }

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"> 
+   <!-- Definitions for Gradients & Drop Shadows --> 
+   <defs> 
+     <!-- Dark App Icon Background --> 
+     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"> 
+       <stop offset="0%" stop-color="#1A1A2E" /> 
+       <stop offset="100%" stop-color="#0A0A12" /> 
+     </linearGradient> 
+      
+     <!-- Metaforge Orange Glow --> 
+     <linearGradient id="forgePrimary" x1="0%" y1="0%" x2="100%" y2="100%"> 
+       <stop offset="0%" stop-color="#FF9955" /> 
+       <stop offset="50%" stop-color="#FF6B00" /> 
+       <stop offset="100%" stop-color="#CC4400" /> 
+     </linearGradient> 
+      
+     <!-- Tech Cyan Accent --> 
+     <linearGradient id="forgeAccent" x1="0%" y1="0%" x2="100%" y2="100%"> 
+       <stop offset="0%" stop-color="#00FFFF" /> 
+       <stop offset="100%" stop-color="#0088FF" /> 
+     </linearGradient> 
+      
+     <!-- Glow Effect for the Core --> 
+     <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"> 
+       <feGaussianBlur stdDeviation="12" result="blur" /> 
+       <feComposite in="SourceGraphic" in2="blur" operator="over" /> 
+     </filter> 
+      
+     <!-- Depth Shadow --> 
+     <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%"> 
+       <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000" flood-opacity="0.8"/> 
+     </filter> 
+   </defs> 
+  
+   <!-- App Icon Rounded Square Background --> 
+   <rect width="512" height="512" rx="115" fill="url(#bg)" /> 
+  
+   <!-- Background Tech Rings --> 
+   <circle cx="256" cy="256" r="170" fill="none" stroke="rgba(255, 107, 0, 0.15)" stroke-width="4" stroke-dasharray="12 8" /> 
+   <circle cx="256" cy="256" r="190" fill="none" stroke="rgba(0, 212, 255, 0.08)" stroke-width="2" /> 
+  
+   <!-- Main Logo Body ('M' Anvil Shape) --> 
+   <g filter="url(#shadow)"> 
+     <!-- Left Base --> 
+     <path d="M 140 360 L 140 220 L 220 280 L 256 250 L 256 360 Z" fill="url(#forgePrimary)" /> 
+     <!-- Right Base --> 
+     <path d="M 372 360 L 372 220 L 292 280 L 256 250 L 256 360 Z" fill="url(#forgePrimary)" opacity="0.85" /> 
+     <!-- Center Floating Engine Core --> 
+     <path d="M 256 140 L 296 200 L 256 230 L 216 200 Z" fill="url(#forgeAccent)" filter="url(#glow)" /> 
+   </g> 
+    
+   <!-- Outer Tech Circuit Lines --> 
+   <path d="M 256 110 L 256 80 M 140 200 L 100 160 M 372 200 L 412 160" stroke="url(#forgeAccent)" stroke-width="8" stroke-linecap="round" /> 
+   <path d="M 140 380 L 140 400 M 372 380 L 372 400 M 256 380 L 256 420" stroke="url(#forgePrimary)" stroke-width="8" stroke-linecap="round" opacity="0.4" /> 
+ </svg>
