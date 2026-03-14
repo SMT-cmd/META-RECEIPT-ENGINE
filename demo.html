@@ -62,13 +62,50 @@
             margin-bottom: -40mm;
         }
 
-        /* Iframe Media Queries */
+        /* Print Optimization for Demo */
+        @media print {
+            body { background: white !important; padding: 0 !important; margin: 0 !important; height: 297mm; overflow: hidden; }
+            .receipt-container { 
+                width: 210mm !important; 
+                height: 297mm !important; 
+                min-height: 297mm !important;
+                max-height: 297mm !important;
+                margin: 0 !important; 
+                padding: 0 !important;
+                transform: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                page-break-after: always;
+            }
+            .demo-lock-overlay { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        /* Iframe Media Queries for Responsive Display (Android & iPhone) */
         @media (max-width: 1400px) { .receipt-container { transform: scale(0.8); margin-bottom: -60mm; } }
         @media (max-width: 1200px) { .receipt-container { transform: scale(0.75); margin-bottom: -70mm; } }
         @media (max-width: 992px) { .receipt-container { transform: scale(0.65); margin-bottom: -100mm; } }
-        @media (max-width: 768px) { .receipt-container { transform: scale(0.55); margin-bottom: -130mm; } }
-        @media (max-width: 576px) { .receipt-container { transform: scale(0.45); margin-bottom: -160mm; } }
-        @media (max-width: 400px) { .receipt-container { transform: scale(0.35); margin-bottom: -190mm; } }
+        
+        @media (max-width: 768px) { 
+            .receipt-container { 
+                transform: scale(0.9) !important; /* Allow more width on mobile */
+                width: 95vw !important;
+                min-height: auto !important;
+                max-height: none !important;
+                margin-bottom: 20px !important;
+                border-radius: 15px;
+            }
+            .info-section { grid-template-columns: 1fr; gap: 10px; }
+            .bottom-section { grid-template-columns: 1fr; gap: 20px; }
+            .signature-section { grid-template-columns: 1fr; gap: 30px; }
+            .header-content { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+
+        @media (max-width: 480px) {
+            .receipt-container { transform: scale(1) !important; width: 100vw !important; padding: 10px !important; border-radius: 0; }
+            .brand-name { font-size: 24px !important; }
+            .doc-type-badge { padding: 10px 20px !important; font-size: 16px !important; }
+        }
 
         .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Space Grotesk', sans-serif; font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }
         .security-layer { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--brand-primary) 0.5px, transparent 0.5px); background-size: 30px 30px; opacity: 0.04; pointer-events: none; z-index: 1; }

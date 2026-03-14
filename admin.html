@@ -368,8 +368,9 @@
 
             <div class="panel">
                 <div class="panel-header">
-                    <div class="panel-title">Active Engine Registry</div>
-                </div>
+                <div class="panel-title">Active Engine Registry</div>
+                <button class="btn-action" style="border-color: var(--danger); color: var(--danger); font-weight: 700;" onclick="clearAllPartners()">⚠️ CLEAR ALL PARTNERS</button>
+            </div>
                 <div class="data-table-wrapper">
                     <table class="data-table">
                         <thead>
@@ -441,7 +442,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw", 
@@ -510,9 +511,11 @@
             document.getElementById('authLoading').style.display = 'block';
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                // Try to sign in, if fails try to sign up (One-time signup logic)
+                await signInWithEmailAndPassword(auth, email, password)
+                    .catch(() => createUserWithEmailAndPassword(auth, email, password));
             } catch (error) {
-                alert(`Login failed: ${error.message}`);
+                alert(`Authentication failed: ${error.message}`);
                 document.getElementById('authForm').style.display = 'block';
                 document.getElementById('authLoading').style.display = 'none';
             }
@@ -717,6 +720,38 @@
             if(confirm('Delete this engine permanently? This action cannot be undone.')) {
                 await deleteDoc(doc(db, "short_urls", id));
                 logAudit("Deleted engine: " + id);
+            }
+        };
+
+        window.clearAllPartners = async () => {
+            const confirmed = confirm("⚠️ WARNING: This will permanently DELETE ALL active engine registries (Brand Partners). This action cannot be undone. Are you absolutely sure?");
+            if (!confirmed) return;
+            
+            const pin = prompt("Please enter the Admin Security Pin to confirm mass deletion:");
+            if (pin !== "2026") { // A simple safety check
+                alert("Incorrect Pin. Mass deletion aborted.");
+                return;
+            }
+
+            try {
+                const snapshot = await getDocs(collection(db, "short_urls"));
+                const total = snapshot.docs.length;
+                
+                if (total === 0) {
+                    alert("No partners found to delete.");
+                    return;
+                }
+
+                if (!confirm(`You are about to delete ${total} partner(s). Proceed?`)) return;
+
+                const batch = snapshot.docs.map(d => deleteDoc(d.ref));
+                await Promise.all(batch);
+                
+                alert(`Successfully cleared ${total} partners.`);
+                logAudit(`Mass deletion of ${total} partners performed.`);
+            } catch (err) {
+                console.error(err);
+                alert("Error clearing partners: " + err.message);
             }
         };
 
