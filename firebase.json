@@ -25,11 +25,7 @@
       },
       {
         "source": "/creator",
-        "destination": "/creator.html"
-      },
-      {
-        "source": "/engine/**",
-        "destination": "/engine/index.html"
+        "destination": "/creator/index.html"
       }
     ]
   }

@@ -6,8 +6,7 @@
     <title>METAFORGE | Interactive Demo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
     
@@ -25,10 +24,52 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { background: transparent; font-family: 'Inter', sans-serif; padding: 0; margin: 0; min-height: 100vh; overflow: hidden; }
+        
+        body { 
+            background: transparent; 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 10px;
+        }
 
-        /* Receipt Container */
-        .receipt-container { width: 210mm; min-height: 297mm; max-height: 297mm; margin: 0 auto; background: white; position: relative; display: flex; flex-direction: column; color: #1a1a1a; font-size: 12px; overflow: hidden; box-sizing: border-box; transform: scale(0.9); transform-origin: top center; }
+        /* Responsive Scaling Fixes for "Hanging" Bug */
+        .receipt-wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Base A4 Receipt Container */
+        .receipt-container { 
+            width: 210mm; 
+            min-height: 297mm; 
+            max-height: 297mm; 
+            background: white; 
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            color: #1a1a1a; 
+            font-size: 12px; 
+            overflow: hidden; 
+            box-sizing: border-box; 
+            transform-origin: top center; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            transform: scale(0.85); /* Default scale */
+            margin-bottom: -40mm;
+        }
+
+        /* Iframe Media Queries */
+        @media (max-width: 1400px) { .receipt-container { transform: scale(0.8); margin-bottom: -60mm; } }
+        @media (max-width: 1200px) { .receipt-container { transform: scale(0.75); margin-bottom: -70mm; } }
+        @media (max-width: 992px) { .receipt-container { transform: scale(0.65); margin-bottom: -100mm; } }
+        @media (max-width: 768px) { .receipt-container { transform: scale(0.55); margin-bottom: -130mm; } }
+        @media (max-width: 576px) { .receipt-container { transform: scale(0.45); margin-bottom: -160mm; } }
+        @media (max-width: 400px) { .receipt-container { transform: scale(0.35); margin-bottom: -190mm; } }
+
         .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Space Grotesk', sans-serif; font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }
         .security-layer { position: absolute; inset: 0; background-image: radial-gradient(circle, var(--brand-primary) 0.5px, transparent 0.5px); background-size: 30px 30px; opacity: 0.04; pointer-events: none; z-index: 1; }
         
@@ -78,310 +119,472 @@
         .stamp-outer { position: absolute; inset: 0; border: 3px solid var(--brand-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.95); box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         .stamp-inner { position: absolute; inset: 5px; border: 1px solid var(--brand-primary); border-radius: 50%; border-style: dashed; }
         .stamp-content { position: relative; z-index: 10; text-align: center; padding: 6px; }
-        .stamp-status { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 1px; }
+        .stamp-status { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 900; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .stamp-authority { font-size: 7px; color: var(--brand-primary); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; font-family: 'Orbitron', sans-serif; border-top: 1px solid var(--brand-primary); padding-top: 2px; }
         
         .footer-message { text-align: center; padding: 15px 35px; background: var(--brand-light); border-top: 1px solid var(--brand-primary); position: relative; z-index: 2; flex-shrink: 0; }
         .message-text { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--brand-primary); letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
         
-        .demo-lock-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.02);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        }
-        .demo-lock-text {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 120px;
-            font-weight: 900;
-            color: rgba(0,0,0,0.03);
-            transform: rotate(-35deg);
-            white-space: nowrap;
-        }
+        .demo-lock-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.02); z-index: 100; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+        .demo-lock-text { font-family: 'Space Grotesk', sans-serif; font-size: 120px; font-weight: 900; color: rgba(0,0,0,0.03); transform: rotate(-35deg); white-space: nowrap; }
 
-        /* TEMPLATES (Partial for Demo) */
-        .tpl-cyber-punk { background: #000; color: #00FF41; border: 1px solid #00FF41; }
-        .tpl-cyber-punk .receipt-header { border-bottom: 1px solid #00FF41; }
-        .tpl-cyber-punk .doc-type-badge { border: 1px solid #00FF41; color: #00FF41; background: transparent; }
-        .tpl-cyber-punk .info-value { background: rgba(0,255,65,0.1); border-color: #00FF41; color: #00FF41; }
-        .tpl-cyber-punk .items-table th { background: #00FF41; color: #000; }
-        .tpl-cyber-punk .items-table td { border-color: rgba(0,255,65,0.3); }
-        .tpl-cyber-punk .totals-box { background: rgba(0,255,65,0.05); border-color: #00FF41; }
-        .tpl-cyber-punk .total-value.grand { color: #00FF41; text-shadow: 0 0 10px #00FF41; }
-        .tpl-cyber-punk .stamp-outer { border-color: #00FF41; }
-        .tpl-cyber-punk .stamp-status { color: #00FF41; }
-
-        .tpl-midnight-special { background: #1a1a2e; color: #fff; }
-        .tpl-midnight-special .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .tpl-midnight-special .info-value { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #fff; }
-        .tpl-midnight-special .items-table th { background: rgba(255,255,255,0.1); color: var(--tpl-primary); }
-        .tpl-midnight-special .totals-box { background: rgba(255,255,255,0.05); border-color: var(--tpl-primary); }
+        /* ALL 35 TEMPLATES SYNCED FROM CREATOR.HTML */
+        .tpl-modern-tech { font-family: 'Rajdhani', sans-serif; }
+        .tpl-modern-tech .receipt-header { background: var(--tpl-secondary); color: white; border-bottom: 5px solid var(--tpl-primary); }
+        .tpl-modern-tech .brand-name span, .tpl-modern-tech .brand-contact strong { color: var(--tpl-primary); }
+        .tpl-modern-tech .doc-type-badge { background: var(--tpl-primary); color: white; transform: rotate(-3deg); }
+        .tpl-modern-tech .info-section { background: #f5f5f5; border-bottom: 3px solid var(--tpl-primary); }
+        .tpl-modern-tech .items-table th { background: var(--tpl-secondary); color: white; }
+        .tpl-modern-tech .words-box { background: rgba(155, 93, 229, 0.05); border-left: 4px solid var(--tpl-primary); }
+        .tpl-modern-tech .totals-box { border: 2px solid var(--tpl-primary); }
+        .tpl-modern-tech .total-value.grand { color: var(--tpl-primary); }
+        .tpl-modern-tech .stamp-outer { border: 3px solid var(--tpl-primary); }
         
-        .tpl-royal-elegance { font-family: 'Cinzel', serif; background: #FFFDF5; border: 4px double #8B4513; }
-        .tpl-royal-elegance .receipt-header { border-bottom: 1px solid #8B4513; }
-        .tpl-royal-elegance .items-table th { background: #2C1810; color: #D4AF37; }
-        
-        .tpl-minimalist-pro { font-family: 'Inter', sans-serif; background: #fff; }
-        .tpl-minimalist-pro .receipt-header { border-bottom: 1px solid #eee; }
-        .tpl-minimalist-pro .brand-name { font-weight: 300; letter-spacing: 5px; }
+        .tpl-minimalist-pro { font-family: 'Inter', sans-serif; }
+        .tpl-minimalist-pro .receipt-header { background: white; border-bottom: 1px solid #eee; }
+        .tpl-minimalist-pro .brand-name { font-weight: 300; letter-spacing: 8px; }
+        .tpl-minimalist-pro .doc-type-badge { border: 1px solid var(--tpl-primary); color: var(--tpl-primary); background: transparent; font-weight: 500; }
+        .tpl-minimalist-pro .items-table th { border-bottom: 2px solid var(--tpl-secondary); background: transparent; color: var(--tpl-secondary); }
+        .tpl-minimalist-pro .words-box { background: rgba(0,0,0,0.02); border-left: 3px solid var(--tpl-secondary); }
+        .tpl-minimalist-pro .totals-box { border: 1px solid #eee; background: white; }
 
-        .tpl-clean-air { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 30px; }
-        .tpl-clean-air .receipt-header { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 20px; margin: 20px; padding: 20px; }
-        .tpl-clean-air .doc-type-badge { background: var(--tpl-primary, #4299e1); color: white; border-radius: 50px; }
-        .tpl-clean-air .items-table th { background: transparent; color: #4a5568; }
-        .tpl-clean-air .items-table td { background: #f7fafc; border-radius: 8px; border: none; }
-        .tpl-clean-air .totals-box { background: linear-gradient(135deg, var(--tpl-primary, #4299e1) 0%, var(--tpl-secondary, #1a365d) 100%); color: white; }
+        .tpl-corporate-luxe { font-family: 'Playfair Display', serif; background: linear-gradient(135deg, #fff 0%, #fafafa 100%); border: 8px solid var(--tpl-primary); }
+        .tpl-corporate-luxe .receipt-header { border-bottom: 2px double var(--tpl-primary); }
+        .tpl-corporate-luxe .brand-name { font-style: italic; }
+        .tpl-corporate-luxe .doc-type-badge { background: var(--tpl-primary); color: white; }
+        .tpl-corporate-luxe .items-table th { background: var(--tpl-secondary); color: var(--tpl-primary); }
+        .tpl-corporate-luxe .totals-box { background: rgba(155, 93, 229, 0.1); border: 1px solid var(--tpl-primary); }
+        
+        .tpl-legal-professional { font-family: 'Cinzel', serif; background: #fff; border: 3px solid var(--tpl-secondary); }
+        .tpl-legal-professional .receipt-header { text-align: center; border-bottom: 3px double var(--tpl-secondary); }
+        .tpl-legal-professional .header-content { flex-direction: column; align-items: center; }
+        .tpl-legal-professional .doc-type-badge { border: 2px solid var(--tpl-primary); color: var(--tpl-primary); background: transparent; }
+        .tpl-legal-professional .items-table th { background: var(--tpl-secondary); color: white; }
+        .tpl-legal-professional .totals-box { border: 2px solid var(--tpl-secondary); }
+
+        .tpl-cyber-punk { font-family: 'Orbitron', monospace; background: #000; color: var(--tpl-primary); border: 2px solid var(--tpl-primary); box-shadow: inset 0 0 30px rgba(0,255,65,0.3); }
+        .tpl-cyber-punk .receipt-header { border-bottom: 1px solid var(--tpl-primary); }
+        .tpl-cyber-punk .doc-type-badge { border: 1px solid var(--tpl-primary); background: transparent; color: var(--tpl-primary); box-shadow: 0 0 15px var(--tpl-primary); }
+        .tpl-cyber-punk .info-value { background: rgba(0,255,65,0.1); border-color: var(--tpl-primary); color: var(--tpl-primary); }
+        .tpl-cyber-punk .items-table th { background: var(--tpl-primary); color: #000; }
+        .tpl-cyber-punk .items-table td { border-bottom: 1px solid rgba(0,255,65,0.3); }
+        .tpl-cyber-punk .totals-box { border: 1px solid var(--tpl-primary); background: rgba(0,255,65,0.05); }
+        .tpl-cyber-punk .stamp-outer { background: #000; border-color: var(--tpl-primary); }
+
+        .tpl-retro-wave { font-family: 'Orbitron', sans-serif; background: linear-gradient(180deg, #2d1b4e 0%, #1a0b2e 100%); color: #fff; }
+        .tpl-retro-wave .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-retro-wave .doc-type-badge { background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000; }
+        .tpl-retro-wave .info-value { background: rgba(255,255,255,0.05); border: none; color: #fff; }
+        .tpl-retro-wave .items-table th { background: rgba(255,0,255,0.2); color: #00ffff; }
+        .tpl-retro-wave .totals-box { background: rgba(0,255,255,0.1); border: 1px solid #00ffff; }
 
         .tpl-neo-brutalist { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 4px solid #000; box-shadow: 8px 8px 0 #000; }
         .tpl-neo-brutalist .receipt-header { border-bottom: 4px solid #000; }
-        .tpl-neo-brutalist .brand-name { text-transform: uppercase; }
-        .tpl-neo-brutalist .doc-type-badge { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+        .tpl-neo-brutalist .doc-type-badge { background: var(--tpl-primary); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
         .tpl-neo-brutalist .items-table { border: 3px solid #000; }
         .tpl-neo-brutalist .items-table th { background: #000; color: white; }
-        .tpl-neo-brutalist .items-table td { border-bottom: 2px solid #000; }
-        .tpl-neo-brutalist .totals-box { background: var(--tpl-primary, #FF006E); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
+        .tpl-neo-brutalist .totals-box { background: var(--tpl-primary); color: white; border: 3px solid #000; box-shadow: 4px 4px 0 #000; }
 
-        .tpl-art-deco { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 100%); border: 3px solid var(--tpl-primary, #C9A961); position: relative; }
-        .tpl-art-deco .brand-name { letter-spacing: 5px; }
-        .tpl-art-deco .doc-type-badge { border: 2px solid var(--tpl-primary, #C9A961); letter-spacing: 4px; }
-        .tpl-art-deco .items-table th { background: var(--tpl-secondary, #2C2C2C); color: var(--tpl-primary, #C9A961); letter-spacing: 2px; }
-        .tpl-art-deco .totals-box { border: 2px solid var(--tpl-primary, #C9A961); text-align: center; }
-        .tpl-art-deco .total-value.grand { color: var(--tpl-primary, #C9A961); }
+        .tpl-startup-modern { font-family: 'Sora', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; }
+        .tpl-startup-modern .doc-type-badge { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 50px; }
+        .tpl-startup-modern .info-value { background: rgba(255,255,255,0.1); border: none; color: white; }
+        .tpl-startup-modern .items-table th { background: rgba(255,255,255,0.1); color: white; }
+        .tpl-startup-modern .totals-box { background: rgba(255,255,255,0.15); border: none; }
 
-        .tpl-retro-wave { font-family: 'Orbitron', sans-serif; background: linear-gradient(180deg, #2d1b4e 0%, #1a0b2e 100%); color: #fff; position: relative; overflow: hidden; }
-        .tpl-retro-wave .receipt-header { border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .tpl-retro-wave .brand-name { text-shadow: 0 0 20px #ff00ff; }
-        .tpl-retro-wave .doc-type-badge { background: linear-gradient(90deg, #ff00ff, #00ffff); color: #000; }
-        .tpl-retro-wave .items-table th { background: rgba(255,0,255,0.2); color: #00ffff; }
-        .tpl-retro-wave .items-table td { border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .tpl-retro-wave .totals-box { background: rgba(0,255,255,0.1); border: 1px solid #00ffff; }
+        .tpl-royal-elegance { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #FFFDF5 0%, #FFF8E7 100%); border: 4px double var(--tpl-primary); }
+        .tpl-royal-elegance .receipt-header { border-bottom: 1px solid var(--tpl-primary); text-align: center; }
+        .tpl-royal-elegance .header-content { flex-direction: column; align-items: center; }
+        .tpl-royal-elegance .doc-type-badge { border: 2px solid var(--tpl-primary); background: transparent; color: var(--tpl-primary); }
+        .tpl-royal-elegance .items-table th { background: var(--tpl-secondary); color: var(--tpl-primary); }
+        .tpl-royal-elegance .totals-box { border-top: 2px solid var(--tpl-primary); border-bottom: 2px solid var(--tpl-primary); background: transparent; }
+
+        .tpl-art-deco { font-family: 'Cinzel', serif; background: linear-gradient(135deg, #f5f5dc 0%, #faf0e6 100%); border: 3px solid var(--tpl-primary); position: relative; }
+        .tpl-art-deco .receipt-header { text-align: center; }
+        .tpl-art-deco .header-content { flex-direction: column; align-items: center; }
+        .tpl-art-deco .doc-type-badge { border: 2px solid var(--tpl-primary); background: transparent; color: var(--tpl-secondary); }
+        .tpl-art-deco .items-table th { background: var(--tpl-secondary); color: var(--tpl-primary); }
+        .tpl-art-deco .totals-box { border: 2px solid var(--tpl-primary); text-align: center; background: transparent; }
+
+        .tpl-fashion-boutique { font-family: 'Raleway', sans-serif; background: #fff; position: relative; }
+        .tpl-fashion-boutique .receipt-header { text-align: center; border-top: 8px solid var(--tpl-secondary); }
+        .tpl-fashion-boutique .header-content { flex-direction: column; align-items: center; }
+        .tpl-fashion-boutique .doc-type-badge { border: 1px solid #000; background: transparent; color: #000; }
+        .tpl-fashion-boutique .items-table th { border-bottom: 1px solid #000; background: transparent; color: #000; }
+        .tpl-fashion-boutique .totals-box { background: transparent; border: none; text-align: right; }
+
+        .tpl-hotel-resort { font-family: 'Playfair Display', serif; background: linear-gradient(135deg, #fff 0%, #f8f4e8 100%); border: 3px solid var(--tpl-primary); }
+        .tpl-hotel-resort .receipt-header { text-align: center; border-bottom: 2px solid var(--tpl-primary); }
+        .tpl-hotel-resort .header-content { flex-direction: column; align-items: center; }
+        .tpl-hotel-resort .doc-type-badge { background: var(--tpl-primary); color: white; }
+        .tpl-hotel-resort .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-hotel-resort .totals-box { background: rgba(184,134,11,0.1); border: 1px solid var(--tpl-primary); }
+
+        .tpl-clean-air { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 30px; }
+        .tpl-clean-air .receipt-header { background: #f7fafc; border-radius: 20px; margin: 20px; }
+        .tpl-clean-air .doc-type-badge { background: var(--tpl-primary); color: white; border-radius: 50px; }
+        .tpl-clean-air .items-table th { background: transparent; color: #4a5568; }
+        .tpl-clean-air .items-table td { background: #f7fafc; border-radius: 8px; border: none; }
+        .tpl-clean-air .totals-box { background: var(--tpl-secondary); color: white; }
 
         .tpl-japanese-minimal { font-family: 'Inter', sans-serif; background: #fafafa; }
-        .tpl-japanese-minimal .brand-name { letter-spacing: 8px; }
-        .tpl-japanese-minimal .doc-type-badge { font-size: 48px; font-weight: 100; color: var(--tpl-primary, #E74C3C); opacity: 0.3; background: transparent; }
-        .tpl-japanese-minimal .items-table th { border-bottom: 1px solid #000; background: transparent; font-weight: 400; }
-        .tpl-japanese-minimal .total-value.grand { color: var(--tpl-primary, #E74C3C); font-weight: 100; }
+        .tpl-japanese-minimal .header-content { align-items: flex-start; }
+        .tpl-japanese-minimal .doc-type-badge { font-size: 48px; font-weight: 100; color: var(--tpl-primary); opacity: 0.3; background: transparent; transform: none; box-shadow: none; }
+        .tpl-japanese-minimal .items-table th { border-bottom: 1px solid #000; background: transparent; color: #000; font-weight: 400; }
+        .tpl-japanese-minimal .totals-box { background: transparent; border: none; text-align: right; }
 
-        @media (max-width: 768px) {
-            .receipt-container { transform: scale(0.4); margin-top: -300px; }
-        }
+        .tpl-compact-slip { font-family: 'Roboto Mono', monospace; background: #fff; width: 85%; margin: 0 auto; border: 1px dashed #ccc; }
+        .tpl-compact-slip .receipt-header { text-align: center; border-bottom: 1px dashed #ccc; }
+        .tpl-compact-slip .header-content { flex-direction: column; align-items: center; }
+        .tpl-compact-slip .doc-type-badge { background: transparent; color: #000; font-size: 14px; border: 1px solid #000; }
+        .tpl-compact-slip .items-table th { background: transparent; color: #000; border-bottom: 1px solid #000; }
+        .tpl-compact-slip .totals-box { border-top: 2px solid #000; border-radius: 0; }
+
+        .tpl-garage-workshop { font-family: 'Oswald', sans-serif; background: #1a1a1a; color: #fff; border: 4px solid var(--tpl-primary); }
+        .tpl-garage-workshop .receipt-header { border-bottom: 2px solid var(--tpl-primary); }
+        .tpl-garage-workshop .doc-type-badge { background: var(--tpl-primary); color: #000; clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%); }
+        .tpl-garage-workshop .info-value { background: #333; border: none; color: #fff; }
+        .tpl-garage-workshop .items-table th { background: var(--tpl-primary); color: #000; }
+        .tpl-garage-workshop .totals-box { background: var(--tpl-primary); color: #000; clip-path: polygon(0% 0%, 100% 0%, 98% 100%, 2% 100%); border-radius: 0; }
+        .tpl-garage-workshop .stamp-outer { background: #1a1a1a; }
+
+        .tpl-bold-stripe { font-family: 'Oswald', sans-serif; background: #fff; }
+        .tpl-bold-stripe .receipt-header { background: var(--tpl-primary); color: white; }
+        .tpl-bold-stripe .doc-type-badge { background: white; color: var(--tpl-primary); }
+        .tpl-bold-stripe .info-section { background: var(--tpl-secondary); color: white; }
+        .tpl-bold-stripe .info-value { background: #333; border: none; color: white; }
+        .tpl-bold-stripe .items-table th { background: var(--tpl-secondary); color: white; }
+        .tpl-bold-stripe .totals-box { background: var(--tpl-primary); color: white; border-radius: 0; }
+
+        .tpl-fitness-gym { font-family: 'Oswald', sans-serif; background: #111; color: white; border: 4px solid var(--tpl-primary); }
+        .tpl-fitness-gym .receipt-header { border-bottom: 3px solid var(--tpl-primary); }
+        .tpl-fitness-gym .doc-type-badge { background: var(--tpl-primary); color: #000; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); }
+        .tpl-fitness-gym .info-value { background: #222; border: none; color: white; }
+        .tpl-fitness-gym .items-table th { background: var(--tpl-primary); color: #000; }
+        .tpl-fitness-gym .totals-box { background: var(--tpl-primary); color: #000; }
+        .tpl-fitness-gym .stamp-outer { background: #111; }
+
+        .tpl-pharmacy-medical { font-family: 'Inter', sans-serif; background: #fff; border: 3px solid var(--tpl-primary); }
+        .tpl-pharmacy-medical .receipt-header { border-bottom: 2px solid var(--tpl-primary); }
+        .tpl-pharmacy-medical .doc-type-badge { background: var(--tpl-primary); color: white; }
+        .tpl-pharmacy-medical .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-pharmacy-medical .totals-box { background: #e3f2fd; border-left: 4px solid var(--tpl-primary); }
+
+        .tpl-bakery-sweet { font-family: 'Dancing Script', cursive; background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 3px dashed var(--tpl-primary); }
+        .tpl-bakery-sweet .receipt-header { text-align: center; }
+        .tpl-bakery-sweet .header-content { flex-direction: column; align-items: center; }
+        .tpl-bakery-sweet .doc-type-badge { background: var(--tpl-primary); color: white; font-family: 'Poppins', sans-serif; border-radius: 20px; }
+        .tpl-bakery-sweet .items-table th { background: var(--tpl-primary); color: white; font-family: 'Poppins', sans-serif; }
+        .tpl-bakery-sweet .totals-box { background: white; border-radius: 15px; }
+
+        .tpl-nature-organic { font-family: 'Lora', serif; background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%); border: 2px solid var(--tpl-primary); }
+        .tpl-nature-organic .receipt-header { text-align: center; }
+        .tpl-nature-organic .header-content { flex-direction: column; align-items: center; }
+        .tpl-nature-organic .doc-type-badge { background: var(--tpl-primary); color: white; font-family: 'Poppins', sans-serif; }
+        .tpl-nature-organic .items-table th { background: var(--tpl-primary); color: white; font-family: 'Poppins', sans-serif; }
+        .tpl-nature-organic .totals-box { background: rgba(85,139,47,0.1); border-radius: 10px; }
+
+        .tpl-salon-beauty { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #ffeef8 0%, #ffe0f0 100%); border: 3px solid var(--tpl-primary); }
+        .tpl-salon-beauty .receipt-header { text-align: center; background: var(--tpl-primary); color: white; }
+        .tpl-salon-beauty .header-content { flex-direction: column; align-items: center; }
+        .tpl-salon-beauty .doc-type-badge { background: white; color: var(--tpl-primary); border-radius: 30px; }
+        .tpl-salon-beauty .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-salon-beauty .totals-box { background: white; border: 2px solid var(--tpl-primary); border-radius: 15px; }
+
+        .tpl-restaurant-diner { font-family: 'Lora', serif; background: #fff; border: 4px dotted var(--tpl-primary); }
+        .tpl-restaurant-diner .receipt-header { text-align: center; border-bottom: 2px dashed var(--tpl-primary); }
+        .tpl-restaurant-diner .header-content { flex-direction: column; align-items: center; }
+        .tpl-restaurant-diner .doc-type-badge { background: var(--tpl-primary); color: white; font-family: 'Oswald', sans-serif; }
+        .tpl-restaurant-diner .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-restaurant-diner .totals-box { background: #fff8f0; border: 2px solid var(--tpl-primary); }
+
+        .tpl-construction-industrial { font-family: 'Oswald', sans-serif; background: #f4f4f4; border: 5px solid var(--tpl-primary); }
+        .tpl-construction-industrial .receipt-header { background: var(--tpl-secondary); color: white; border-bottom: 5px solid var(--tpl-primary); }
+        .tpl-construction-industrial .doc-type-badge { background: var(--tpl-primary); color: #000; clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%); }
+        .tpl-construction-industrial .items-table th { background: var(--tpl-secondary); color: white; }
+        .tpl-construction-industrial .totals-box { background: var(--tpl-primary); color: #000; }
+
+        .tpl-education-academy { font-family: 'Inter', sans-serif; background: #fff; border: 3px solid var(--tpl-primary); }
+        .tpl-education-academy .receipt-header { background: var(--tpl-primary); color: white; }
+        .tpl-education-academy .doc-type-badge { background: white; color: var(--tpl-primary); border-radius: 8px; }
+        .tpl-education-academy .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-education-academy .totals-box { background: #f0f4ff; border-left: 5px solid var(--tpl-primary); }
+
+        .tpl-transport-logistics { font-family: 'Rajdhani', sans-serif; background: #fff; border: 3px solid var(--tpl-secondary); }
+        .tpl-transport-logistics .receipt-header { background: var(--tpl-secondary); color: white; border-bottom: 5px solid var(--tpl-primary); }
+        .tpl-transport-logistics .doc-type-badge { background: var(--tpl-primary); color: #000; }
+        .tpl-transport-logistics .items-table th { background: var(--tpl-secondary); color: white; }
+        .tpl-transport-logistics .totals-box { background: var(--tpl-primary); color: #000; }
+
+        .tpl-real-estate { font-family: 'Cinzel', serif; background: #fff; border: 4px double var(--tpl-primary); }
+        .tpl-real-estate .receipt-header { text-align: center; }
+        .tpl-real-estate .header-content { flex-direction: column; align-items: center; }
+        .tpl-real-estate .doc-type-badge { border: 3px solid var(--tpl-primary); background: transparent; color: var(--tpl-primary); }
+        .tpl-real-estate .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-real-estate .totals-box { border: 2px solid var(--tpl-primary); background: #fffaf0; }
+
+        .tpl-event-planning { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%); border: 3px solid var(--tpl-primary); }
+        .tpl-event-planning .receipt-header { text-align: center; background: var(--tpl-primary); color: white; clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%); padding-bottom: 40px; }
+        .tpl-event-planning .header-content { flex-direction: column; align-items: center; }
+        .tpl-event-planning .doc-type-badge { background: white; color: var(--tpl-primary); border-radius: 25px; }
+        .tpl-event-planning .items-table th { background: var(--tpl-primary); color: white; }
+        .tpl-event-planning .totals-box { background: white; border: 2px solid var(--tpl-primary); border-radius: 15px; }
+
+        .tpl-curved-organic { font-family: 'Poppins', sans-serif; background: #fff; border-radius: 40px; }
+        .tpl-curved-organic .receipt-header { text-align: center; border-bottom: 2px dashed #eee; background: transparent; color: #1a1a1a; }
+        .tpl-curved-organic .header-content { flex-direction: column; align-items: center; }
+        .tpl-curved-organic .doc-type-badge { background: var(--tpl-primary); color: white; border-radius: 50px; }
+        .tpl-curved-organic .items-table { border-spacing: 0 15px; border-collapse: separate; }
+        .tpl-curved-organic .items-table th { background: transparent; color: #999; }
+        .tpl-curved-organic .items-table td { background: white; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: none; }
+        .tpl-curved-organic .totals-box { background: var(--tpl-secondary); border-radius: 30px; color: white; border: none; }
+
+        .tpl-geometric-slice { font-family: 'Space Grotesk', sans-serif; background: #fff; border: 2px solid #000; }
+        .tpl-geometric-slice .receipt-header { background: #000; color: white; padding: 60px 40px; clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%); min-height: 220px; }
+        .tpl-geometric-slice .doc-type-badge { font-size: 60px; opacity: 0.1; background: transparent; position: absolute; top: 10px; right: 20px; transform: none; box-shadow: none; }
+        .tpl-geometric-slice .items-table th { border: 2px solid #000; background: var(--tpl-primary); color: #000; }
+        .tpl-geometric-slice .items-table td { border: 2px solid #000; }
+        .tpl-geometric-slice .totals-box { border: 4px solid #000; border-radius: 0; background: #fff; }
+
+        .tpl-vintage-ticket { font-family: 'Roboto Mono', monospace; background: #fef9e7; border: 2px solid #d4c4a8; }
+        .tpl-vintage-ticket .receipt-header { text-align: center; border-bottom: 2px dashed #d4c4a8; background: transparent; color: #7d6b5d; }
+        .tpl-vintage-ticket .header-content { flex-direction: column; align-items: center; }
+        .tpl-vintage-ticket .doc-type-badge { background: transparent; color: #a69076; font-size: 14px; letter-spacing: 5px; box-shadow: none; margin-top: 15px; }
+        .tpl-vintage-ticket .items-table th { background: transparent; color: #a69076; border-bottom: 1px solid #d4c4a8; }
+        .tpl-vintage-ticket .items-table td { border-bottom: 1px dotted #d4c4a8; }
+        .tpl-vintage-ticket .totals-box { border: none; background: transparent; }
+
+        .tpl-futuristic-glass { font-family: 'Rajdhani', sans-serif; background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .receipt-header { background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .tpl-futuristic-glass .doc-type-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--tpl-primary); color: white; transform: none; box-shadow: 0 0 10px var(--tpl-primary); }
+        .tpl-futuristic-glass .info-value { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; }
+        .tpl-futuristic-glass .items-table th { background: rgba(255,255,255,0.05); color: var(--tpl-primary); }
+        .tpl-futuristic-glass .items-table td { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .tpl-futuristic-glass .totals-box { background: linear-gradient(135deg, var(--tpl-primary), var(--tpl-secondary)); border: none; }
+        .tpl-futuristic-glass .stamp-outer { background: transparent; }
+
+        .tpl-stamp-quality { font-family: 'Cinzel', serif; background: #fff; border: 15px solid #f0f0f0; }
+        .tpl-stamp-quality .receipt-header { text-align: center; background: transparent; color: #1a1a1a; border-bottom: none; }
+        .tpl-stamp-quality .header-content { flex-direction: column; align-items: center; }
+        .tpl-stamp-quality .doc-type-badge { border-top: 2px solid #1a1a1a; border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; transform: none; box-shadow: none; letter-spacing: 10px; border-radius: 0; width: auto; padding: 10px 50px; }
+        .tpl-stamp-quality .items-table th { border-bottom: 2px solid #1a1a1a; background: transparent; color: #1a1a1a; }
+        .tpl-stamp-quality .totals-box { border: 4px double var(--tpl-primary); background: transparent; }
+
+        /* Handle Swiss Design Structure */
+        .tpl-swiss-design { font-family: 'Inter', sans-serif; background: #fff; flex-direction: row !important; }
+        .tpl-swiss-design .sidebar { width: 180px; background: var(--tpl-primary); color: white; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; min-height: 297mm; }
+        .tpl-swiss-design .sidebar .brand-name { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 24px; }
+        .tpl-swiss-design .sidebar .doc-type-badge { font-size: 24px; font-weight: 900; opacity: 0.3; background: transparent; padding: 0; box-shadow: none; transform: none; }
+        .tpl-swiss-design .main-content { flex: 1; padding: 30px; position: relative; }
+        .tpl-swiss-design .items-table th { background: #000; color: white; }
+        .tpl-swiss-design .totals-box { border-top: 4px solid var(--tpl-primary); border-radius: 0; border-left: none; border-right: none; border-bottom: none; background: transparent; }
     </style>
 </head>
 <body>
-    <div class="receipt-container" id="receipt">
-        <div class="demo-lock-overlay"><div class="demo-lock-text">LOCKED DEMO</div></div>
-        <div class="page-watermark" id="watermark">BRAND NAME</div>
-        <div class="security-layer"></div>
+    <div class="receipt-wrapper">
+        <div class="receipt-container tpl-modern-tech" id="receipt">
+            <div class="demo-lock-overlay"><div class="demo-lock-text">PREVIEW</div></div>
+            <div class="page-watermark" id="watermark">BRAND NAME</div>
+            <div class="security-layer"></div>
 
-        <header class="receipt-header">
-            <div class="header-content">
-                <div class="brand-block">
-                    <div class="brand-name" id="brandNameDisplay">BRAND<span>NAME</span></div>
-                    <div class="brand-tagline" id="taglineDisplay">Digital Infrastructure</div>
-                    <div class="brand-contact">
-                        <div><strong>RC:</strong> <span id="rcDisplay">RC 000000</span></div>
-                        <div><strong>Address:</strong> Professional Suite 101, Global Plaza</div>
-                        <div><strong>Tel:</strong> <span id="telDisplay">+234 000 000 000</span></div>
+            <header class="receipt-header" id="normalHeader">
+                <div class="header-content">
+                    <div class="brand-block">
+                        <div class="brand-name" id="brandNameDisplay">BRAND<span>NAME</span></div>
+                        <div class="brand-tagline" id="taglineDisplay">Digital Infrastructure</div>
+                        <div class="brand-contact">
+                            <div><strong>RC:</strong> <span id="rcDisplay">RC 000000</span></div>
+                            <div><strong>Address:</strong> Business Address Here</div>
+                            <div><strong>Tel:</strong> <span id="telDisplay">+234 000 000 000</span></div>
+                        </div>
+                    </div>
+                    <div class="doc-type-badge" id="docTypeDisplay">INVOICE</div>
+                </div>
+            </header>
+
+            <section class="info-section">
+                <div class="info-block full-width">
+                    <div class="info-label">Customer Name</div>
+                    <div class="info-value">Demo Client</div>
+                </div>
+                <div class="info-block">
+                    <div class="info-label">Date</div>
+                    <div class="info-value" id="currentDate">2026-03-12</div>
+                </div>
+                <div class="info-block">
+                    <div class="info-label">Reference</div>
+                    <div class="info-value">#MF-DEMO</div>
+                </div>
+            </section>
+
+            <section class="items-section">
+                <div class="section-header">
+                    <div class="section-line"></div>
+                    <div class="section-title">Services</div>
+                    <div class="section-line" style="background: linear-gradient(to left, var(--tpl-primary), transparent);"></div>
+                </div>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Qty</th>
+                            <th>Description</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="text-align: center;">1</td>
+                            <td>Enterprise Infrastructure License</td>
+                            <td style="text-align: right;">₦ 150,000.00</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;">1</td>
+                            <td>Premium Configuration Setup</td>
+                            <td style="text-align: right;">₦ 25,000.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <div class="bottom-section">
+                <div class="words-section">
+                    <div class="words-box">
+                        <div class="words-label">Amount in Words</div>
+                        <div class="words-value">One Hundred and Seventy Five Thousand Naira Only</div>
                     </div>
                 </div>
-                <div class="doc-type-badge" id="docTypeDisplay">INVOICE</div>
-            </div>
-        </header>
-
-        <section class="info-section">
-            <div class="info-block full-width">
-                <div class="info-label">Customer Name</div>
-                <div class="info-value">Elite Client Partnership</div>
-            </div>
-            <div class="info-block">
-                <div class="info-label">Date</div>
-                <div class="info-value" id="currentDate">2026-03-09</div>
-            </div>
-            <div class="info-block">
-                <div class="info-label">Reference</div>
-                <div class="info-value">#MF-DEMO-2026</div>
-            </div>
-        </section>
-
-        <section class="items-section">
-            <div class="section-header">
-                <div class="section-line"></div>
-                <div class="section-title">Services</div>
-                <div class="section-line" style="background: linear-gradient(to left, var(--brand-primary), transparent);"></div>
-            </div>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 10%;">Qty</th>
-                        <th>Description</th>
-                        <th style="text-align: right;">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="text-align: center;">1</td>
-                        <td>Enterprise Infrastructure License (Annual)</td>
-                        <td style="text-align: right;">$ 15,000.00</td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: center;">5</td>
-                        <td>Cloud Deployment Units</td>
-                        <td style="text-align: right;">$ 2,500.00</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <div class="bottom-section">
-            <div class="words-section">
-                <div class="words-box">
-                    <div class="words-label">Amount in Words</div>
-                    <div class="words-value">Seventeen Thousand Five Hundred Dollars Only</div>
-                </div>
-            </div>
-            <div class="totals-section">
-                <div class="totals-box">
-                    <div class="total-row">
-                        <span class="total-label">Subtotal</span>
-                        <span class="total-value">$ 17,500.00</span>
-                    </div>
-                    <div class="total-row">
-                        <span class="total-label">VAT (0%)</span>
-                        <span class="total-value">$ 0.00</span>
-                    </div>
-                    <div class="total-row">
-                        <span class="total-label">TOTAL</span>
-                        <span class="total-value grand">$ 17,500.00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <section class="signature-section">
-            <div class="signature-box">
-                <div class="signature-line"></div>
-                <div class="signature-label">Customer Acceptance</div>
-            </div>
-            <div class="signature-box">
-                <div class="digital-stamp" id="digitalStamp">
-                    <div class="stamp-outer">
-                        <div class="stamp-inner"></div>
-                        <div class="stamp-watermark">✓</div>
-                        <div class="stamp-content">
-                            <div class="stamp-status">DEMO</div>
-                            <div class="stamp-authority" id="stampAuthority">METAFORGE</div>
+                <div class="totals-section">
+                    <div class="totals-box">
+                        <div class="total-row">
+                            <span class="total-label">Subtotal</span>
+                            <span class="total-value">₦ 175,000.00</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">VAT (0%)</span>
+                            <span class="total-value">₦ 0.00</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">TOTAL</span>
+                            <span class="total-value grand">₦ 175,000.00</span>
                         </div>
                     </div>
                 </div>
-                <div class="signature-line"></div>
-                <div class="signature-label">Authority Stamp</div>
             </div>
-        </section>
 
-        <div class="footer-message">
-            <div class="message-text">Generated via MetaForge Interactive Benchmarking Engine</div>
+            <section class="signature-section">
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Customer Acceptance</div>
+                </div>
+                <div class="signature-box">
+                    <div class="digital-stamp" id="digitalStamp">
+                        <div class="stamp-outer">
+                            <div class="stamp-inner"></div>
+                            <div class="stamp-content">
+                                <div class="stamp-status">PREVIEW</div>
+                                <div class="stamp-authority" id="stampAuthority">METAFORGE</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Authority Stamp</div>
+                </div>
+            </section>
+
+            <div class="footer-message">
+                <div class="message-text">Generated via MetaForge Engine</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // CONFIGURATION: Must match creator.html template list exactly
-        const templates = {
-            'modern-tech': { name: 'Modern Tech', category: 'Corporate' },
-            'minimalist-pro': { name: 'Minimalist Pro', category: 'Corporate' },
-            'corporate-luxe': { name: 'Corporate Luxe', category: 'Premium' },
-            'legal-professional': { name: 'Legal Professional', category: 'Professional' },
-            'cyber-punk': { name: 'Cyber Punk', category: 'Tech' },
-            'retro-wave': { name: 'Retro Wave', category: 'Creative' },
-            'neo-brutalist': { name: 'Neo Brutalist', category: 'Bold' },
-            'startup-modern': { name: 'Startup Modern', category: 'Tech' },
-            'royal-elegance': { name: 'Royal Elegance', category: 'Classic' },
-            'art-deco': { name: 'Art Deco', category: 'Vintage' },
-            'fashion-boutique': { name: 'Fashion Boutique', category: 'Retail' },
-            'hotel-resort': { name: 'Hotel Resort', category: 'Hospitality' },
-            'clean-air': { name: 'Clean Air', category: 'Minimal' },
-            'swiss-design': { name: 'Swiss Design', category: 'Professional' },
-            'japanese-minimal': { name: 'Japanese Minimal', category: 'Zen' },
-            'compact-slip': { name: 'Compact Slip', category: 'Quick' },
-            'midnight-special': { name: 'Midnight Special', category: 'Dark' },
-            'garage-workshop': { name: 'Garage Workshop', category: 'Industrial' },
-            'bold-stripe': { name: 'Bold Stripe', category: 'Modern' },
-            'fitness-gym': { name: 'Fitness Gym', category: 'Sports' },
-            'pharmacy-medical': { name: 'Pharmacy Medical', category: 'Medical' },
-            'bakery-sweet': { name: 'Bakery Sweet', category: 'Food' },
-            'nature-organic': { name: 'Nature Organic', category: 'Eco' },
-            'salon-beauty': { name: 'Salon Beauty', category: 'Beauty' },
-            'restaurant-diner': { name: 'Restaurant Diner', category: 'Food' },
-            'construction-industrial': { name: 'Construction', category: 'Industrial' },
-            'education-academy': { name: 'Education Academy', category: 'Education' },
-            'transport-logistics': { name: 'Transport', category: 'Logistics' },
-            'real-estate': { name: 'Real Estate', category: 'Property' },
-            'event-planning': { name: 'Event Planning', category: 'Events' },
-            'curved-organic': { name: 'Curved Organic', category: 'Artistic' },
-            'geometric-slice': { name: 'Geometric Slice', category: 'Bold' },
-            'vintage-ticket': { name: 'Vintage Ticket', category: 'Retro' },
-            'futuristic-glass': { name: 'Futuristic Glass', category: 'Tech' },
-            'stamp-quality': { name: 'Stamp Quality', category: 'Premium' }
-        };
-
-        function refresh() {
-            const hash = window.location.hash.slice(1);
-            if (!hash) return;
+        // Unicode-safe Base64 Decoding
+        function decodeData(hash) {
             try {
-                // Support UTF-8 in base64
                 const binary = atob(hash);
                 const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const json = new TextDecoder().decode(bytes);
-                const config = JSON.parse(json);
-                
-                document.getElementById('brandNameDisplay').textContent = config.bn || 'METAFORGE ELITE';
-                document.getElementById('watermark').textContent = (config.bn || 'METAFORGE').toUpperCase();
-                document.getElementById('rcDisplay').textContent = config.rc || 'RC 000000';
-                document.getElementById('telDisplay').textContent = config.ph || '+234 000 000 000';
-                document.getElementById('stampAuthority').textContent = (config.bn || 'METAFORGE').toUpperCase();
-                document.getElementById('docTypeDisplay').textContent = config.dtp || 'INVOICE';
-                
-                const root = document.documentElement;
-                const primary = config.pc || '#9B5DE5';
-                const secondary = config.sc || '#1A1A1A';
-                
-                root.style.setProperty('--brand-primary', primary);
-                root.style.setProperty('--tpl-primary', primary);
-                root.style.setProperty('--tpl-secondary', secondary);
-                
-                const receipt = document.getElementById('receipt');
-                // Remove existing tpl classes
-                receipt.classList.forEach(cls => {
-                    if (cls.startsWith('tpl-')) receipt.classList.remove(cls);
-                });
-                
-                // Fallback if template is missing or invalid
-                const templateName = config.tp && templates[config.tp] ? config.tp : 'modern-tech';
-                receipt.classList.add('tpl-' + templateName);
-                
-                if (config.ff) receipt.style.fontFamily = config.ff;
-                
-                // Apply specific template overrides via JS if CSS alone isn't enough (mirrors creator.html logic)
-                if (templateName === 'geometric-slice') {
-                    const header = receipt.querySelector('.receipt-header');
-                    if (header) {
-                        header.style.background = secondary;
-                        // Simple contrast check
-                        header.style.color = '#ffffff'; 
-                    }
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
                 }
-                
-                document.getElementById('currentDate').textContent = new Date().toISOString().split('T')[0];
+                const json = new TextDecoder().decode(bytes);
+                return JSON.parse(json);
             } catch (e) {
-                console.error("Demo decode error", e);
+                console.error("Decoding error:", e);
+                return null;
             }
         }
 
-        window.addEventListener('hashchange', refresh);
-        refresh();
+        function updateFromHash() {
+            const hash = window.location.hash.substring(1);
+            if (!hash) return;
+            
+            const config = decodeData(hash);
+            if (!config) return;
+
+            document.getElementById('brandNameDisplay').textContent = config.bn || 'METAFORGE ELITE';
+            document.getElementById('watermark').textContent = (config.bn || 'PREVIEW').toUpperCase();
+            document.getElementById('rcDisplay').textContent = config.rc || 'RC 000000';
+            document.getElementById('telDisplay').textContent = config.ph || '+234 000 000 000';
+            document.getElementById('stampAuthority').textContent = (config.bn || 'METAFORGE').toUpperCase();
+            document.getElementById('docTypeDisplay').textContent = config.dtp || 'INVOICE';
+            
+            const root = document.documentElement;
+            const primary = config.pc || '#9B5DE5';
+            const secondary = config.sc || '#1A1A1A';
+            
+            root.style.setProperty('--brand-primary', primary);
+            root.style.setProperty('--tpl-primary', primary);
+            root.style.setProperty('--tpl-secondary', secondary);
+            
+            const receipt = document.getElementById('receipt');
+            
+            // Reconstruct HTML for Swiss Design if selected
+            const isSwiss = config.tp === 'swiss-design';
+            if (isSwiss && !receipt.querySelector('.sidebar')) {
+                const originalContent = receipt.innerHTML;
+                receipt.innerHTML = `
+                    <div class="sidebar">
+                        <div class="brand-name">${config.bn || 'METAFORGE'}</div>
+                        <div class="doc-type-badge">${config.dtp || 'INVOICE'}</div>
+                    </div>
+                    <div class="main-content">
+                        ${originalContent}
+                    </div>
+                `;
+                // Hide normal header elements inside main content
+                const normHeader = receipt.querySelector('.receipt-header');
+                if(normHeader) normHeader.style.display = 'none';
+            } else if (!isSwiss && receipt.querySelector('.sidebar')) {
+                // Refresh page to reset DOM if switching away from Swiss
+                window.location.reload();
+            }
+
+            // Remove existing template classes
+            receipt.classList.forEach(cls => {
+                if (cls.startsWith('tpl-')) receipt.classList.remove(cls);
+            });
+            
+            const templateName = config.tp || 'modern-tech';
+            receipt.classList.add('tpl-' + templateName);
+            
+            if (config.ff) receipt.style.fontFamily = config.ff;
+            
+            // Apply specific template overrides via JS
+            if (templateName === 'geometric-slice') {
+                const header = receipt.querySelector('.receipt-header');
+                if (header) {
+                    header.style.background = secondary;
+                    header.style.color = '#ffffff'; 
+                }
+            } else if (templateName === 'vintage-ticket') {
+                const brand = receipt.querySelector('.brand-name');
+                if(brand) { brand.style.color = primary; brand.style.borderColor = primary; }
+            }
+            
+            document.getElementById('currentDate').textContent = new Date().toISOString().split('T')[0];
+        }
+
+        window.addEventListener('hashchange', updateFromHash);
+        updateFromHash();
     </script>
 </body>
 </html>
