@@ -62,28 +62,53 @@
         /* Mobile Optimization Overhaul */
         @media (max-width: 1200px) { 
             .main-grid { grid-template-columns: 1fr; } 
-            .container { padding: 10px; }
-            .preview-panel { position: relative; top: 0; margin-top: 30px; }
+            .container { padding: 15px; }
+            .preview-panel { position: relative; top: 0; margin-top: 40px; }
         }
         
         @media (max-width: 768px) {
-            header { padding: 20px 10px; margin-bottom: 20px; }
-            h1 { font-size: 24px; letter-spacing: 2px; }
-            .form-tab { padding: 12px 5px; font-size: 9px; }
-            .form-content { padding: 15px; }
-            .input-row, .input-row-3 { grid-template-columns: 1fr; }
-            .color-section { grid-template-columns: 1fr; }
-            .a4-preview { transform: scale(0.4); transform-origin: top center; margin-bottom: -500px; width: 210mm; }
-            .preview-container { padding: 10px; overflow-x: hidden; }
-            .preview-header-bar { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
-            .preview-actions { justify-content: center; }
-            .btn-generate { padding: 15px; font-size: 12px; }
+            header { padding: 30px 15px; margin-bottom: 25px; border-radius: 0 0 30px 30px; }
+            h1 { font-size: 28px; letter-spacing: 3px; line-height: 1.2; }
+            .subtitle { font-size: 12px; margin-top: 10px; }
+            
+            .form-panel { max-height: none; border-radius: 25px; }
+            .form-tab { padding: 18px 10px; font-size: 10px; font-weight: 700; }
+            .form-content { padding: 25px 20px; }
+            
+            .input-group { margin-bottom: 25px; }
+            label { font-size: 11px; margin-bottom: 10px; color: var(--primary); opacity: 0.9; }
+            input, select, textarea { padding: 16px 18px; font-size: 16px; border-radius: 14px; min-height: 55px; }
+            
+            .input-row, .input-row-3 { grid-template-columns: 1fr; gap: 20px; }
+            .color-section { grid-template-columns: 1fr; gap: 25px; }
+            
+            .preview-header-bar { flex-direction: column; gap: 20px; align-items: stretch; text-align: center; margin-bottom: 25px; }
+            .preview-title { font-size: 18px; }
+            .preview-actions { justify-content: center; flex-wrap: wrap; gap: 15px; }
+            .preview-btn { padding: 12px 25px; font-size: 12px; width: 100%; }
+            
+            .preview-container { padding: 15px; border-radius: 20px; }
+            .a4-preview { transform: scale(0.45); transform-origin: top center; margin-bottom: -500px; width: 210mm; border-radius: 10px; }
+            
+            .btn-generate { padding: 22px; font-size: 14px; border-radius: 18px; margin-top: 30px; }
         }
 
         @media (max-width: 480px) {
-            .template-gallery { grid-template-columns: 1fr; }
-            .typo-gallery { grid-template-columns: 1fr; }
-            .logo-style-grid { grid-template-columns: 1fr 1fr; }
+            .container { padding: 10px; }
+            header { padding: 25px 10px; }
+            h1 { font-size: 24px; letter-spacing: 2px; }
+            
+            .template-gallery { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .template-card { padding: 15px 10px; border-radius: 15px; }
+            .template-name { font-size: 10px; }
+            
+            .typo-gallery { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .typo-option { padding: 15px 10px; border-radius: 12px; }
+            
+            .logo-style-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .logo-style-opt { padding: 15px 10px; border-radius: 12px; }
+            
+            .a4-preview { transform: scale(0.4); margin-bottom: -550px; }
         }
         .form-panel { background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); overflow: hidden; max-height: 90vh; display: flex; flex-direction: column; }
         .form-tabs { display: flex; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
@@ -1028,12 +1053,12 @@
     <!-- Auth Modal -->
     <div id="authModal" class="auth-modal show">
         <div class="auth-container">
-            <div class="auth-title">Creator Login</div>
-            <p style="color: #888; text-align: center; margin-top: -15px; margin-bottom: 25px; font-size: 13px;">Authorized Personnel Only</p>
+            <div class="auth-title">Creator Access</div>
+            <p style="color: #888; text-align: center; margin-top: -15px; margin-bottom: 25px; font-size: 13px;">Sign in or create a new account to begin forging.</p>
             <div id="authForm">
                 <div class="input-group">
                     <label>Email Address</label>
-                    <input type="email" id="authEmail" placeholder="admin@metaforge.com">
+                    <input type="email" id="authEmail" placeholder="you@metaforge.com">
                 </div>
                 <div class="input-group">
                     <label>Password</label>
@@ -1043,10 +1068,10 @@
                     </div>
                     <a href="javascript:void(0)" class="forgot-password" onclick="handleForgotPassword()">Forgot Password?</a>
                 </div>
-                <button class="btn-generate" onclick="handleAuth()">Sign In</button>
+                <button class="btn-generate" style="background: linear-gradient(135deg, var(--primary), var(--accent));" onclick="handleAuth()">SIGN IN / SIGN UP</button>
             </div>
             <div id="authLoading" style="display: none; text-align: center; color: var(--primary);">
-                <p>Verifying Credentials...</p>
+                <p>Establishing Secure Session...</p>
             </div>
         </div>
     </div>
@@ -1226,36 +1251,15 @@
         };
 
         window.openLiveTest = function() {
-            const config = {
-                brandName: document.getElementById('brandName').value,
-                logoUrl: document.getElementById('logoUrl').value,
-                tagline: document.getElementById('tagline').value,
-                tel: document.getElementById('tel').value,
-                rcNumber: document.getElementById('rcNumber').value,
-                tinNumber: document.getElementById('tinNumber').value,
-                address: document.getElementById('address').value,
-                email: document.getElementById('email').value,
-                bankName: document.getElementById('bankName').value,
-                accName: document.getElementById('accName').value,
-                accNumber: document.getElementById('accNumber').value,
-                defaultPayment: document.getElementById('defaultPayment').value,
-                defaultTerms: document.getElementById('defaultTerms').value,
-                footerNote: document.getElementById('footerNote').value,
-                docType: document.getElementById('docType').value,
-                currency: document.getElementById('currency').value,
-                primaryColor: document.getElementById('primaryColor').value,
-                secondaryColor: document.getElementById('secondaryColor').value,
-                vatRate: document.getElementById('vatRate').value,
-                stampStatus: document.getElementById('stampStatus').value,
-                fontFamily: currentFont,
-                template: currentTemplate,
-                logoStyle: currentLogoStyle,
-                timestamp: Date.now(),
-                version: '4.0-SECURE'
-            };
+            const config = getCurrentConfig();
             const encoded = encodeConfigToURL(config);
             const brandSlug = (config.brandName || 'test').toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
-            const testUrl = window.location.origin + "/engine/index.html#" + brandSlug + "_" + encoded;
+            
+            // Fix 404 on GitHub Pages: ensure relative path to /engine/ from /creator/
+            const currentPath = window.location.pathname;
+            const enginePath = currentPath.substring(0, currentPath.lastIndexOf('/')) + '/../engine/index.html';
+            const testUrl = window.location.origin + enginePath + "#" + brandSlug + "_" + encoded;
+            
             window.open(testUrl, '_blank');
         };
 
