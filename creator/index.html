@@ -7,7 +7,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500;700&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/metaforge-icon.svg">
+    <meta property="og:title" content="METAFORGE ENGINE | Professional Document System">
+    <meta property="og:description" content="Elite digital document automation engineered for prestigious brands. Forge your financial authority.">
+    <meta property="og:image" content="/metaforge-icon.svg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="METAFORGE ENGINE">
+    <meta name="twitter:description" content="Elite digital document automation engineered for prestigious brands.">
+    <meta name="twitter:image" content="/metaforge-icon.svg">
     <meta name="theme-color" content="#FF6B00">
     <style>
         .auth-modal {
@@ -949,9 +958,10 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
-                        <button class="btn-generate" id="btnGenLink" style="margin-top: 0; background: linear-gradient(135deg, #00c853, #64dd17);" onclick="generateEngine('link')">🔗 GENERATE UNIQUE LINK</button>
-                        <button class="btn-generate" id="btnGenFile" style="margin-top: 0;" onclick="generateEngine('file')">🚀 GENERATE ENGINE FILE</button>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px;">
+                        <button class="btn-generate" style="margin-top: 0; background: var(--secondary); border: 1px solid var(--primary);" onclick="openLiveTest()">⚡ LIVE TEST ENGINE</button>
+                        <button class="btn-generate" id="btnGenLink" style="margin-top: 0; background: linear-gradient(135deg, #00c853, #64dd17);" onclick="generateEngine('link')">🔗 GENERATE LINK</button>
+                        <button class="btn-generate" id="btnGenFile" style="margin-top: 0;" onclick="generateEngine('file')">🚀 GENERATE FILE</button>
                     </div>
                     
                     <div class="result-area" id="resultArea">
@@ -1197,14 +1207,12 @@
             document.getElementById('authLoading').style.display = 'block';
 
             try {
-                // Try to sign in (Login Only)
-                await signInWithEmailAndPassword(auth, email, password);
+                // Try to sign in, if fails try to sign up (One-time signup logic)
+                await signInWithEmailAndPassword(auth, email, password)
+                    .catch(() => createUserWithEmailAndPassword(auth, email, password));
             } catch (error) {
                 console.error(error);
-                let msg = "Login failed. Please check your credentials.";
-                if (error.code === 'auth/user-not-found') msg = "Account not found. Access is restricted to authorized personnel.";
-                if (error.code === 'auth/wrong-password') msg = "Invalid password.";
-                alert(msg);
+                alert("Authentication failed: " + error.message);
             } finally {
                 document.getElementById('authForm').style.display = 'block';
                 document.getElementById('authLoading').style.display = 'none';
@@ -1215,6 +1223,40 @@
             if (confirm("Are you sure you want to logout?")) {
                 await signOut(auth);
             }
+        };
+
+        window.openLiveTest = function() {
+            const config = {
+                brandName: document.getElementById('brandName').value,
+                logoUrl: document.getElementById('logoUrl').value,
+                tagline: document.getElementById('tagline').value,
+                tel: document.getElementById('tel').value,
+                rcNumber: document.getElementById('rcNumber').value,
+                tinNumber: document.getElementById('tinNumber').value,
+                address: document.getElementById('address').value,
+                email: document.getElementById('email').value,
+                bankName: document.getElementById('bankName').value,
+                accName: document.getElementById('accName').value,
+                accNumber: document.getElementById('accNumber').value,
+                defaultPayment: document.getElementById('defaultPayment').value,
+                defaultTerms: document.getElementById('defaultTerms').value,
+                footerNote: document.getElementById('footerNote').value,
+                docType: document.getElementById('docType').value,
+                currency: document.getElementById('currency').value,
+                primaryColor: document.getElementById('primaryColor').value,
+                secondaryColor: document.getElementById('secondaryColor').value,
+                vatRate: document.getElementById('vatRate').value,
+                stampStatus: document.getElementById('stampStatus').value,
+                fontFamily: currentFont,
+                template: currentTemplate,
+                logoStyle: currentLogoStyle,
+                timestamp: Date.now(),
+                version: '4.0-SECURE'
+            };
+            const encoded = encodeConfigToURL(config);
+            const brandSlug = (config.brandName || 'test').toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 15);
+            const testUrl = window.location.origin + "/engine/index.html#" + brandSlug + "_" + encoded;
+            window.open(testUrl, '_blank');
         };
 
         // Unique Short URL Generation in Firestore
@@ -1247,7 +1289,9 @@
                     usage: 0
                 });
 
-                const shortUrl = window.location.origin + "/r/" + code;
+                // GitHub Pages doesn't support path-based rewrites, so we use hash-routing for the short code.
+                // Firebase Hosting supports both, but this works on both platforms.
+                const shortUrl = window.location.origin + "/engine/index.html#_sc=" + code;
                 document.getElementById('shareLink').textContent = shortUrl;
                 btn.textContent = "DONE!";
                 
