@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Check if user owns the document (assuming owner_uid field)
+    function isOwner() {
+      return isAuthenticated() && resource.data.owner_uid == request.auth.uid;
+    }
+
+    // 1. Engine Requests (Landing Page Lead Capture)
+    // - Public CREATE (anyone can submit a request)
+    // - Admin/Creator READ/WRITE (to process requests)
+    match /engine_requests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // 2. Creator History (Social Proof Ticker)
+    // - Public READ (for the scrolling wall on landing page)
+    // - Authenticated WRITE (to log new partners/docs)
+    match /creator_history/{historyId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // 3. Short URLs (The Branded Engine Configs)
+    // - Public READ (so the engine can load the config)
+    // - Authenticated CREATE/UPDATE (claiming links)
+    match /short_urls/{shortCode} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      // Allow update if:
+      // 1. The doc has no owner (claiming it)
+      // 2. The user is the owner
+      // 3. Incrementing usage (public update for specific field)
+      allow update: if (isAuthenticated() && resource.data.owner_uid == null) || 
+                       isOwner() || 
+                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usage']));
+
+      // Subcollection: Document History for this specific Engine
+      // Only the owner of the Engine can read/write its history
+      match /receipts/{docId} {
+        allow read, write: if isOwner();
+      }
+    }
+
+    // 4. Notifications (Build requests, system alerts)
+    match /notifications/{notifId} {
+      allow read, delete: if isAuthenticated();
+      allow create: if true; // Public can trigger notifications (e.g. from landing page)
+    }
+
+    // 5. User Settings (Signatures, Preferences)
+    // - Strictly Owner Only
+    match /user_settings/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}

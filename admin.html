@@ -511,11 +511,26 @@
             document.getElementById('authLoading').style.display = 'block';
 
             try {
-                // Try to sign in, if fails try to sign up (One-time signup logic)
-                await signInWithEmailAndPassword(auth, email, password)
-                    .catch(() => createUserWithEmailAndPassword(auth, email, password));
+                try {
+                    // Try to sign in first
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (signInError) {
+                    // If user not found, try to sign up
+                    if (signInError.code === 'auth/user-not-found' || 
+                        signInError.code === 'auth/invalid-credential' || 
+                        signInError.code === 'auth/invalid-email') {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        throw signInError;
+                    }
+                }
             } catch (error) {
-                alert(`Authentication failed: ${error.message}`);
+                console.error(error);
+                let msg = "Authentication failed: " + error.message;
+                if (error.code === 'auth/weak-password') msg = "Password is too weak. Use at least 6 characters.";
+                if (error.code === 'auth/email-already-in-use') msg = "This email is already registered. Please check your password.";
+                alert(msg);
+            } finally {
                 document.getElementById('authForm').style.display = 'block';
                 document.getElementById('authLoading').style.display = 'none';
             }

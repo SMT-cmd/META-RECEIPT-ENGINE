@@ -32,20 +32,23 @@
             overflow: hidden; 
             display: flex;
             justify-content: center;
-            align-items: flex-start;
-            padding-top: 10px;
+            align-items: center; /* Center vertically for better desktop view */
+            padding: 0;
         }
 
         /* Responsive Scaling Fixes for "Hanging" Bug */
         .receipt-wrapper {
             display: flex;
             justify-content: center;
+            align-items: center;
             width: 100%;
+            height: 100%;
         }
 
         /* Base A4 Receipt Container */
         .receipt-container { 
             width: 210mm; 
+            height: 297mm; /* Fixed A4 Height */
             min-height: 297mm; 
             max-height: 297mm; 
             background: white; 
@@ -56,10 +59,36 @@
             font-size: 12px; 
             overflow: hidden; 
             box-sizing: border-box; 
-            transform-origin: top center; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-            transform: scale(0.85); /* Default scale */
-            margin-bottom: -40mm;
+            transform-origin: center center; /* Scale from center */
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+            transform: scale(0.95); /* Better default for 950px height */
+        }
+
+        /* Iframe Media Queries for Responsive Display (Android & iPhone) */
+        @media (max-width: 1400px) { .receipt-container { transform: scale(0.85); } }
+        @media (max-width: 1200px) { .receipt-container { transform: scale(0.75); } }
+        @media (max-width: 992px) { .receipt-container { transform: scale(0.65); } }
+        
+        @media (max-width: 768px) { 
+            .receipt-container { 
+                transform: scale(1) !important;
+                width: 100vw !important;
+                height: auto !important;
+                min-height: 100vh !important;
+                max-height: none !important;
+                border-radius: 0;
+            }
+            .receipt-wrapper { align-items: flex-start; overflow-y: auto; }
+            .info-section { grid-template-columns: 1fr; gap: 10px; }
+            .bottom-section { grid-template-columns: 1fr; gap: 20px; }
+            .signature-section { grid-template-columns: 1fr; gap: 30px; }
+            .header-content { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+
+        @media (max-width: 480px) {
+            .receipt-container { padding: 15px !important; }
+            .brand-name { font-size: 24px !important; }
+            .doc-type-badge { padding: 12px 24px !important; font-size: 16px !important; }
         }
 
         /* Print Optimization for Demo */
@@ -79,32 +108,6 @@
             }
             .demo-lock-overlay { display: none !important; }
             @page { size: A4; margin: 0; }
-        }
-
-        /* Iframe Media Queries for Responsive Display (Android & iPhone) */
-        @media (max-width: 1400px) { .receipt-container { transform: scale(0.8); margin-bottom: -60mm; } }
-        @media (max-width: 1200px) { .receipt-container { transform: scale(0.75); margin-bottom: -70mm; } }
-        @media (max-width: 992px) { .receipt-container { transform: scale(0.65); margin-bottom: -100mm; } }
-        
-        @media (max-width: 768px) { 
-            .receipt-container { 
-                transform: scale(0.9) !important; /* Allow more width on mobile */
-                width: 95vw !important;
-                min-height: auto !important;
-                max-height: none !important;
-                margin-bottom: 20px !important;
-                border-radius: 15px;
-            }
-            .info-section { grid-template-columns: 1fr; gap: 10px; }
-            .bottom-section { grid-template-columns: 1fr; gap: 20px; }
-            .signature-section { grid-template-columns: 1fr; gap: 30px; }
-            .header-content { flex-direction: column; align-items: flex-start; gap: 10px; }
-        }
-
-        @media (max-width: 480px) {
-            .receipt-container { transform: scale(1) !important; width: 100vw !important; padding: 10px !important; border-radius: 0; }
-            .brand-name { font-size: 24px !important; }
-            .doc-type-badge { padding: 10px 20px !important; font-size: 16px !important; }
         }
 
         .page-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-family: 'Space Grotesk', sans-serif; font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.04); white-space: nowrap; pointer-events: none; z-index: 0; user-select: none; text-transform: uppercase; letter-spacing: 8px; }

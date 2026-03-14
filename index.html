@@ -381,6 +381,15 @@
             .template-grid { grid-template-columns: repeat(4, 1fr); }
         }
 
+        /* Final Tablet/iPad/Android-Large Optimization */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .demo-container { grid-template-columns: 1fr; gap: 40px; }
+            .demo-controls { height: auto; max-height: 850px; }
+            .demo-viewport { height: 900px; }
+            .hero { padding: 160px 40px 100px; }
+            .section-title { font-size: 42px; }
+        }
+
         @media (max-width: 768px) {
             .section { padding: 80px 20px; }
             .section-title { font-size: 36px; }
@@ -392,7 +401,7 @@
             h1 { font-size: clamp(40px, 12vw, 70px); letter-spacing: -2px; }
             .hero-sub { font-size: 18px; margin-bottom: 40px; }
             .hero-btns { flex-direction: column; width: 100%; gap: 15px; }
-            .btn { width: 100%; justify-content: center; padding: 20px 30px; border-radius: 18px; }
+            .btn { width: 100%; justify-content: center; padding: 20px 30px; border-radius: 18px; font-size: 16px; }
         }
 
         @media (max-width: 480px) {
@@ -417,6 +426,10 @@
             /* Partner scroll breathing room */
             .partner-scroll { padding: 20px 0; }
             .partner-card { min-width: 220px; padding: 25px 20px; border-radius: 20px; }
+            
+            /* Hero text scaling */
+            h1 { font-size: 38px; line-height: 1.1; }
+            .hero-sub { font-size: 16px; }
         }
             .demo-viewport { height: 600px; border-radius: 20px; }
             .footer-grid { grid-template-columns: 1fr; text-align: center; }
@@ -495,7 +508,10 @@
         <a href="#social" class="nav-link mobile-link">Partners</a>
         <a href="#demo" class="nav-link mobile-link">Interactive Demo</a>
         <a href="#request" class="nav-link mobile-link">Request Engine</a>
-        <button class="theme-toggle" id="mobileThemeToggle" style="margin-top: 20px;"></button>
+        <div style="margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+            <span style="font-size: 12px; opacity: 0.5; text-transform: uppercase; letter-spacing: 2px;">Switch Interface Theme</span>
+            <button class="theme-toggle" id="mobileThemeToggle" style="width: 60px; height: 60px; font-size: 24px; border-radius: 20px;"></button>
+        </div>
     </div>
 
     <section class="hero">
