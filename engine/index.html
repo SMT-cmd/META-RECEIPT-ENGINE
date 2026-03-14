@@ -10,6 +10,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/metaforge-icon.svg">
+    <meta property="og:title" content="Branded Receipt Engine | METAFORGE">
+    <meta property="og:description" content="Securely view and manage your prestigious digital documents. Powered by MetaForge.">
+    <meta property="og:image" content="/metaforge-icon.svg">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Branded Receipt Engine">
+    <meta name="twitter:image" content="/metaforge-icon.svg">
     <base href="/">
     <meta name="theme-color" content="#FF6B00">
 
@@ -1087,6 +1095,13 @@
                 const docSnap = await getDoc(shortDocRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    
+                    // If we found a config in the short URL, load it
+                    if (data.config) {
+                        config = decodeConfigFromURL(data.config);
+                        updatePreview();
+                    }
+
                     if (data.status === 'shutdown') {
                         document.body.innerHTML = '<div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:white; font-family:Orbitron; text-align:center; padding:20px;"><h1>🚀 ENGINE SHUTDOWN</h1><p style="opacity:0.7; max-width:500px;">This branded engine has been deactivated by the administrator. Please contact support if you believe this is an error.</p></div>';
                         return;
@@ -1113,10 +1128,9 @@
                     loadDataFromLocalStorage();
                 }
             } else {
-                if (shortCode) {
-                    document.getElementById('authModal').style.display = 'flex';
-                } else {
-                    document.getElementById('authModal').style.display = 'none';
+                // FORCE AUTH GATE: Always show modal if user is not logged in, regardless of link type
+                document.getElementById('authModal').style.display = 'flex';
+                if (!shortCode) {
                     loadDataFromLocalStorage();
                 }
             }
