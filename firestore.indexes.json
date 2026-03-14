@@ -1,0 +1,20 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "short_urls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "usage", "order": "DESCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "receipts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

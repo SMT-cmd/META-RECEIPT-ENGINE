@@ -277,20 +277,22 @@
 
         /* Demo Engine Container */
         .demo-container { 
-            max-width: 1400px; 
+            max-width: 1700px; 
             margin: 0 auto; 
             display: grid; 
-            grid-template-columns: 500px 1fr; 
-            gap: 80px; 
-            align-items: start; 
+            grid-template-columns: 420px 1fr; 
+            gap: 40px; 
+            align-items: stretch; 
         }
 
         .demo-controls {
             background: var(--glass);
-            padding: 50px;
-            border-radius: 40px;
+            padding: 40px;
+            border-radius: 30px;
             border: 1px solid var(--border);
             backdrop-filter: blur(40px);
+            display: flex;
+            flex-direction: column;
         }
 
         .demo-input-group { margin-bottom: 30px; }
@@ -342,13 +344,14 @@
         .template-name { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; color: var(--text-light); }
 
         .demo-viewport {
-            height: 850px;
+            height: 950px;
             background: white;
             border-radius: 30px;
             box-shadow: 0 50px 120px rgba(0,0,0,0.5);
             position: relative;
             overflow: hidden;
             border: 1px solid var(--border);
+            flex-grow: 1;
         }
         iframe { width: 100%; height: 100%; border: none; }
 
@@ -677,8 +680,9 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw", 
@@ -686,10 +690,12 @@
             projectId: "metaforge-6afdf", 
             storageBucket: "metaforge-6afdf.firebasestorage.app", 
             messagingSenderId: "261172077627", 
-            appId: "1:261172077627:web:cb3cec74be2dbcb1d6281e"
+            appId: "1:261172077627:web:cb3cec74be2dbcb1d6281e", 
+            measurementId: "G-E2FZPZR3F7" 
         }; 
 
         const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
         // Hamburger Menu Logic
@@ -712,17 +718,19 @@
         // Live Firebase Partners
         function listenToPartners() {
             const track = document.getElementById('partnersTrack');
-            const q = query(collection(db, "creator_history"), orderBy("created_at", "desc"), limit(15));
+            // Pull from short_urls instead of creator_history
+            const q = query(collection(db, "short_urls"), orderBy("usage", "desc"), limit(15));
             
             onSnapshot(q, (snapshot) => {
                 if(!snapshot.empty) {
                     track.innerHTML = '';
                     const docs = snapshot.docs.map(d => ({
                         name: d.data().brandName || 'MetaForge Client',
-                        docs: Math.floor(Math.random() * 5000) + 1000 
+                        usage: d.data().usage || 0
                     }));
 
-                    [...docs, ...docs, ...docs].forEach(partner => {
+                    // Double the docs for smooth infinite scroll
+                    [...docs, ...docs].forEach(partner => {
                         const card = document.createElement('div');
                         card.className = 'partner-card';
                         const letter = partner.name.charAt(0).toUpperCase();
@@ -732,22 +740,28 @@
                             </div>
                             <div class="partner-brand">${partner.name.toUpperCase()}</div>
                             <div class="partner-count">
-                                <span style="color: var(--accent); font-weight: 700;">${partner.docs.toLocaleString()}+</span> 
-                                DOCUMENTS GENERATED
+                                <span style="color: var(--accent); font-weight: 700;">${partner.usage.toLocaleString()}</span> 
+                                TOTAL ACTIVATIONS
                             </div>
                         `;
                         track.appendChild(card);
                     });
                 } else {
-                    track.innerHTML = `
-                        <div class="partner-card"><div class="partner-brand">APEX HOLDINGS</div><div class="partner-count">1,420+ DOCUMENTS</div></div>
-                        <div class="partner-card"><div class="partner-brand">NEXUS ENERGY</div><div class="partner-count">3,400+ DOCUMENTS</div></div>
-                        <div class="partner-card"><div class="partner-brand">CIPHER TECH</div><div class="partner-count">5,300+ DOCUMENTS</div></div>
-                    `;
+                    track.innerHTML = '<div style="color: #888; padding: 20px;">Waiting for first partner activation...</div>';
                 }
             });
         }
         listenToPartners();
+
+        // PWA Service Worker Registration
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    console.log('Landing Service Worker Registered');
+                });
+            }
+        }
+        registerServiceWorker();
 
         // Demo Engine Logic with 35 Template Previews
         const temps = [

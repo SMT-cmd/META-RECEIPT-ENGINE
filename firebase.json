@@ -9,11 +9,7 @@
     "rewrites": [
       {
         "source": "/r/**",
-        "function": "redirect"
-      },
-      {
-        "source": "/shorten",
-        "function": "shorten"
+        "destination": "/engine/index.html"
       },
       {
         "source": "/demo",
@@ -28,5 +24,28 @@
         "destination": "/creator/index.html"
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ]
+    }
+  ],
+  "emulators": {
+    "auth": { "port": 9099 },
+    "firestore": { "port": 8080 },
+    "hosting": { "port": 5000 },
+    "functions": { "port": 5001 },
+    "ui": { "enabled": true }
   }
 }
