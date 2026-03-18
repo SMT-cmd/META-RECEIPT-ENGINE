@@ -9,24 +9,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;700;900&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700;900&family=Oswald:wght@300;400;500;700&family=Raleway:wght@300;400;500;700;900&family=Bebas+Neue&family=Lora:wght@400;500;700&family=Inter:wght@300;400;500;700;900&family=Sora:wght@300;400;500;700;800&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/metaforge-icon.svg">
+    <link rel="manifest" href="../manifest.json">
+    <link rel="icon" type="image/svg+xml" href="../metaforge-icon.svg">
     <meta property="og:title" content="Branded Receipt Engine | METAFORGE">
     <meta property="og:description" content="Securely view and manage your prestigious digital documents. Powered by MetaForge.">
-    <meta property="og:image" content="/metaforge-icon.svg">
+    <meta property="og:image" content="../metaforge-icon.svg">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Branded Receipt Engine">
-    <meta name="twitter:image" content="/metaforge-icon.svg">
-    <base href="/">
+    <meta name="twitter:image" content="../metaforge-icon.svg">
     <meta name="theme-color" content="#FF6B00">
 
     <style>
         :root {
-            --brand-primary: #FF6B00;
-            --brand-primary-light: #FF8533;
-            --brand-secondary: #1A1A1A;
-            --brand-dark: #1A1A1A;
+            --brand-primary: #9B5DE5;
+            --brand-primary-light: #B889F0;
+            --brand-secondary: #120A1A;
+            --brand-dark: #0F0F0F;
             --brand-gray: #4A4A4A;
             --brand-light: #F5F5F5;
             --brand-blue: #007bff;
@@ -37,8 +36,39 @@
             --tpl-secondary: var(--brand-secondary);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { background: #e2e8f0; font-family: 'Rajdhani', sans-serif; padding: 0; margin: 0; min-height: 100vh; overflow-x: hidden; }
+        [data-theme="light"] {
+            --brand-dark: #F5F5F5;
+            --brand-secondary: #FFFFFF;
+            --brand-light: #120A1A;
+            --brand-gray: #4A4A68;
+        }
+
+        body { 
+            background: var(--brand-light); 
+            color: var(--brand-dark); 
+            font-family: 'Rajdhani', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        /* Pagination & Mobile Fixes */
+        @media screen and (max-width: 768px) {
+            .receipt-container { 
+                width: 100% !important; 
+                padding: 15px !important;
+                transform: none !important;
+            }
+            .info-section, .bottom-section, .signature-section { 
+                grid-template-columns: 1fr !important; 
+            }
+        }
+
+        .signature-upload-container {
+            touch-action: manipulation;
+        }
 
         /* Control Panel Elements */
         .panel-toggle { position: fixed; top: 20px; right: 20px; z-index: 1001; width: 50px; height: 50px; background: var(--brand-primary); color: white; border: none; border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 5px 20px rgba(0,0,0,0.3); transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
@@ -115,6 +145,60 @@
         .brand-contact { font-size: 10px; line-height: 1.6; margin-top: 10px; }
         .brand-contact strong { color: var(--brand-primary); margin-right: 5px; }
         .doc-type-badge { padding: 12px 25px; font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 3px; text-align: center; }
+        
+        /* Demo Mode Styles */
+        .demo-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: var(--brand-primary);
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            letter-spacing: 2px;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+        body.demo-mode .demo-banner { display: block; }
+        body.demo-mode .receipt-container { margin-top: 70px !important; }
+        body.demo-mode .no-auth-feature { opacity: 0.4 !important; pointer-events: none !important; filter: grayscale(1) !important; cursor: not-allowed !important; }
+        body.demo-mode .demo-only-badge { display: inline-block; background: rgba(155, 93, 229, 0.1); color: var(--brand-primary); padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 800; border: 1px solid var(--brand-primary); margin-left: 10px; vertical-align: middle; }
+        
+        /* View-only mode overlay for demo */
+        .demo-view-only-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            background: transparent;
+            cursor: default;
+            display: none;
+        }
+        body.demo-mode .demo-view-only-overlay { display: block; }
+        
+        .demo-watermark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 2px;
+            border: 1px solid var(--brand-primary);
+            z-index: 9998;
+            display: none;
+            pointer-events: none;
+        }
+        body.demo-mode .demo-watermark { display: block; }
         
         .info-section { padding: 20px 35px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; position: relative; z-index: 2; flex-shrink: 0; }
         .info-block { display: flex; flex-direction: column; gap: 4px; }
@@ -672,7 +756,10 @@
     <div class="control-panel hidden" id="controlPanel">
         <div class="panel-title">
             <span>Engine Controls</span>
-            <button class="action-btn btn-view" onclick="openDashboard()" title="View History">📜</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="themeBtn" class="action-btn btn-view" onclick="toggleTheme()" title="Toggle Theme" style="width: 30px; height: 30px; border-radius: 50%; font-size: 14px; padding: 0;">🌙</button>
+                <button id="dashboardBtn" class="action-btn btn-view" onclick="openDashboard()" title="View History">📜</button>
+            </div>
         </div>
 
         <div class="control-group">
@@ -717,7 +804,7 @@
 
         <button class="btn btn-primary" onclick="calculateTotals()">🧮 Calculate Totals</button>
         <button class="btn btn-success" onclick="generateWords()">📝 Auto Words</button>
-        <button class="btn btn-info" onclick="saveToHistory()">💾 Save to History</button>
+        <button class="btn btn-info" id="saveToHistoryBtn" onclick="saveToHistory()">💾 Save to History</button>
         
         <div class="control-group">
             <label class="control-label">Stamp Authority</label>
@@ -736,7 +823,7 @@
 
         <button class="btn btn-primary" onclick="savePDF()">📄 Download PDF</button>
         <button class="btn btn-success" onclick="saveImage()">🖼️ Download Image</button>
-        <button class="btn btn-info" onclick="shareDocument()">🔗 Share Document</button>
+        <button class="btn btn-info" id="shareBtn" onclick="shareDocument()">🔗 Share Document</button>
         <button class="btn btn-secondary" onclick="window.print()">🖨️ Direct Print</button>
         <button class="btn btn-info" id="installBtn" style="display: none; background: #6f42c1;" onclick="installPWA()">📲 Install as App</button>
 
@@ -752,8 +839,8 @@
                     <span style="color: #888; font-size: 11px;">No signature</span>
                 </div>
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <button class="btn btn-secondary" style="margin-bottom: 0; flex: 1; font-size: 11px;" onclick="document.getElementById('sigInput').click()">Upload</button>
-                    <button class="btn btn-danger" style="margin-bottom: 0; width: 40px; padding: 0;" onclick="clearSavedSignature('auth')">✕</button>
+                    <button class="btn btn-secondary" id="sigUploadBtn" style="margin-bottom: 0; flex: 1; font-size: 11px;" onclick="document.getElementById('sigInput').click()">Upload</button>
+                    <button class="btn btn-danger" id="sigClearBtn" style="margin-bottom: 0; width: 40px; padding: 0;" onclick="clearSavedSignature('auth')">✕</button>
                 </div>
                 <input type="file" id="sigInput" accept="image/*" style="display: none;" onchange="handleSignatureUpload(this, 'auth')">
             </div>
@@ -766,14 +853,14 @@
                     <span style="color: #888; font-size: 11px;">No signature</span>
                 </div>
                 <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <button class="btn btn-secondary" style="margin-bottom: 0; flex: 1; font-size: 11px;" onclick="document.getElementById('custSigInput').click()">Upload</button>
-                    <button class="btn btn-danger" style="margin-bottom: 0; width: 40px; padding: 0;" onclick="clearSavedSignature('cust')">✕</button>
+                    <button class="btn btn-secondary" id="custSigUploadBtn" style="margin-bottom: 0; flex: 1; font-size: 11px;" onclick="document.getElementById('custSigInput').click()">Upload</button>
+                    <button class="btn btn-danger" id="custSigClearBtn" style="margin-bottom: 0; width: 40px; padding: 0;" onclick="clearSavedSignature('cust')">✕</button>
                 </div>
                 <input type="file" id="custSigInput" accept="image/*" style="display: none;" onchange="handleSignatureUpload(this, 'cust')">
             </div>
         </div>
 
-        <button class="btn btn-danger" onclick="clearReceipt()">🗑️ Reset Engine</button>
+        <button class="btn btn-danger" id="clearReceiptBtn" onclick="clearReceipt()">🗑️ Reset Engine</button>
     </div>
 
     <div class="dashboard-overlay" id="dashboardOverlay">
@@ -1059,6 +1146,126 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
         import { getFirestore, doc, updateDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, setDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
+        // --- THEME SYNCHRONIZATION ---
+        const getStoredTheme = () => localStorage.getItem('metaforge_theme') || 'dark';
+        
+        function applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('metaforge_theme', theme);
+            const themeBtn = document.getElementById('themeBtn');
+            const icon = theme === 'light' ? '☀️' : '🌙';
+            if(themeBtn) themeBtn.textContent = icon;
+        }
+
+        applyTheme(getStoredTheme());
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'metaforge_theme') applyTheme(e.newValue);
+        });
+
+        window.toggleTheme = function() {
+            const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        };
+
+        window.enableDemoMode = function() {
+            isDemoMode = true;
+            document.body.classList.add('demo-mode');
+            
+            // Add the banner if it doesn't exist
+            if (!document.getElementById('demoBanner')) {
+                const banner = document.createElement('div');
+                banner.id = 'demoBanner';
+                banner.className = 'demo-banner';
+                banner.innerHTML = '🚀 METAFORGE PREVIEW MODE — Authentication Disabled';
+                document.body.appendChild(banner);
+            }
+
+            // Add view-only overlay to the receipt container
+            const container = document.querySelector('.receipt-container');
+            if (container && !document.getElementById('demoOverlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'demoOverlay';
+                overlay.className = 'demo-view-only-overlay';
+                overlay.title = "This is a view-only preview. Sign up to enable full editing.";
+                container.appendChild(overlay);
+            }
+
+            // Add persistent watermark
+            if (!document.getElementById('demoWatermark')) {
+                const wm = document.createElement('div');
+                wm.id = 'demoWatermark';
+                wm.className = 'demo-watermark';
+                wm.innerHTML = 'DEMO PREVIEW';
+                document.body.appendChild(wm);
+            }
+
+            // Block Auth APIs and clear modals
+            window.handleAuth = function() {
+                alert("This action is disabled in preview mode. Please create an account to access full features.");
+                return false;
+            };
+            
+            document.getElementById('authModal').style.display = 'none';
+            
+            // Apply visual restrictions to auth-only features
+            const authElements = [
+                'adminBtn', 'logoutBtn', 'installBtn', 'saveToCloudBtn', 
+                'shareBtn', 'btnGenLink', 'btnGenFile', 'dashboardBtn', 'controlPanel',
+                'saveToHistoryBtn', 'clearReceiptBtn', 'pwaInstallBtn',
+                'sigUploadBtn', 'sigClearBtn', 'custSigUploadBtn', 'custSigClearBtn'
+            ];
+            
+            authElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.add('no-auth-feature');
+                    el.title = "Authentication required";
+                    el.disabled = true;
+                    // For buttons with onclick, we might need to remove them or nullify
+                    el.onclick = (e) => {
+                        e.preventDefault();
+                        alert("Account required for this feature.");
+                        return false;
+                    };
+                }
+            });
+            
+            // Disable all form inputs in the receipt for true view-only
+            const inputs = document.querySelectorAll('.info-input, .cell-input, .words-input, .total-input');
+            inputs.forEach(input => {
+                input.readOnly = true;
+                input.style.cursor = 'default';
+            });
+            
+            // Show sample data for a more complete visual experience
+            if (!document.getElementById('clientName').value) {
+                document.getElementById('clientName').value = "CYBERDYNE SYSTEMS INC.";
+                document.getElementById('clientAddress').value = "747 Howard St, San Francisco, CA 94103";
+            }
+            
+            // Block Firestore writes and sensitive actions
+            window.checkAndClaimLink = () => { console.warn("Claiming disabled in demo mode."); };
+            window.loadDataFromFirestore = () => { console.warn("Firestore data loading disabled in demo mode."); };
+            window.saveToHistory = () => { alert("Saving to history is disabled in preview mode. Please sign up to use this feature."); };
+            window.clearReceipt = () => { console.warn("Clearing disabled in demo mode."); };
+            window.shortenURL = () => { alert("URL shortening requires a verified account."); };
+            window.addItem = () => { console.warn("Adding items disabled in preview mode."); };
+            window.deleteRow = () => { console.warn("Deleting rows disabled in preview mode."); };
+
+            // MutationObserver to ensure demo-mode is never removed
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (!document.body.classList.contains('demo-mode')) {
+                            document.body.classList.add('demo-mode');
+                        }
+                    }
+                });
+            });
+            observer.observe(document.body, { attributes: true });
+        };
+
         const firebaseConfig = { 
             apiKey: "AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw", 
             authDomain: "metaforge-6afdf.firebaseapp.com", 
@@ -1081,6 +1288,7 @@
         let currentCurrency = '₦';
         let currentVatRate = 7.5;
         let shortCode = null; // Will hold the 6-char code from the URL
+        let isDemoMode = false;
 
         // UI Access functions
         window.togglePasswordVisibility = function(id) {
@@ -1115,9 +1323,31 @@
 
         // Authentication & Claiming Logic
         onAuthStateChanged(auth, async (user) => {
-            const hash = window.location.hash;
+            const hash = window.location.hash.slice(1);
             const path = window.location.pathname;
             
+            // Check if we're in demo mode immediately from the hash
+            if (hash && !config) {
+                config = decodeConfigFromURL(hash);
+            }
+            
+            // Comprehensive Demo Mode Activation
+            if (config && (config.demo === true || config.dm === true)) {
+                isDemoMode = true;
+                document.getElementById('authModal').style.display = 'none';
+                enableDemoMode();
+                // If it's a demo, we don't need to proceed with other auth logic
+                return;
+            }
+
+            // Fallback: If no config but URL contains 'demo=true' or 'dm=true' (plaintext)
+            if (window.location.href.includes('demo=true') || window.location.href.includes('dm=true')) {
+                isDemoMode = true;
+                document.getElementById('authModal').style.display = 'none';
+                enableDemoMode();
+                return;
+            }
+
             // Try to get shortCode from hash (_sc=) or from path (/r/XXXXXX)
             const scMatch = hash.match(/_sc=([a-zA-Z0-9]{6})/) || path.match(/\/r\/([a-zA-Z0-9]{6})/);
             shortCode = scMatch ? scMatch[1] : null;
@@ -1182,7 +1412,7 @@
                             owner_uid: user.uid,
                             claimed_at: new Date()
                         });
-                        console.log("Link claimed by:", user.email);
+                        
                     } else if (data.owner_email !== user.email) {
                         // If owned by someone else, we might want to restrict access
                         console.warn("Link already owned by:", data.owner_email);
@@ -1276,16 +1506,22 @@
             registerServiceWorker();
         };
 
+        // Listen for hash changes to support real-time preview without full reloads
+        window.addEventListener('hashchange', () => {
+            applyBranding();
+        });
+
         let deferredPrompt;
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('../sw.js').then(() => {
-                    console.log('Service Worker Registered');
+                    
                 });
             }
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
+            if (isDemoMode) return; // Skip PWA prompt in demo mode
             e.preventDefault();
             deferredPrompt = e;
             const installBtn = document.getElementById('installBtn');
@@ -1298,7 +1534,7 @@
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
+                
             }
             deferredPrompt = null;
             document.getElementById('installBtn').style.display = 'none';
@@ -1314,7 +1550,8 @@
             address: 'ad', email: 'em', bankName: 'bk', accName: 'an', accNumber: 'ac',
             defaultPayment: 'dp', defaultTerms: 'dt', footerNote: 'fn', docType: 'dtp',
             currency: 'cy', primaryColor: 'pc', secondaryColor: 'sc', vatRate: 'vr',
-            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts'
+            stampStatus: 'ss', fontFamily: 'ff', template: 'tp', logoStyle: 'ls', timestamp: 'ts',
+            demo: 'dm'
         };
 
         function decompressConfig(compressed) {
@@ -1374,6 +1611,11 @@
             if (!hash) return;
             config = decodeConfigFromURL(hash);
             if (!config) return;
+
+            // Trigger demo mode if config has dm:true or demo:true
+            if (config.demo === true || config.dm === true) {
+                enableDemoMode();
+            }
 
             document.title = `${config.brandName} - Receipt Engine`;
             const primary = config.primaryColor || '#FF6B00';
@@ -1588,11 +1830,19 @@
             if (dateEl) dateEl.textContent = now.toISOString().split('T')[0];
             if (timeEl) timeEl.textContent = now.toTimeString().split(' ')[0];
             
-            // Generate QR Code for verification
+            // Generate QR Code for verification with offline grace
             const qrEl = document.getElementById('verificationQR');
             if (qrEl) {
-                const currentUrl = window.location.href;
-                qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}`;
+                if (navigator.onLine) {
+                    const currentUrl = window.location.href;
+                    qrEl.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}`;
+                    qrEl.style.display = 'block';
+                } else {
+                    // Hide QR if offline and not already loaded
+                    if (!qrEl.complete || qrEl.naturalWidth === 0) {
+                        qrEl.style.display = 'none';
+                    }
+                }
             }
         };
 
@@ -1673,8 +1923,9 @@
             });
             
             // Pagination logic: 1 perfect page first until filled up, generate page 2
-            const PAGE_1_MAX = 12; // Adjusted for design with header
-            const SUBSEQUENT_PAGE_MAX = 18; // More rows fit on subsequent pages
+            const isMobile = window.innerWidth <= 768;
+            const PAGE_1_MAX = isMobile ? 8 : 12; // Fewer rows on mobile due to scaling
+            const SUBSEQUENT_PAGE_MAX = isMobile ? 12 : 18;
             
             if (rows.length > PAGE_1_MAX) {
                 insertSplit(rows[PAGE_1_MAX - 1]);
