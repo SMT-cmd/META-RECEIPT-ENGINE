@@ -178,37 +178,61 @@
     </footer>
 
     <script>
-        // Theme Logic
         const themeBtn = document.getElementById('themeToggle');
-        const updateThemeUI = (theme) => {
-            document.body.setAttribute('data-theme', theme);
-            themeBtn.textContent = theme === 'light' ? '☀️' : '🌙';
-        };
         
-        const savedTheme = localStorage.getItem('metaforge-theme') || 'dark';
-        updateThemeUI(savedTheme);
+        // Robust Shared Theme Synchronization
+        const getStoredTheme = () => localStorage.getItem('metaforge_theme') || 'dark';
+        let currentTheme = getStoredTheme();
 
-        themeBtn.onclick = () => {
-            const current = document.body.getAttribute('data-theme');
-            const target = current === 'light' ? 'dark' : 'light';
-            localStorage.setItem('metaforge-theme', target);
-            updateThemeUI(target);
-        };
+        function applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            const icon = theme === 'light' ? '☀️' : '🌙';
+            if(themeBtn) themeBtn.textContent = icon;
+            localStorage.setItem('metaforge_theme', theme);
+            currentTheme = theme;
+        }
 
-        // Mobile Menu
+        function toggleTheme() {
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        }
+
+        if(themeBtn) themeBtn.onclick = toggleTheme;
+
+        // Initialize theme on load
+        applyTheme(currentTheme);
+
+        // Listen for storage changes from other pages
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'metaforge_theme') applyTheme(e.newValue);
+        });
+
+        // Mobile Menu Logic
         const hamburgerBtn = document.getElementById('hamburgerBtn');
         const mobileMenu = document.getElementById('mobileMenu');
+        const mobileLinks = document.querySelectorAll('.mobile-nav-link');
 
-        hamburgerBtn.onclick = () => {
-            hamburgerBtn.classList.toggle('active');
-            mobileMenu.classList.toggle('active');
-        };
+        if(hamburgerBtn && mobileMenu) {
+            hamburgerBtn.addEventListener('click', () => {
+                const isActive = hamburgerBtn.classList.toggle('active');
+                mobileMenu.classList.toggle('active', isActive);
+                document.body.style.overflow = isActive ? 'hidden' : '';
+            });
+
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    hamburgerBtn.classList.remove('active');
+                    mobileMenu.classList.remove('active');
+                    document.body.style.overflow = '';
+                });
+            });
+        }
 
         // Background Animation
         const canvas = document.getElementById('bgCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
-        
+
         function initBG() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -217,28 +241,27 @@
                 particles.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
-                    r: Math.random() * 2,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    r: Math.random() * 2 + 1
                 });
             }
         }
-        
+
         function drawBG() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            ctx.fillStyle = isDark ? '#9B5DE5' : '#7038ba';
-            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = currentTheme === 'dark' ? '#9B5DE5' : '#7038ba';
             particles.forEach(p => {
                 p.x += p.vx; p.y += p.vy;
                 if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
                 if(p.y < 0 || p.y > canvas.height) p.vy *= -1;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
                 ctx.fill();
             });
             requestAnimationFrame(drawBG);
         }
+
         window.addEventListener('resize', initBG);
         initBG(); drawBG();
     </script>
