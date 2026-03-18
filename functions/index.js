@@ -1,131 +1,75 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const crypto = require("crypto");
 
 admin.initializeApp();
 const db = admin.firestore();
 
 /**
- * Generates a 6-character alphanumeric code for the short link.
- */
-function generateCode() {
-  return crypto.randomBytes(4).toString("hex").substring(0, 6);
-}
-
-/**
- * POST /shorten
- * Secured Endpoint: Requires Firebase Auth Bearer Token
- * Accepts: { url: "...", brandName: "...", config: "..." }
- */
-exports.shorten = functions.https.onRequest(async (req, res) => {
-  // CORS configuration - Allows the frontend to communicate with the backend
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  if (req.method === 'OPTIONS') {
-    res.set('Access-Control-Allow-Methods', 'POST');
-    res.set('Access-Control-Max-Age', '3600');
-    return res.status(204).send('');
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).send("Method Not Allowed");
-  }
-
-  // SECURITY: Verify the Firebase Auth Token sent from the Creator Panel
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).send("Unauthorized: Missing Auth Token");
-  }
-  
-  const idToken = authHeader.split('Bearer ')[1];
-  let decodedToken;
-  try {
-    decodedToken = await admin.auth().verifyIdToken(idToken);
-  } catch (error) {
-    console.error("Token verification failed:", error);
-    return res.status(401).send("Unauthorized: Invalid Token");
-  }
-
-  // Extract the data payload sent from creator/index.html
-  const { url, brandName, config } = req.body;
-  if (!url) {
-    return res.status(400).send("URL is required");
-  }
-
-  try {
-    const code = generateCode();
-    const shortDoc = db.collection("short_urls").doc(code);
-
-    // Save the complete details to Firestore so the Admin Panel can read it
-    await shortDoc.set({
-      original_url: url,
-      brandName: brandName || "Unnamed Brand",
-      config: config || null,
-      creator_uid: decodedToken.uid, // Track which authorized admin created it
-      owner_email: null,             // To be claimed later by the end-user
-      owner_uid: null,               // To be claimed later by the end-user
-      created_at: admin.firestore.FieldValue.serverTimestamp(),
-      device_fingerprints: [],
-      status: 'active'
-    });
-
-    // Build the dynamic short URL using your Firebase Hosting Rewrite rules
-    const projectId = process.env.GCLOUD_PROJECT || "metaforge-6afdf";
-    const shortUrl = `https://${projectId}.web.app/r/${code}`;
-
-    // Also update the brand tracker for the landing page scrolling wall
-    if (brandName) {
-      await db.collection("creator_history").add({
-        brandName: brandName,
-        created_at: admin.firestore.FieldValue.serverTimestamp(),
-        type: 'activation'
-      });
-    }
-
-    return res.status(200).json({
-      code: code,
-      shortUrl: shortUrl
-    });
-  } catch (error) {
-    console.error("Error shortening URL:", error);
-    return res.status(500).send("Internal Server Error");
-  }
-});
-
-/**
- * GET /{code}
- * Performs 301 redirect and passes the code to the engine
+ * GET /r/:code
+ * Redirect resolver for Firebase Hosting
  */
 exports.redirect = functions.https.onRequest(async (req, res) => {
-  const code = req.path.split("/").pop();
-  
-  if (!code || code.length !== 6) {
-    return res.status(400).send("Invalid Engine Code");
-  }
-
-  try {
-    const doc = await db.collection("short_urls").doc(code).get();
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
     
-    if (!doc.exists) {
-      return res.status(404).send("Engine Not Found or Deactivated");
+    // Extract code from path /r/CODE or query param
+    const pathParts = req.path.split('/');
+    const code = pathParts.pop() || req.query.c;
+
+    if (!code || code.length < 5) {
+        return res.status(400).send(`
+            <html>
+                <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                    <h1>Invalid Link</h1>
+                    <p>The short code provided is invalid.</p>
+                    <a href="/">Go to Homepage</a>
+                </body>
+            </html>
+        `);
     }
 
-    let originalUrl = doc.data().original_url;
-    
-    // Append the short code to the hash payload so engine/index.html can detect it
-    // This allows the engine to tie generated receipts back to this specific database ID
-    const separator = originalUrl.includes("#") ? "_sc=" : "#sc=";
-    originalUrl += `${separator}${code}`;
-    
-    // Set caching headers for performance
-    res.set("Cache-Control", "public, max-age=3600");
-    
-    // Perform the permanent redirect to the Base64 Engine URL
-    return res.redirect(301, originalUrl);
-    
-  } catch (error) {
-    console.error("Error redirecting:", error);
-    return res.status(500).send("Internal Server Error");
-  }
+    try {
+        const doc = await db.collection("short_urls").doc(code.toUpperCase()).get();
+        
+        if (!doc.exists) {
+            // Check lowercase as well just in case
+            const docLower = await db.collection("short_urls").doc(code.toLowerCase()).get();
+            if (!docLower.exists) {
+                return res.status(404).send("Short URL not found.");
+            }
+            return resolveRedirect(docLower, res, code);
+        }
+
+        return resolveRedirect(doc, res, code);
+        
+    } catch (error) {
+        console.error("Redirect error:", error);
+        return res.status(500).send("Internal Server Error");
+    }
 });
+
+async function resolveRedirect(doc, res, code) {
+    const data = doc.data();
+    if (data.status === 'shutdown') {
+        return res.status(403).send("This engine has been deactivated.");
+    }
+
+    // Update usage count asynchronously
+    doc.ref.update({ usage: admin.firestore.FieldValue.increment(1) });
+
+    let destination;
+    if (data.original_url) {
+        destination = data.original_url;
+    } else if (data.config) {
+        // Legacy/Hash-only support: construct URL to engine
+        destination = `https://${process.env.GCLOUD_PROJECT}.web.app/engine/index.html#_sc=${code}`;
+    }
+
+    if (!destination) {
+        return res.status(404).send("Destination not found.");
+    }
+
+    // Perform redirect
+    res.set("Cache-Control", "public, max-age=300");
+    return res.redirect(302, destination);
+}
