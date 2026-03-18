@@ -249,13 +249,6 @@
         }
         .auth-box h2 { font-family: 'Orbitron', sans-serif; margin-bottom: 10px; font-size: 24px; color: var(--primary); }
         .auth-box p { color: #888; margin-bottom: 30px; font-size: 14px; }
-        
-        .password-group { position: relative; }
-        .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #888; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; z-index: 10; transition: color 0.3s; }
-        .password-toggle:hover { color: var(--primary); }
-        .forgot-password { display: block; text-align: right; font-size: 11px; color: var(--primary); text-decoration: none; margin-top: 8px; cursor: pointer; opacity: 0.8; transition: opacity 0.3s; }
-        .forgot-password:hover { opacity: 1; text-decoration: underline; }
-
         .auth-input-group { margin-bottom: 20px; text-align: left; }
         .auth-input-group label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 8px; }
         .auth-input { 
@@ -368,9 +361,8 @@
 
             <div class="panel">
                 <div class="panel-header">
-                <div class="panel-title">Active Engine Registry</div>
-                <button class="btn-action" style="border-color: var(--danger); color: var(--danger); font-weight: 700;" onclick="clearAllPartners()">⚠️ CLEAR ALL PARTNERS</button>
-            </div>
+                    <div class="panel-title">Active Engine Registry</div>
+                </div>
                 <div class="data-table-wrapper">
                     <table class="data-table">
                         <thead>
@@ -425,11 +417,7 @@
                 </div>
                 <div class="auth-input-group">
                     <label>Password</label>
-                    <div class="password-group">
-                        <input type="password" id="authPassword" class="auth-input" placeholder="••••••••">
-                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('authPassword')">👁️</button>
-                    </div>
-                    <a href="javascript:void(0)" class="forgot-password" onclick="handleForgotPassword()">Forgot Password?</a>
+                    <input type="password" id="authPassword" class="auth-input" placeholder="••••••••">
                 </div>
                 <button class="auth-btn" onclick="handleAuth()">LOGIN TO DASHBOARD</button>
             </div>
@@ -441,8 +429,30 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        // --- THEME SYNCHRONIZATION ---
+        const themeBtn = document.getElementById('themeBtn');
+        const getStoredTheme = () => localStorage.getItem('metaforge_theme') || 'dark';
+        
+        function applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('metaforge_theme', theme);
+            const icon = theme === 'light' ? '☀️' : '🌙';
+            if(themeBtn) themeBtn.textContent = icon;
+        }
+
+        applyTheme(getStoredTheme());
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'metaforge_theme') applyTheme(e.newValue);
+        });
+
+        window.toggleTheme = function() {
+            const newTheme = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        };
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw", 
@@ -450,41 +460,12 @@
             projectId: "metaforge-6afdf", 
             storageBucket: "metaforge-6afdf.firebasestorage.app", 
             messagingSenderId: "261172077627", 
-            appId: "1:261172077627:web:cb3cec74be2dbcb1d6281e", 
-            measurementId: "G-E2FZPZR3F7" 
+            appId: "1:261172077627:web:cb3cec74be2dbcb1d6281e"
         }; 
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        // UI Access functions
-        window.togglePasswordVisibility = function(id) {
-            const input = document.getElementById(id);
-            const btn = input.nextElementSibling;
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = '🔒';
-            } else {
-                input.type = 'password';
-                btn.textContent = '👁️';
-            }
-        };
-
-        window.handleForgotPassword = async function() {
-            const email = document.getElementById('authEmail').value;
-            if (!email) return alert("Please enter your email address first.");
-            
-            if (confirm(`Send password reset link to ${email}?`)) {
-                try {
-                    await sendPasswordResetEmail(auth, email);
-                    alert("Reset link sent! Please check your email inbox.");
-                } catch (err) {
-                    console.error(err);
-                    alert("Error: " + err.message);
-                }
-            }
-        };
 
         // Sidebar Toggle for Mobile
         window.toggleSidebar = function() {
@@ -511,26 +492,9 @@
             document.getElementById('authLoading').style.display = 'block';
 
             try {
-                try {
-                    // Try to sign in first
-                    await signInWithEmailAndPassword(auth, email, password);
-                } catch (signInError) {
-                    // If user not found, try to sign up
-                    if (signInError.code === 'auth/user-not-found' || 
-                        signInError.code === 'auth/invalid-credential' || 
-                        signInError.code === 'auth/invalid-email') {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                    } else {
-                        throw signInError;
-                    }
-                }
+                await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
-                console.error(error);
-                let msg = "Authentication failed: " + error.message;
-                if (error.code === 'auth/weak-password') msg = "Password is too weak. Use at least 6 characters.";
-                if (error.code === 'auth/email-already-in-use') msg = "This email is already registered. Please check your password.";
-                alert(msg);
-            } finally {
+                alert(`Login failed: ${error.message}`);
                 document.getElementById('authForm').style.display = 'block';
                 document.getElementById('authLoading').style.display = 'none';
             }
@@ -557,15 +521,6 @@
              // Listen to Build Requests
             const qRequests = query(collection(db, "engine_requests"), orderBy("timestamp", "desc"));
             onSnapshot(qRequests, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const data = change.doc.data();
-                        // Only show notification if it's recent (within last 10 seconds)
-                        if (data.timestamp && (Date.now() - data.timestamp.toMillis() < 10000)) {
-                            showLiveNotification(`New Build Request: ${data.brandName}`);
-                        }
-                    }
-                });
                 renderNotifications(snapshot.docs);
                 document.getElementById('pendingRequests').textContent = snapshot.docs.filter(d => d.data().status === 'pending').length;
             });
@@ -738,59 +693,14 @@
             }
         };
 
-        window.clearAllPartners = async () => {
-            const confirmed = confirm("⚠️ WARNING: This will permanently DELETE ALL active engine registries (Brand Partners). This action cannot be undone. Are you absolutely sure?");
-            if (!confirmed) return;
-            
-            const pin = prompt("Please enter the Admin Security Pin to confirm mass deletion:");
-            if (pin !== "2026") { // A simple safety check
-                alert("Incorrect Pin. Mass deletion aborted.");
-                return;
-            }
-
-            try {
-                const snapshot = await getDocs(collection(db, "short_urls"));
-                const total = snapshot.docs.length;
-                
-                if (total === 0) {
-                    alert("No partners found to delete.");
-                    return;
-                }
-
-                if (!confirm(`You are about to delete ${total} partner(s). Proceed?`)) return;
-
-                const batch = snapshot.docs.map(d => deleteDoc(d.ref));
-                await Promise.all(batch);
-                
-                alert(`Successfully cleared ${total} partners.`);
-                logAudit(`Mass deletion of ${total} partners performed.`);
-            } catch (err) {
-                console.error(err);
-                alert("Error clearing partners: " + err.message);
-            }
-        };
-
         window.editConfig = async (id) => {
             const docSnap = await getDoc(doc(db, "short_urls", id));
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                const form = document.getElementById('editForm');
-                form.innerHTML = `
-                    <input type="hidden" id="editId" value="${id}">
-                    <div class="auth-input-group">
-                        <label>Brand Name</label>
-                        <input type="text" id="editBrand" class="auth-input" value="${data.brandName || ''}">
-                    </div>
-                    <div class="auth-input-group">
-                        <label>Status</label>
-                        <select id="editStatus" class="auth-input">
-                            <option value="active" ${data.status === 'active' ? 'selected' : ''}>Active</option>
-                            <option value="maintenance" ${data.status === 'maintenance' ? 'selected' : ''}>Maintenance</option>
-                            <option value="shutdown" ${data.status === 'shutdown' ? 'selected' : ''}>Shutdown</option>
-                        </select>
-                    </div>
-                `;
-                document.getElementById('editModal').style.display = 'flex';
+                const config = data.config;
+                // Redirect to creator with short code and config in hash
+                // Format: #_sc={CODE}_{CONFIG}
+                window.location.href = `creator/index.html#_sc=${id}_${config}`;
             }
         };
 

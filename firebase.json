@@ -9,11 +9,11 @@
     "rewrites": [
       {
         "source": "/r/**",
-        "destination": "/engine/index.html"
+        "function": "redirect"
       },
       {
         "source": "/r/",
-        "destination": "/engine/index.html"
+        "function": "redirect"
       },
       {
         "source": "/demo",

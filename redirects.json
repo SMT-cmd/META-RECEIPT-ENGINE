@@ -1,0 +1,8 @@
+{
+  "VERSION": "1.0",
+  "DESCRIPTION": "Static fallback redirects for GitHub Pages. DO NOT EDIT MANUALLY unless necessary.",
+  "LAST_UPDATED": "2024-03-21T12:00:00Z",
+  "REDIRECTS": {
+    "SAMPLE": "https://metaforge-6afdf.web.app/engine/index.html#brand-name_BASE64_DATA"
+  }
+}
