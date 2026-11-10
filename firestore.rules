@@ -94,7 +94,7 @@ service cloud.firestore {
       return hasBusinessRole(bid, ['owner','admin']);
     }
     function businessEditor(bid) {
-      return hasBusinessRole(bid, ['owner','admin','manager','staff']);
+      return hasBusinessRole(bid, ['owner','admin','manager','accountant','cashier','sales','staff']);
     }
 
     // Slugs are globally unique and reserved atomically with
@@ -176,7 +176,7 @@ service cloud.firestore {
         allow update: if hasBusinessRole(bid,['owner'])
           && resource.data.role != 'owner'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','status'])
-          && request.resource.data.role in ['admin','manager','staff','viewer']
+          && request.resource.data.role in ['admin','manager','accountant','cashier','sales','staff','viewer']
           && request.resource.data.status in ['active','suspended'];
         allow delete: if false;
       }
@@ -192,7 +192,7 @@ service cloud.firestore {
           && request.resource.data.email is string
           && request.resource.data.email.size() >= 5
           && request.resource.data.email.size() <= 254
-          && request.resource.data.role in ['admin','manager','staff','viewer']
+          && request.resource.data.role in ['admin','manager','accountant','cashier','sales','staff','viewer']
           && (request.resource.data.role != 'admin' || hasBusinessRole(bid,['owner']))
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
@@ -243,26 +243,33 @@ service cloud.firestore {
         allow create: if businessEditor(bid)
           && request.resource.data.id == docId
           && request.resource.data.number is string
-          && request.resource.data.number.size() <= 65;
+          && request.resource.data.number.size() <= 65
+          && (!hasBusinessRole(bid,['cashier']) || request.resource.data.type in ['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt']);
         allow update: if businessEditor(bid)
           && resource.data.voided != true
-          && request.resource.data.id == docId;
+          && request.resource.data.id == docId
+          && (!hasBusinessRole(bid,['cashier']) || (resource.data.draft == true && request.resource.data.type in ['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt']));
         allow delete: if false;
       }
       match /customers/{customerId} {
-        allow read: if isBusinessMember(bid);
+        allow read: if businessEditor(bid);
         allow create, update: if businessEditor(bid);
         allow delete: if teamAdmin(bid);
       }
       match /products/{productId} {
-        allow read: if isBusinessMember(bid);
+        allow read: if businessEditor(bid);
         allow create, delete: if hasBusinessRole(bid,['owner','admin','manager']);
         allow update: if hasBusinessRole(bid,['owner','admin','manager'])
           || (hasBusinessRole(bid,['staff'])
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock','updatedAt']))
+          || (hasBusinessRole(bid,['cashier','sales','accountant'])
+             && request.resource.data.stock is number
+             && request.resource.data.stock >= 0
+             && request.resource.data.stock <= resource.data.stock
              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock','updatedAt']));
       }
       match /expenses/{expenseId} {
-        allow read, write: if teamAdmin(bid);
+        allow read, write: if hasBusinessRole(bid,['owner','admin','manager','accountant']);
       }
       match /targets/{monthId} {
         // Monthly sales goals belong to one business and its authorized team.
