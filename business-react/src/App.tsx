@@ -421,7 +421,7 @@ export default function App(){
       </>}
       {page==='team'&&manage&&<>
         <Heading eyebrow="TEAM & PERMISSIONS" title="Work together, securely." description="Invite members by email. They must verify their account before joining."/>
-        <div className="two-columns narrow"><Panel><h2>Invite staff</h2><form onSubmit={e=>void invite(e)}>
+        <div className="two-columns narrow"><Panel><h2>Invite staff</h2><p className="muted">Viewer: read receipts and invoices only. Cashier: issue receipts. Sales: handle invoices and customers. Accountant: manage financial documents and expenses. Manager: oversee operations. Admin: manage the workspace.</p><form onSubmit={e=>void invite(e)}>
           <Field label="Staff email" type="email" required value={inviteEmail} onChange={setInviteEmail}/>
           <Select label="Role" value={inviteRole} onChange={v=>setInviteRole(v as typeof inviteRole)} options={
             (role==='owner'?['admin','manager','accountant','cashier','sales','viewer']:['manager','accountant','cashier','sales','viewer']).map(r=>[r,r.charAt(0).toUpperCase()+r.slice(1)])}/>
@@ -432,6 +432,14 @@ export default function App(){
           <Panel><div className="panel-row"><h2>Team ({staff.length})</h2><button className="text-button" onClick={()=>void listStaff(business.id).then(setStaff).catch(alert)}>Refresh</button></div>
             {staff.map(m=><div className="list-entry" key={m.uid}><div><strong>{m.email}</strong><small>{m.role} · {m.status}</small></div>
               {role==='owner'&&m.role!=='owner'&&<div className="actions">
+                <select aria-label={'Access level for '+m.email} value={m.role} onChange={async e=>{
+                  const selected=e.target.value as Exclude<Role,'owner'>;
+                  if(!confirm('Change '+m.email+' to '+selected+'? Their permissions will update immediately.'))return;
+                  try{await setStaffRole(business.id,m.uid,selected,m.status==='active');await listStaff(business.id).then(setStaff);note('Staff role updated.');}catch(err){alert(err);}
+                }}>
+                  {['admin','manager','accountant','cashier','sales','staff','viewer'].map(r=>
+                    <option key={r} value={r}>{r==='staff'?'Staff (legacy)':r[0].toUpperCase()+r.slice(1)}</option>)}
+                </select>
                 <button className="text-button" onClick={async()=>{try{await setStaffRole(business.id,m.uid,m.role,m.status!=='active');await listStaff(business.id).then(setStaff);}catch(e){alert(e);}}}>{m.status==='active'?'Suspend':'Reactivate'}</button></div>}
             </div>)}{!staff.length&&<Empty text="No team members yet."/>}</Panel></div>
       </>}
