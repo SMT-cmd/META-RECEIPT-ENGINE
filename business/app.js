@@ -55,7 +55,7 @@ function openView(view,preserveEditor=false) {
 function renderNav() {
   $('#topbarName').textContent=state.profile.name||'Your business';
   $('#topbarDate').textContent=new Date().toLocaleDateString('en-NG',{weekday:'long',month:'short',day:'numeric',year:'numeric'});
-  document.title=(state.profile.name||'MetaForge Business')+' | MetaForge';
+  document.title=(state.profile.name||'Bizlano Business')+' | Bizlano';
 }
 function renderDashboard() {
   renderNav();
@@ -190,7 +190,7 @@ function showDocument(doc){
     '<div class="paper-foot">'+(doc.notes?'<div><strong class="paper-footer-title">Notes</strong>'+p(doc.notes)+'</div>':'')+
     (profile.bank?'<div><strong class="paper-footer-title">Payment details</strong>'+p([profile.bank,profile.accountName,profile.accountNumber].filter(Boolean).join(' · '))+'</div>':'')+
     (profile.footer?p(profile.footer):'')+
-    '<div>Generated with MetaForge Business · '+E(doc.number)+'</div></div></article>';
+    '<div class="bizlano-powered">Powered by <strong>Bizlano</strong> · '+E(doc.number)+'</div></div></article>';
 }
 function renderPreview(){
   let doc;
