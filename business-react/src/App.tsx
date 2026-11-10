@@ -108,7 +108,7 @@ function LoginScreen({user,alert,note}:{user:User|null;alert:(e:unknown)=>void;n
   if(user)return <div className="auth-layout"><Panel><h1>Verify your email</h1><p>Please open the verification email sent to <strong>{user.email}</strong>. Then return here.</p>
     <div className="actions"><Button onClick={async()=>{try{const ok=await refreshEmailVerification();if(ok)window.location.reload();else note('Email is not verified yet.');}catch(e){alert(e);}}} kind="primary">I verified my email</Button><Button onClick={()=>void signOutAccount()}>Sign out</Button></div>
     <p className="hint">Existing MetaForge accounts keep their same Firebase sign-in.</p></Panel></div>;
-  return <div className="auth-layout"><div className="auth-brand"><a href="../"><img className="brandmark" src={bizlanoIcon} alt=""/><strong>Bizlano</strong></a><p>Your business, beautifully managed. Receipts, sales and teams in one place.</p></div>
+  return <div className="auth-layout"><div className="auth-brand"><a href="../bizlano/"><img className="brandmark" src={bizlanoIcon} alt=""/><strong>Bizlano</strong></a><p>Your business, beautifully managed. Receipts, sales and teams in one place.</p></div>
     <Panel><div className="eyebrow">YOUR BUSINESS ACCOUNT</div><h1>{mode==='login'?'Sign in':'Create a free account'}</h1>
       <p className="muted">No subscription gate is enabled while the product is being expanded.</p>
       <form onSubmit={submit}><Field label="Email" type="email" value={email} onChange={setEmail} required/>
@@ -125,7 +125,7 @@ function BusinessPicker({user,businesses,pick,refresh,alert,note,legacyCount}:{u
       await saveBusinessProfile(business.id,{name:business.name,phone:'',email:user.email||'',address:'',registration:'',taxId:'',bank:'',accountName:'',accountNumber:'',currency:'NGN',taxDefault:0,accent:'#4855d9',footer:'Thank you for your patronage!',logo:''});
       await refresh();pick(business);note('Business created. Your workspace is ready.');}
     catch(err){alert(err);}finally{setBusy(false);}};
-  return <div className="onboard-layout"><header><a href="../" className="brand-link">Bizlano</a>
+  return <div className="onboard-layout"><header><a href="../bizlano/" className="brand-link">Bizlano</a>
     <div>{user.email} <button className="text-button" onClick={()=>void signOutAccount()}>Sign out</button></div></header>
     <main><div className="eyebrow">BUSINESS ONBOARDING</div><h1>Welcome to your business workspace.</h1><p className="muted">Create a business, or open one you belong to. Each workspace keeps its own staff and history.</p>
       {legacyCount>0&&<div className="legacy-alert"><strong>Upgrade available: {legacyCount} older receipt records detected</strong><p>Continue with your existing account. Create or select a business, then choose “Upgrade old records” to copy them safely. Your existing links stay available.</p></div>}
@@ -343,7 +343,7 @@ export default function App(){
   const finance=canFinance(role);
   const f=(n:number)=>money(n,workspace.profile.currency);
   return <div className="app-shell">
-    <aside className={'sidebar '+(mobile?'open':'')} id="bizlano-sidebar" aria-label="Business navigation"><a className="brand" href="../"><img className="brandmark" src={bizlanoIcon} alt=""/><span><strong>Bizlano</strong><small>MANAGEMENT SUITE</small></span></a>
+    <aside className={'sidebar '+(mobile?'open':'')} id="bizlano-sidebar" aria-label="Business navigation"><a className="brand" href="../bizlano/"><img className="brandmark" src={bizlanoIcon} alt=""/><span><strong>Bizlano</strong><small>MANAGEMENT SUITE</small></span></a>
       <p className="nav-caption">WORKSPACE</p><nav aria-label="Business navigation">
         {PAGE_ITEMS.filter(p=>!p.roles||p.roles.includes(role)).map(p=><button key={p.id} className={'nav-item '+(page===p.id?'active':'')}
           onClick={()=>go(p.id)}><span>{p.symbol}</span> {p.label}</button>)}</nav>
