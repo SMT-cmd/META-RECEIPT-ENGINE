@@ -147,7 +147,8 @@ $('stage-button').addEventListener('click',()=>{
         documents:[],customers:[],products:[],expenses:[],audit:[]
       };
     }
-    const {result,preview}=migration.migrateArchive(archive,workspace,{businessName:$('business-name').value.trim()});
+    const selectedArchive=$('include-local').checked?archive:{...archive,local:{...archive.local,histories:[]}};
+    const {result,preview}=migration.migrateArchive(selectedArchive,workspace,{businessName:$('business-name').value.trim()});
     if(preview.skipped)notify(preview.skipped+' entries lacked enough details and remain preserved in the JSON archive.');
     if(!window.confirm('Stage '+preview.importable+' legacy receipts as review-only drafts in this browser? '+preview.skipped+' will remain in the downloaded archive. No original cloud records or existing documents will be deleted.'))return;
     const prior=localStorage.getItem(key);
