@@ -60,7 +60,7 @@ test('new business workspace is linked without replacing the existing creator',(
   assert.match(home,/href="business\/"/);
   assert.match(page,/src="core\.js"/);
   assert.match(page,/src="app\.js"/);
-  assert.match(page,/href="\.\.\/metaforge-icon\.svg"/);
+  assert.match(page,/href="\.\.\/bizlano-icon\.svg"/);
   assert.ok(fs.existsSync(path.join(root,'creator/index.html')));
   const ids=new Set([...page.matchAll(/id="([^"]+)"/g)].map(m=>m[1]));
   const refs=new Set([...app.matchAll(/\$\('#([A-Za-z0-9_-]+)'\)/g)].map(m=>m[1]));
