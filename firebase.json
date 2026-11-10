@@ -26,6 +26,10 @@
       {
         "source": "/creator",
         "destination": "/creator/index.html"
+      },
+      {
+        "source": "/app/**",
+        "destination": "/app/index.html"
       }
     ],
     "cleanUrls": true,
@@ -36,9 +40,17 @@
     "indexes": "firestore.indexes.json"
   },
   "emulators": {
-    "auth": { "port": 9099 },
-    "firestore": { "port": 8080 },
-    "hosting": { "port": 5000 },
-    "ui": { "enabled": true }
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "hosting": {
+      "port": 5000
+    },
+    "ui": {
+      "enabled": true
+    }
   }
 }
