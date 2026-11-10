@@ -226,3 +226,33 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   attempted_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_login_attempts ON login_attempts(email,attempted_at);
+
+-- Payment insertion is the single authoritative mutation of the amount received.
+-- This trigger runs in the same D1 transaction as the journal INSERT.
+CREATE TRIGGER IF NOT EXISTS trg_payment_validate
+BEFORE INSERT ON payments
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (
+    SELECT 1 FROM documents
+    WHERE tenant_id=NEW.tenant_id AND id=NEW.document_id
+      AND status IN ('issued','part_paid')
+      AND paid_minor + NEW.amount_minor <= total_minor
+  ) THEN RAISE(ABORT,'Payment exceeds balance or document is not payable') END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_payment_apply
+AFTER INSERT ON payments
+BEGIN
+  UPDATE documents SET
+    paid_minor=paid_minor+NEW.amount_minor,
+    status=CASE WHEN paid_minor+NEW.amount_minor=total_minor THEN 'paid' ELSE 'part_paid' END,
+    updated_at=datetime('now')
+  WHERE tenant_id=NEW.tenant_id AND id=NEW.document_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_document_payment_guard
+BEFORE UPDATE OF paid_minor ON documents
+WHEN NEW.paid_minor < 0 OR NEW.paid_minor > NEW.total_minor
+BEGIN
+  SELECT RAISE(ABORT,'Invalid paid amount');
+END;
