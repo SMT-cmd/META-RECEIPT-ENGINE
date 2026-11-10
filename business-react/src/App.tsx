@@ -110,7 +110,7 @@ function LoginScreen({user,alert,note}:{user:User|null;alert:(e:unknown)=>void;n
       <button className="text-button" onClick={()=>setMode(mode==='login'?'register':'login')}>{mode==='login'?'New here? Create an account':'Already have an account? Sign in'}</button>
     </Panel></div>;
 }
-function BusinessPicker({user,businesses,pick,refresh,alert,note}:{user:User;businesses:Business[];pick:(b:Business)=>void;refresh:()=>Promise<void>;alert:(e:unknown)=>void;note:(s:string)=>void}){
+function BusinessPicker({user,businesses,pick,refresh,alert,note,legacyCount}:{user:User;businesses:Business[];pick:(b:Business)=>void;refresh:()=>Promise<void>;alert:(e:unknown)=>void;note:(s:string)=>void;legacyCount:number}){
   const [name,setName]=useState(''),[slug,setSlug]=useState(''),[busy,setBusy]=useState(false);
   const invitation=parseInviteFromAddress(),expected=slugFromAddress();
   const create=async(e:FormEvent)=>{e.preventDefault();setBusy(true);
@@ -121,6 +121,7 @@ function BusinessPicker({user,businesses,pick,refresh,alert,note}:{user:User;bus
   return <div className="onboard-layout"><header><a href="../" className="brand-link">MetaForge Business</a>
     <div>{user.email} <button className="text-button" onClick={()=>void signOutAccount()}>Sign out</button></div></header>
     <main><div className="eyebrow">BUSINESS ONBOARDING</div><h1>Welcome to your business workspace.</h1><p className="muted">Create a business, or open one you belong to. Each workspace keeps its own staff and history.</p>
+      {legacyCount>0&&<div className="legacy-alert"><strong>Upgrade available: {legacyCount} older receipt records detected</strong><p>Continue with your existing account. Create or select a business, then choose “Upgrade old records” to copy them safely. Your existing links stay available.</p></div>}
       {invitation&&<Panel><h2>Staff invitation detected</h2><p>Accept this invitation using the verified email that the business owner invited.</p>
         <Button kind="primary" disabled={busy} onClick={async()=>{setBusy(true);try{const b=await acceptInvitation(invitation.businessId,invitation.token);await refresh();pick(b);note('Invitation accepted.');}catch(e){alert(e);}finally{setBusy(false);}}}>Accept invitation</Button></Panel>}
       {expected&&!businesses.some(b=>b.slug===expected)&&<Panel><h2>Private business address</h2><p>You need an invitation to access this workspace. A branded address alone never grants permission.</p></Panel>}
@@ -232,6 +233,11 @@ export default function App(){
     return ()=>{live=false;connection.stop();stopProfile();};
   },[business?.id,member?.role,member?.status]);
   useEffect(()=>{if(page==='team'&&business&&canAdmin(role))listStaff(business.id).then(setStaff).catch(alert);},[page,business?.id,role]);
+  useEffect(()=>{if(!user?.emailVerified)return;
+    let live=true;
+    detectLegacy().then(value=>{if(live){setMigrationSources(value.sources);setMigrationWarnings(value.warnings);}}).catch(()=>{});
+    return ()=>{live=false;};
+  },[user?.uid,user?.emailVerified]);
   useEffect(()=>{if(page!=='migration'||!business||role!=='owner')return;
     detectLegacy().then(value=>{setMigrationSources(value.sources);setMigrationWarnings(value.warnings);}).catch(alert);
   },[page,business?.id,role]);
@@ -317,7 +323,7 @@ export default function App(){
   if(loading)return <div className="loading">Opening MetaForge Business…</div>;
   if(!user||!user.emailVerified)return <><LoginScreen user={user} alert={alert} note={note}/>
     {message&&<div className={'floating-alert '+(message.error?'error':'')}>{message.text}</div>}</>;
-  if(!business)return <><BusinessPicker user={user} businesses={businesses} pick={chooseBusiness} refresh={loadBusinesses} alert={alert} note={note}/>
+  if(!business)return <><BusinessPicker user={user} businesses={businesses} pick={chooseBusiness} refresh={loadBusinesses} alert={alert} note={note} legacyCount={migrationSources.reduce((n,x)=>n+x.receiptCount,0)}/>
     {message&&<div className={'floating-alert '+(message.error?'error':'')}>{message.text}</div>}</>;
   if(!member)return <div className="loading">Checking business permissions… <Button onClick={()=>setBusiness(null)}>Back</Button>{message?.text}</div>;
   const manage=canAdmin(role);
@@ -338,6 +344,7 @@ export default function App(){
     <main className="main-area">
       {message&&<div className={'notice '+(message.error?'error':'')} role="status">{message.text}<button onClick={()=>setMessage(null)} aria-label="Close">×</button></div>}
       {page==='overview'&&<>
+        {role==='owner'&&migrationSources.length>0&&<div className="legacy-alert"><div><strong>Your old MetaForge receipts are ready to upgrade</strong><p>We found {migrationSources.reduce((n,x)=>n+x.receiptCount,0)} records. Choose “Upgrade old records” to safely copy them as drafts. No old record will be deleted.</p></div><Button kind="primary" onClick={()=>go('migration')}>Upgrade records</Button></div>}
         <Heading eyebrow="BUSINESS OVERVIEW" title="Every sale. Clearly accounted for."
           description="Your business records, available to everyone you authorize."
           action={canWrite(role)&&<Button kind="dark" onClick={()=>go('create')}>Create a receipt ↗</Button>}/>
