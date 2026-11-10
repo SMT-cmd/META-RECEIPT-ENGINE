@@ -9,7 +9,7 @@ type Span=7|30|90;
 type Target={amount:number;currency:Currency;updatedBy:string};
 type Props={businessId:string;documents:BusinessDocument[];currency:Currency;role:Role};
 const day=(date:Date):string=>{
-  const d=new Date(date);
+  const d=new Date(date.getTime());
   return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 };
 const safeTotal=(d:BusinessDocument):number=>{try{return calculate(d).total;}catch{return 0;}};
