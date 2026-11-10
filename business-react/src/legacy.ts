@@ -3,9 +3,9 @@
  * Receipts without payment evidence migrate as DRAFTS FOR REVIEW.
  * Nothing is deleted from short_urls or localStorage.
  */
-import {collection,doc,getDocs,query,serverTimestamp,where,writeBatch} from 'firebase/firestore';
+import {collection,doc,getDocs,query,serverTimestamp,where,getDoc,runTransaction} from 'firebase/firestore';
 import {auth,db,requireVerified} from './cloud';
-import {newId,today,type BusinessDocument,type DocumentType,type BusinessProfile} from './domain';
+import {today,type BusinessDocument,type DocumentType,type BusinessProfile} from './domain';
 
 interface LegacyRow {
   id?:unknown; date?:unknown; time?:unknown; customer?:unknown;
@@ -14,7 +14,7 @@ interface LegacyRow {
     discount?:unknown;vatEnabled?:unknown;words?:unknown;bonusItem?:unknown
   };
 }
-interface LegacySource {source:string;businessName:string;receiptCount:number;kind:'cloud'|'browser';code?:string}
+export interface LegacySource {source:string;businessName:string;receiptCount:number;kind:'cloud'|'browser';code?:string}
 export interface MigrationPreview {
   sources:LegacySource[];
   count:number;
@@ -100,6 +100,8 @@ export async function importLegacySource(businessId:string,source:LegacySource,p
   let rows:LegacyRow[]=[];
   if(source.kind==='cloud'){
     if(!source.code||!SOURCE_KEY.test(source.code))throw Error('Invalid legacy engine code.');
+    const link=await getDoc(doc(db,'short_urls',source.code));
+    if(!link.exists()||link.data().owner_uid!==user.uid)throw Error('Only the original owner can import this engine.');
     const original=await getDocs(collection(db,'short_urls',source.code,'receipts'));
     // Membership and ownership verified by rules. No client-side account takeover.
     rows=original.docs.map(s=>({...s.data(),id:s.id} as LegacyRow));
@@ -110,42 +112,42 @@ export async function importLegacySource(businessId:string,source:LegacySource,p
   }
   let imported=0,skipped=0;
   const documents=rows.map((r,i)=>adaptLegacy(r,source.source,i,profile));
-  // Grouped writes (under the per-batch operation limit) retain old originals.
-  for(let offset=0;offset<documents.length;offset+=150){
-    const batch=writeBatch(db);
-    const chunk=documents.slice(offset,offset+150);
-    const destination=collection(db,'businesses',businessId,'documents');
-    for(const record of chunk){
-      const marker=doc(db,'businesses',businessId,'legacy_imports',record.id);
-      const dest=doc(destination,record.id);
-      // Deterministic target IDs make retries safe; do not overwrite edited documents.
-      // Checks must be performed server-side via a transaction in a follow-up step.
-      // This path deliberately uses create-only semantics via transaction below.
-      void marker;void dest;
-    }
-    await importChunk(businessId,chunk,user.uid);
-    imported+=chunk.length;
-    void batch;
+  // Original payload is retained as JSON in an immutable owner-only checkpoint.
+  // Deterministic IDs make interrupted migrations safe to resume.
+  for(let offset=0;offset<documents.length;offset+=100){
+    const chunk=documents.slice(offset,offset+100);
+    const originals=rows.slice(offset,offset+100);
+    const outcome=await importChunk(businessId,chunk,originals,user.uid);
+    imported+=outcome.imported;skipped+=outcome.skipped;
   }
   return {found:rows.length,imported,skipped,source:source.source};
 }
-import {runTransaction,getDoc} from 'firebase/firestore';
-async function importChunk(businessId:string,documents:BusinessDocument[],actorUid:string):Promise<void>{
-  // One transaction per receipt guards idempotency across retries and devices.
-  for(const record of documents){
+async function importChunk(
+  businessId:string,documents:BusinessDocument[],originals:LegacyRow[],actorUid:string
+):Promise<{imported:number;skipped:number}>{
+  let imported=0,skipped=0;
+  for(let i=0;i<documents.length;i++){
+    const record=documents[i],originalJSON=JSON.stringify(originals[i]);
+    if(originalJSON.length>700000)throw Error('One old document is too large for Firestore. Export its original data before continuing.');
     const destination=doc(db,'businesses',businessId,'documents',record.id);
     const checkpoint=doc(db,'businesses',businessId,'legacy_imports',record.id);
-    await runTransaction(db,async tx=>{
+    const didWrite=await runTransaction(db,async tx=>{
       const [existing,marker]=await Promise.all([tx.get(destination),tx.get(checkpoint)]);
-      if(marker.exists()||existing.exists())return;
+      if(marker.exists()||existing.exists())return false;
       tx.set(destination,record);
       tx.set(checkpoint,{
         sourceId:record.id,actorUid,createdAt:serverTimestamp(),
-        source:record.reference,documentId:record.id
+        source:record.reference,documentId:record.id,
+        originalJSON,originalTotal:clean(originals[i].total,60),
+        migratedAs:'draft',reviewRequired:true
       });
+      return true;
     });
+    if(didWrite)imported++;else skipped++;
   }
+  return {imported,skipped};
 }
+
 export function copyLegacyHistoryInfo():string {
   return 'Your original engine receipts remain at their existing links and in the original browser. Imported drafts are separate copies and require review; no payments are automatically confirmed.';
 }
