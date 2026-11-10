@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>METAFORGE | Elite Digital Document Infrastructure</title>
+    <title>Bizlano (formerly MetaForge) | Your business, beautifully managed</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"></noscript>
+    <link rel="icon" type="image/svg+xml" href="bizlano-icon.svg">
+    <meta name="description" content="Meet Bizlano, formerly MetaForge — professional business receipts, invoices and operations in one place. Existing receipt engines and sign-ins remain available.">
     <link rel="manifest" href="manifest.json">
     <style>
         :root { 
@@ -463,7 +465,12 @@
         .cookie-content p { font-size: 12px; opacity: 0.7; margin-bottom: 20px; line-height: 1.5; }
         .cookie-btns { display: flex; gap: 10px; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    </style>
+    
+        .bizlano-transition{position:relative;z-index:4;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:linear-gradient(110deg,#241853,#5232ab);color:#fff;padding:12px 20px;text-align:center;font:600 12px/1.55 'Inter',system-ui,sans-serif}
+        .bizlano-transition img{width:30px;height:30px;border-radius:7px;background:#fff}
+        .bizlano-transition a{color:#fff;text-underline-offset:4px;font-weight:800;text-decoration:underline}
+        @media(max-width:600px){.bizlano-transition{font-size:11px;padding:10px 13px;gap:8px}.bizlano-transition img{width:25px;height:25px}}
+</style>
 </head>
 <body data-theme="dark">
     <canvas id="bgCanvas"></canvas>
@@ -496,6 +503,7 @@
             <a href="#prestige" class="nav-link">Prestige</a>
             <a href="#social" class="nav-link">Partners</a>
             <a href="#demo" class="nav-link">Interactive Demo</a>
+            <a href="bizlano/" class="nav-link">Meet Bizlano</a>
             <a href="business/" class="nav-link">Business Tools</a>
             <a href="#request" class="nav-link">Request Engine</a>
             <button class="theme-toggle" id="themeToggle"></button>
@@ -512,9 +520,12 @@
         <a href="#prestige" class="nav-link mobile-link">Prestige</a>
         <a href="#social" class="nav-link mobile-link">Partners</a>
         <a href="#demo" class="nav-link mobile-link">Interactive Demo</a>
+        <a href="bizlano/" class="nav-link mobile-link">Meet Bizlano</a>
         <a href="business/" class="nav-link mobile-link">Business Tools</a>
         <a href="#request" class="nav-link mobile-link">Request Engine</a>
     </div>
+
+    <div class="bizlano-transition"><img src="bizlano-icon.svg" alt=""><span>MetaForge is becoming <strong>Bizlano</strong>. Your existing documents and account remain available.</span><a href="bizlano/">Meet Bizlano →</a></div>
 
     <section class="hero">
         <h1>ELEVATE YOUR <span>LEGACY</span></h1>
