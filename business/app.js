@@ -22,7 +22,7 @@ function load() {
   return defaults();
 }
 let state=load(),editingId=null,selectedStyle='signature',previewDoc=null,logoDraft=null;
-const money=n=>C.money(n,state.profile.currency);
+const money=(n,currency)=>C.money(n,currency||state.profile.currency);
 const typeInfo=id=>C.DOCUMENT_TYPES.find(t=>t.id===id)||C.DOCUMENT_TYPES[0];
 const fmtDate=day=>day?new Date(day+'T12:00:00').toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}):'—';
 function commit(action,detail) {
@@ -59,24 +59,25 @@ function renderNav() {
 }
 function renderDashboard() {
   renderNav();
-  const s=C.summary(state.documents,state.expenses);
+  const s=C.summary(state.documents.filter(d=>!d.currency||d.currency===state.profile.currency),state.expenses.filter(e=>!e.currency||e.currency===state.profile.currency));
+  const mixed=state.documents.some(d=>d.currency&&d.currency!==state.profile.currency);
   const stats=[
     ['Issued sales value',money(s.invoiced),'Total issued billable documents'],
     ['Payments received',money(s.collected),'Manually recorded'],
     ['Outstanding',money(s.outstanding),'Not yet collected'],
-    ['Expenses logged',money(s.expenses),'Cash less expenses: '+money(s.cashAfterExpenses)]
+    ['Expenses logged',money(s.expenses),'Cash less expenses: '+money(s.cashAfterExpenses)+(mixed?' · Other currencies excluded':'')]
   ];
   $('#stats').innerHTML=stats.map(row=>'<div class="stat"><span>'+E(row[0])+'</span><strong>'+E(row[1])+'</strong><small>'+E(row[2])+'</small></div>').join('');
   const docs=state.documents.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,6);
   $('#recentDocs').innerHTML=docs.length?tableDocuments(docs,true):'<div class="empty">No documents yet. Create your first receipt or invoice.</div>';
   const debts=state.documents.filter(d=>C.BILLABLE.has(d.type)&&!d.draft&&!d.voided).map(d=>{try{return {d,totals:C.calculate(d)}}catch(_){return null}}).filter(x=>x && x.totals.balance>0).sort((a,b)=>b.totals.balance-a.totals.balance).slice(0,6);
-  $('#debts').innerHTML=debts.length?debts.map(x=>'<div class="debt-item"><div><strong>'+E(x.d.customer||'Walk-in customer')+'</strong><small>'+E(x.d.number)+' · '+E(C.status(x.d))+'</small></div><strong>'+E(money(x.totals.balance))+'</strong></div>').join(''):'<div class="empty">No outstanding payments.</div>';
+  $('#debts').innerHTML=debts.length?debts.map(x=>'<div class="debt-item"><div><strong>'+E(x.d.customer||'Walk-in customer')+'</strong><small>'+E(x.d.number)+' · '+E(C.status(x.d))+'</small></div><strong>'+E(money(x.totals.balance,x.d.currency))+'</strong></div>').join(''):'<div class="empty">No outstanding payments.</div>';
   $('#setupPanel').classList.toggle('hidden',Boolean(state.profile.phone&&state.profile.name&&state.profile.name!=='My Business'));
 }
 function docStatus(d){try{return C.status(d)}catch(_){return 'Needs review'}}
 function tableDocuments(list,compact=false) {
   const rows=list.map(d=>{
-    let total='—';try{total=money(C.calculate(d).total)}catch(_){}
+    let total='—';try{total=money(C.calculate(d).total,d.currency)}catch(_){}
     const status=docStatus(d);
     return '<tr><td><strong>'+E(d.number)+'</strong><small>'+E(typeInfo(d.type).label)+'</small></td><td>'+E(d.customer||'Walk-in')+'</td><td>'+E(fmtDate(d.date))+'</td><td class="money">'+E(total)+'</td><td><span class="status '+E(status.replace(/[^a-zA-Z-]/g,''))+'">'+E(status)+'</span></td>'+
       (compact?'':'<td><div class="table-actions"><button data-doc-action="edit" data-id="'+E(d.id)+'">Edit</button><button data-doc-action="copy" data-id="'+E(d.id)+'">Copy</button><button data-doc-action="print" data-id="'+E(d.id)+'">Print</button><button data-doc-action="share" data-id="'+E(d.id)+'">Share</button>'+(C.BILLABLE.has(d.type)&&!d.voided&&!d.draft&&docStatus(d)!=='Paid'?'<button data-doc-action="payment" data-id="'+E(d.id)+'">Payment</button>':'')+(d.draft?'<button data-doc-action="delete" data-id="'+E(d.id)+'">Delete</button>':!d.voided?'<button data-doc-action="void" data-id="'+E(d.id)+'">Void</button>':'')+'</div></td>')+'</tr>';
@@ -99,7 +100,7 @@ function renderCustomers(){
   $('#customerOptions').innerHTML=state.customers.map(c=>'<option value="'+E(c.name)+'"></option>').join('');
   $('#customerList').innerHTML=state.customers.length?state.customers.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>{
     const docs=state.documents.filter(d=>d.customer&&d.customer.trim().toLowerCase()===c.name.toLowerCase()&&!d.voided);
-    const outstanding=docs.reduce((sum,d)=>{try{return sum+(C.BILLABLE.has(d.type)&&!d.draft?C.calculate(d).balance:0)}catch(_){return sum}},0);
+    const outstanding=docs.reduce((sum,d)=>{try{return sum+(C.BILLABLE.has(d.type)&&!d.draft&&(!d.currency||d.currency===state.profile.currency)?C.calculate(d).balance:0)}catch(_){return sum}},0);
     return '<div class="list-row"><div><strong>'+E(c.name)+'</strong><small>'+E(c.phone||c.email||'No contact saved')+' · '+docs.length+' documents</small></div><div class="end"><strong>'+E(money(outstanding))+'</strong><small>Outstanding</small><button class="text-btn" data-remove="customer" data-id="'+E(c.id)+'">Remove</button></div></div>';
   }).join(''):'<div class="empty">No customers saved yet.</div>';
 }
@@ -166,9 +167,9 @@ function validateDoc(doc){
 }
 function showDocument(doc){
   let totals;try{totals=C.calculate(doc);}catch(err){$('#preview').innerHTML='<div class="paper"><p class="empty">'+E(err.message)+'</p></div>';return;}
-  const profile=state.profile,style=C.STYLES.find(s=>s.id===doc.style)||C.STYLES[0];
+  const profile=doc.profileSnapshot||state.profile,docMoney=n=>money(n,doc.currency||profile.currency),style=C.STYLES.find(s=>s.id===doc.style)||C.STYLES[0];
   const accent=doc.style==='signature'?profile.accent:style.accent;
-  const rows=totals.lines.map(line=>'<tr><td>'+E(line.description)+'</td><td>'+E(line.qty)+'</td><td>'+E(money(line.price))+'</td><td>'+E(money(line.total))+'</td></tr>').join('');
+  const rows=totals.lines.map(line=>'<tr><td>'+E(line.description)+'</td><td>'+E(line.qty)+'</td><td>'+E(docMoney(line.price))+'</td><td>'+E(docMoney(line.total))+'</td></tr>').join('');
   const p=(text)=>text?'<div>'+E(text)+'</div>':'';
   $('#preview').innerHTML='<article class="paper" id="printableDocument" data-style="'+E(doc.style||'signature')+'" style="--receipt-accent:'+E(/^#[a-f\d]{6}$/i.test(accent)?accent:'#4855d9')+'">'+
     '<div class="paper-header"><div>'+(profile.logo&&/^data:image\/(png|jpeg|webp);base64,/.test(profile.logo)?'<img class="paper-logo" src="'+profile.logo+'" alt="Business logo">':'')+
@@ -178,13 +179,13 @@ function showDocument(doc){
     '<div class="paper-meta"><div><strong>Issued to</strong>'+p(doc.customer||'Walk-in customer')+p(doc.customerPhone)+p(doc.customerEmail)+p(doc.customerAddress)+'</div>'+
     '<div><strong>Document details</strong>'+p('Issued: '+fmtDate(doc.date))+(doc.dueDate?p('Due: '+fmtDate(doc.dueDate)):'')+(doc.reference?p('Ref: '+doc.reference):'')+p('Currency: '+profile.currency)+'</div></div>'+
     '<table class="paper-table"><thead><tr><th>Item / service</th><th>Qty</th><th>Unit</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<div class="paper-totals"><div class="paper-total-row"><span>Subtotal</span><strong>'+E(money(totals.subtotal))+'</strong></div>'+
-    (totals.discount?'<div class="paper-total-row"><span>Discount ('+E(doc.discountPct)+'%)</span><strong>−'+E(money(totals.discount))+'</strong></div>':'')+
-    (doc.taxPct?'<div class="paper-total-row"><span>Tax ('+E(doc.taxPct)+'%)</span><strong>'+E(money(totals.tax))+'</strong></div>':'')+
-    (totals.shipping?'<div class="paper-total-row"><span>Extra charges</span><strong>'+E(money(totals.shipping))+'</strong></div>':'')+
-    '<div class="paper-total-row grand"><span>TOTAL</span><strong>'+E(money(totals.total))+'</strong></div>'+
-    (doc.paid?'<div class="paper-total-row"><span>Received</span><strong>'+E(money(totals.paid))+'</strong></div>':'')+
-    (C.BILLABLE.has(doc.type)?'<div class="paper-total-row"><span>Balance</span><strong>'+E(money(totals.balance))+'</strong></div>':'')+'</div>'+
+    '<div class="paper-totals"><div class="paper-total-row"><span>Subtotal</span><strong>'+E(docMoney(totals.subtotal))+'</strong></div>'+
+    (totals.discount?'<div class="paper-total-row"><span>Discount ('+E(doc.discountPct)+'%)</span><strong>−'+E(docMoney(totals.discount))+'</strong></div>':'')+
+    (doc.taxPct?'<div class="paper-total-row"><span>Tax ('+E(doc.taxPct)+'%)</span><strong>'+E(docMoney(totals.tax))+'</strong></div>':'')+
+    (totals.shipping?'<div class="paper-total-row"><span>Extra charges</span><strong>'+E(docMoney(totals.shipping))+'</strong></div>':'')+
+    '<div class="paper-total-row grand"><span>TOTAL</span><strong>'+E(docMoney(totals.total))+'</strong></div>'+
+    (doc.paid?'<div class="paper-total-row"><span>Received</span><strong>'+E(docMoney(totals.paid))+'</strong></div>':'')+
+    (C.BILLABLE.has(doc.type)?'<div class="paper-total-row"><span>Balance</span><strong>'+E(docMoney(totals.balance))+'</strong></div>':'')+'</div>'+
     '<div class="paper-status">'+E(doc.draft?'DRAFT':doc.voided?'VOID':doc.type==='invoice'&&totals.balance>0?'ISSUED':C.status(doc).toUpperCase())+'</div>'+
     '<div class="paper-foot">'+(doc.notes?'<div><strong class="paper-footer-title">Notes</strong>'+p(doc.notes)+'</div>':'')+
     (profile.bank?'<div><strong class="paper-footer-title">Payment details</strong>'+p([profile.bank,profile.accountName,profile.accountNumber].filter(Boolean).join(' · '))+'</div>':'')+
@@ -224,6 +225,10 @@ function saveDocument(draft){
     const old=editingId?state.documents.find(d=>d.id===editingId):null;
     if(old?.voided)throw Error('Voided documents cannot be edited. Duplicate it instead.');
     doc.draft=draft;doc.voided=false;
+    doc.currency=old?.currency||state.profile.currency;
+    doc.profileSnapshot=old?.profileSnapshot||(!draft?{...state.profile}:null);
+    doc.revisions=Array.isArray(old?.revisions)?old.revisions.slice(-9):[];
+    if(old&&!old.draft)doc.revisions.push({at:new Date().toISOString(),previous:{type:old.type,number:old.number,date:old.date,customer:old.customer,items:old.items,discountPct:old.discountPct,taxPct:old.taxPct,shipping:old.shipping,paid:old.paid}});
     doc.id=old?.id||newid();doc.createdAt=old?.createdAt||new Date().toISOString();doc.updatedAt=new Date().toISOString();
     state.products=inventoryPlan(old,doc);
     if(old)state.documents[state.documents.findIndex(d=>d.id===doc.id)]=doc;else state.documents.push(doc);
@@ -247,8 +252,9 @@ function populateEditor(doc,duplicate){
 function printDocument(){if(!previewDoc){announce('Create a document first.',true);return;}window.print();}
 function shareText(doc) {
   const s=C.calculate(doc),p=state.profile;
-  return [p.name,typeInfo(doc.type).label+' '+doc.number,'Date: '+fmtDate(doc.date),'Customer: '+(doc.customer||'Walk-in'),...(doc.items||[]).map(i=>i.description+' × '+i.qty+' — '+money(Number(i.qty)*Number(i.price))),
-    'Total: '+money(s.total),'Paid: '+money(s.paid),'Balance: '+money(s.balance),
+  const docMoney=n=>docMoney(n,doc.currency);
+  return [(doc.profileSnapshot?.name||p.name),typeInfo(doc.type).label+' '+doc.number,'Date: '+fmtDate(doc.date),'Customer: '+(doc.customer||'Walk-in'),...(doc.items||[]).map(i=>i.description+' × '+i.qty+' — '+docMoney(Number(i.qty)*Number(i.price))),
+    'Total: '+docMoney(s.total),'Paid: '+docMoney(s.paid),'Balance: '+docMoney(s.balance),
     p.bank?'Payment details: '+[p.bank,p.accountName,p.accountNumber].filter(Boolean).join(' / '):'',
     'Please ask the sender for the official PDF copy.'].filter(Boolean).join('\n');
 }
@@ -308,7 +314,7 @@ function adjustProduct(id) {
 function addExpense(form){
   const v=Object.fromEntries(new FormData(form).entries());
   if(!v.description.trim()||!Number.isFinite(Number(v.amount))||Number(v.amount)<=0)return announce('Add an expense name and positive amount.',true);
-  const expense={id:newid(),description:v.description.trim(),category:v.category,date:v.date||nowDate(),amount:Number(v.amount)};
+  const expense={id:newid(),description:v.description.trim(),category:v.category,date:v.date||nowDate(),amount:Number(v.amount),currency:state.profile.currency};
   state.expenses.push(expense);if(commit('expense.created',expense.description)){form.reset();form.elements.date.value=nowDate();renderExpenses();announce('Expense recorded.');}
 }
 function removeRecord(kind,id){
@@ -330,7 +336,7 @@ function saveProfile(){
   if(!Number.isFinite(Number(v.taxDefault))||Number(v.taxDefault)<0||Number(v.taxDefault)>100)return announce('Default tax must be between 0 and 100.',true);
   const next={...v,name:v.name.trim(),taxDefault:Number(v.taxDefault),logo:logoDraft||''};
   state.profile=next;
-  if(commit('profile.updated',next.name)){renderNav();announce('Business profile updated. Existing records will display your current branding.');}
+  if(commit('profile.updated',next.name)){renderNav();announce('Business profile updated. Issued documents keep their original business branding.');}
 }
 function download(name,data,type){
   const blob=new Blob([data],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -343,10 +349,10 @@ function csvSafe(value){
 }
 function exportCsv(kind){
   let rows=[];
-  if(kind==='documents')rows=[['Number','Type','Date','Due','Customer','Subtotal','Discount','Tax','Total','Paid','Balance','Status'],...state.documents.map(d=>{try{const s=C.calculate(d);return [d.number,typeInfo(d.type).label,d.date,d.dueDate,d.customer,s.subtotal,s.discount,s.tax,s.total,s.paid,s.balance,docStatus(d)];}catch(_){return [d.number,'Invalid record'];}})];
+  if(kind==='documents')rows=[['Number','Type','Date','Due','Customer','Currency','Subtotal','Discount','Tax','Total','Paid','Balance','Status'],...state.documents.map(d=>{try{const s=C.calculate(d);return [d.number,typeInfo(d.type).label,d.date,d.dueDate,d.customer,d.currency||state.profile.currency,s.subtotal,s.discount,s.tax,s.total,s.paid,s.balance,docStatus(d)];}catch(_){return [d.number,'Invalid record'];}})];
   if(kind==='customers')rows=[['Name','Phone','Email','Address'],...state.customers.map(c=>[c.name,c.phone,c.email,c.address])];
   if(kind==='products')rows=[['Name','SKU','Price','Stock','Low-stock threshold','Track stock'],...state.products.map(p=>[p.name,p.sku,p.price,p.stock,p.low,p.track])];
-  if(kind==='expenses')rows=[['Date','Description','Category','Amount'],...state.expenses.map(x=>[x.date,x.description,x.category,x.amount])];
+  if(kind==='expenses')rows=[['Date','Description','Category','Amount','Currency'],...state.expenses.map(x=>[x.date,x.description,x.category,x.amount,x.currency||state.profile.currency])];
   download('metaforge-'+kind+'-'+nowDate()+'.csv','\uFEFF'+C.csv(rows.map(r=>r.map(csvSafe))),'text/csv;charset=utf-8');
 }
 async function restoreBackup(){
