@@ -8,7 +8,7 @@ test('React workspace uses Bizlano branding without deleting legacy upgrade rout
   const app=source('business-react/src/App.tsx');
   const html=source('business-react/index.html');
   assert.match(html,/<title>Bizlano/);
-  assert.match(app,/Powered by Bizlano/);
+  assert.match(app,/Powered by <strong>Bizlano<\/strong>/);
   assert.match(app,/Your business, beautifully managed/);
   assert.match(app,/old MetaForge receipts are ready to upgrade/);
   assert.ok(fs.existsSync(path.join(__dirname,'..','upgrade/index.html')));
