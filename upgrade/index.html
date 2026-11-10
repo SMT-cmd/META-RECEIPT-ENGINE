@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#151a33"><meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Secure, voluntary migration assistant for existing MetaForge receipt and invoice customers.">
+<title>Upgrade your workspace | MetaForge</title>
+<link rel="icon" type="image/svg+xml" href="../metaforge-icon.svg">
+<style>
+:root{--navy:#151a33;--brand:#4956d5;--ink:#1d2539;--muted:#6a7690;--line:#e2e7ef;--bg:#f6f7fb;--white:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg)}button,input{font:inherit}button{cursor:pointer}a{color:#4052b4}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #abb5ff;outline-offset:2px}
+.top{background:var(--navy);color:#fff;padding:17px clamp(18px,4vw,64px);display:flex;justify-content:space-between;align-items:center;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:18px;font-weight:800}.mark{background:#dfe3ff;color:#28378b;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;font-size:23px}
+.toplink{color:#d9defa;font-size:13px}.wrap{max-width:1060px;margin:0 auto;padding:clamp(22px,4vw,56px) 20px 70px}
+.eyebrow{color:#4c59b1;letter-spacing:2px;text-transform:uppercase;font-weight:800;font-size:11px}
+h1{font-size:clamp(29px,5vw,49px);letter-spacing:-1.6px;line-height:1.15;max-width:850px;margin:10px 0 14px}
+.subtitle{color:var(--muted);max-width:780px;line-height:1.7;margin:0 0 32px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:17px;display:flex;align-items:center;gap:12px;color:#5c6981;font-weight:700;font-size:12px}
+.step strong{display:grid;place-items:center;width:30px;height:30px;background:#e8ebff;border-radius:50%;color:var(--brand)}.step.on{border-color:#9faafa;background:#f9faff}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:17px;padding:clamp(18px,3vw,29px);margin-bottom:20px}
+h2{font-size:19px;margin:0 0 10px;letter-spacing:-.35px}h3{font-size:14px;margin:12px 0}.panel p{font-size:13px;color:var(--muted);line-height:1.7}
+label{display:block;font-size:12px;font-weight:700;margin:13px 0;color:#48536e}input{display:block;width:100%;border:1px solid #dbe0e9;border-radius:9px;padding:11px 13px;margin-top:6px;background:#fff;color:var(--ink)}
+button.btn,a.btn{border-radius:9px;background:var(--brand);color:white;border:1px solid transparent;padding:12px 17px;min-height:44px;font-size:13px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.secondary,a.secondary{background:#fff;color:#354059;border-color:#dce1eb}
+button.btn:disabled{opacity:.5;cursor:not-allowed}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.hidden{display:none!important}
+.status{border:1px solid #d8e3fb;background:#f1f5ff;padding:12px;border-radius:9px;font-size:12px;color:#344671;line-height:1.6;margin:13px 0}
+.status.error{background:#fff3f2;border-color:#f2c9c6;color:#a02a24}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#f5f7fc;border:1px solid #ebedf5;padding:16px;border-radius:10px}.metric strong{font-size:26px;display:block}.metric small{font-size:11px;color:var(--muted)}.warn{background:#fffaf0;border:1px solid #f3dfb9;border-radius:11px;padding:15px;font-size:12px;color:#845b15;line-height:1.7}
+ul{margin:0;padding-left:20px}li{margin:9px 0;font-size:12px;color:#566177;line-height:1.6}
+.footer{border-top:1px solid var(--line);padding:20px 0;color:#76849d;font-size:12px;margin-top:25px}
+@media(max-width:770px){.grid,.steps{grid-template-columns:1fr}.statgrid{grid-template-columns:repeat(3,1fr)}.step{padding:10px}.top{padding:15px}.step strong{width:25px;height:25px}}
+</style>
+<script src="./legacy.js" defer></script>
+<script type="module" src="./app.js"></script>
+</head>
+<body>
+<header class="top"><a href="../" class="brand"><span class="mark">M</span> MetaForge <span style="font-weight:400;opacity:.7;font-size:12px">ACCOUNT UPGRADE</span></a><a class="toplink" href="../creator/">Return to classic creator</a></header>
+<main class="wrap" id="content">
+<div class="eyebrow">YOUR RECORDS COME FIRST</div>
+<h1>Move forward without leaving your records behind.</h1>
+<p class="subtitle">You can review what your old account contains, save a personal backup and optionally stage historical records for the upgraded business workspace. Your existing login, receipt links and original history remain unchanged.</p>
+<div class="steps" aria-label="Migration stages"><div class="step on"><strong>1</strong> Sign in</div><div class="step"><strong>2</strong> Review & back up</div><div class="step"><strong>3</strong> Stage review drafts</div></div>
+<div id="notice" role="status" aria-live="polite" class="status hidden"></div>
+<div class="grid">
+<div>
+  <section id="sign-in" class="panel">
+    <h2>Existing MetaForge account</h2><p>Use the email and password you already use for the classic creator. No new account or password is needed.</p>
+    <form id="login-form"><label>Account email<input name="email" type="email" required autocomplete="username" placeholder="your@email.com"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="btn" type="submit" id="login-button">Sign in securely</button></form>
+  </section>
+  <section id="review" class="panel hidden">
+    <h2>Check your existing records</h2><p id="signed-in">Signed in</p>
+    <div class="statgrid"><div class="metric"><strong id="count-engines">—</strong><small>Owned receipt engines</small></div><div class="metric"><strong id="count-cloud">—</strong><small>Cloud receipts readable</small></div><div class="metric"><strong id="count-local">—</strong><small>Local receipts found</small></div></div>
+    <p id="scan-info">Select Scan my records. This will read your own Firestore history and histories saved on this browser.</p>
+    <div class="row"><button class="btn" id="scan-button" type="button">Scan my records</button><button class="btn secondary hidden" id="download-button" type="button">Download my backup</button></div>
+    <div id="issues-panel" class="warn hidden" style="margin-top:15px"><strong>Some records need attention</strong><ul id="issues"></ul></div>
+  </section>
+  <section class="panel hidden" id="stage">
+    <h2>Stage historical records for review</h2>
+    <p>Your old records will be converted into <strong>drafts marked for review</strong> in the new browser workspace, not counted as new sales. Their original source remains untouched.</p>
+    <label>Business name to show on your new workspace<input id="business-name" value="" maxlength="120" placeholder="Your business name"></label>
+    <p id="stage-preview" class="status">Download a backup first to enable staging.</p>
+    <div class="row"><button class="btn" id="stage-button" disabled type="button">Stage records and open workspace</button><a class="btn secondary" href="../business/">Open workspace without import</a></div>
+  </section>
+</div>
+<aside>
+  <section class="panel"><h2>What remains safe?</h2><ul><li>Your old password and Firebase sign-in stay in place.</li><li>Existing short receipt links keep working; no link is redirected.</li><li>You can download a JSON archive before changing anything.</li><li>Cloud records are read only; nothing is removed or rewritten.</li><li>Importing twice will not duplicate the same records.</li></ul></section>
+  <section class="panel"><h2>What about my future subdomain?</h2><p>The new platform is being prepared for individual business addresses such as <strong>myshop.platform.com</strong>. This wizard does not create a live subdomain yet, and it does not transfer login sessions between unrelated domains.</p><div class="warn">For accounts opened from a different website, use the downloaded backup when the hosted migration importer is available. Keep the backup private: it can contain customer and transaction information.</div></section>
+  <section class="panel"><h2>Questions?</h2><p>You can choose “later” in the original account and continue using the existing creator. No migration or subscription is mandatory.</p><a href="../creator/">Continue with classic MetaForge</a></section>
+</aside>
+</div>
+<footer class="footer">MetaForge account migration · Source receipts are preserved · Never share your downloaded archive publicly.</footer>
+</main>
+</body></html>
