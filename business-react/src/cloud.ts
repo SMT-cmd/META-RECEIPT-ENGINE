@@ -202,7 +202,10 @@ export function observeBusiness(
       onUpdate(name,snap.docs.map(d=>d.data()) as BusinessCloudCollections[keyof BusinessCloudCollections]);
     },err=>onError(err)));
   };
-  listen('documents');listen('customers');listen('products');
+  listen('documents');
+  // View-only staff can open issued documents, but customer PII and the
+  // stock catalogue have their own protected collections in Firestore.
+  if(role!=='viewer'){listen('customers');listen('products');}
   if(['owner','admin','manager','accountant'].includes(role))listen('expenses');
   return {stop:()=>stop.forEach(unsub=>unsub())};
 }
