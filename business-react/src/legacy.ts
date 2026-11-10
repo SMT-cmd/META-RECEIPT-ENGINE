@@ -4,7 +4,7 @@
  * Nothing is deleted from short_urls or localStorage.
  */
 import {collection,doc,getDocs,query,serverTimestamp,where,getDoc,runTransaction} from 'firebase/firestore';
-import {auth,db,requireVerified} from './cloud';
+import {db,requireVerified} from './cloud';
 import {today,type BusinessDocument,type DocumentType,type BusinessProfile} from './domain';
 
 interface LegacyRow {
