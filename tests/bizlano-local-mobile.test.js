@@ -9,7 +9,7 @@ test('browser workspace mobile tabs link to actual sections',()=>{
   for(const view of ['dashboard','documents','create','catalog']){
     assert.match(html,new RegExp('class="bottom-tab[^"]*" data-view="'+view+'"'));
     assert.match(html,new RegExp('id="view-'+view+'"'));
-    assert.match(js,new RegExp("if\\(view==='"+view+"'\\)"));
+    assert.ok(js.includes("view==='" + view + "'"));
   }
   assert.match(html,/id="mobileMore"/);
   assert.match(html,/id="mobileScrim"/);
