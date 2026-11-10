@@ -45,7 +45,10 @@ service cloud.firestore {
       // Subcollection: Document History for this specific Engine
       // Only the owner of the Engine can read/write its history
       match /receipts/{docId} {
-        allow read, write: if isOwner();
+        // Legacy receipts belong to the parent engine, not to the receipt.
+        // Preserve the old engine's owner-only history with correct ownership lookup.
+        allow read, write: if isAuthenticated()
+          && get(/databases/$(database)/documents/short_urls/$(shortCode)).data.owner_uid == request.auth.uid;
       }
     }
 
@@ -205,6 +208,15 @@ service cloud.firestore {
           && request.resource.data.usedBy == request.auth.uid
           && request.resource.data.usedAt == request.time;
         allow delete: if teamAdmin(bid);
+      }
+
+      match /legacy_imports/{sourceId} {
+        allow get, list: if hasBusinessRole(bid, ['owner','admin']);
+        allow create: if hasBusinessRole(bid, ['owner'])
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.sourceId == sourceId
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
       }
 
       match /settings/{settingsId} {
