@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#171c31">
+<meta name="description" content="MetaForge Business — professional receipts, invoices and sales records for growing businesses.">
+<title>MetaForge Business | Receipts, Invoices & Sales</title>
+<link rel="icon" type="image/svg+xml" href="../metaforge-icon.svg">
+<link rel="stylesheet" href="style.css">
+<script defer src="core.js"></script><script defer src="app.js"></script>
+</head><body>
+<a href="#content" class="skip">Skip to workspace</a>
+<div class="shell">
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="../"><span class="brand-icon">M</span><span><strong>MetaForge</strong><small>BUSINESS</small></span></a>
+<p class="nav-heading">YOUR WORKSPACE</p>
+<nav aria-label="Main navigation" id="nav">
+<button data-view="dashboard" class="nav active">▦ <span>Overview</span></button>
+<button data-view="create" class="nav">＋ <span>Create document</span></button>
+<button data-view="documents" class="nav">▤ <span>Documents</span></button>
+<button data-view="customers" class="nav">♙ <span>Customers</span></button>
+<button data-view="catalog" class="nav">▥ <span>Products & stock</span></button>
+<button data-view="expenses" class="nav">↗ <span>Expenses</span></button>
+<button data-view="settings" class="nav">⚙ <span>Business profile</span></button>
+<button data-view="data" class="nav">⇩ <span>Backup & exports</span></button>
+</nav>
+<div class="sidebar-foot"><strong>Local-first workspace</strong><p>Records are saved in this browser only. Export regular backups; online sync is not enabled.</p><a href="../creator/">Advanced design engine ↗</a></div>
+</aside>
+<div class="workspace"><header class="topbar">
+<button type="button" class="mobile-menu" id="menuBtn" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+<div><strong id="topbarName">Your business</strong><small id="topbarDate"></small></div>
+<div class="top-actions"><span class="chip">● Stored on this device</span><button class="btn primary" type="button" data-view="create">+ New document</button></div>
+</header>
+<main id="content" tabindex="-1">
+<div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
+<section class="view" id="view-dashboard">
+<div class="heading"><div><p class="eyebrow">BUSINESS OVERVIEW</p><h1>Every sale. Clearly accounted for.</h1><p>See what you sold, what you collected and who still owes you.</p></div><button type="button" data-view="create" class="btn dark">Create a receipt ↗</button></div>
+<div class="stats" id="stats"></div>
+<div class="two-columns"><div class="panel"><div class="panel-title"><div><h2>Recent documents</h2><p>Latest receipts and invoices</p></div><button data-view="documents" class="text-btn">View all</button></div><div id="recentDocs"></div></div><div class="panel"><div class="panel-title"><div><h2>Outstanding balances</h2><p>Customers with money to pay</p></div></div><div id="debts"></div></div></div>
+<div class="setup-panel" id="setupPanel"><div><strong>Make every receipt your own</strong><p>Set your business name, contacts, tax preferences and brand colours just once.</p></div><button class="btn outline" data-view="settings">Set up profile</button></div>
+</section>
+<section class="view hidden" id="view-create">
+<div class="heading compact"><div><p class="eyebrow">DOCUMENT STUDIO</p><h1 id="editorHeading">Create document</h1><p>Edit the details, preview the result, then save, share or print.</p></div><div class="actions"><button type="button" id="newDoc" class="btn outline">New</button><button type="button" id="saveDraft" class="btn outline">Save draft</button><button type="button" id="issueDoc" class="btn primary">Save & issue</button></div></div>
+<div class="editor-layout">
+<form id="docForm" autocomplete="off">
+<div class="panel"><h2><span class="step">01</span> Document</h2><div class="fields">
+<label>Document type<select name="type" id="docType" required></select></label>
+<label>Document number<input id="docNumber" name="number" maxlength="48" required></label>
+<label>Issue date<input type="date" name="date" required></label>
+<label>Due date (if applicable)<input type="date" name="dueDate"></label>
+</div><p class="hint">28 document purposes and 12 original visual styles.</p><div class="styles" id="styles"></div></div>
+<div class="panel"><h2><span class="step">02</span> Customer</h2>
+<label>Customer / recipient<input name="customer" id="customerName" list="customerOptions" maxlength="100" placeholder="e.g. Ada Ventures"><datalist id="customerOptions"></datalist></label>
+<div class="fields"><label>Phone / WhatsApp<input name="customerPhone" type="tel" maxlength="35" placeholder="+234..."></label><label>Email<input name="customerEmail" type="email" maxlength="140"></label></div>
+<label>Customer address<input name="customerAddress" maxlength="240"></label><label>Order / project reference<input name="reference" maxlength="90"></label></div>
+<div class="panel"><div class="panel-title"><h2><span class="step">03</span> Items & services</h2><button id="addLine" type="button" class="text-btn">+ Add line</button></div><div id="itemRows"></div><p class="hint">Saved catalog products autofill the price and reduce stock on issued sales.</p></div>
+<div class="panel"><h2><span class="step">04</span> Charges & payment</h2><div class="fields">
+<label>Discount (%)<input name="discountPct" type="number" min="0" max="100" step=".01" value="0"></label>
+<label>Tax / VAT (%)<input name="taxPct" type="number" min="0" max="100" step=".01" value="0"></label>
+<label>Delivery / extra charges<input name="shipping" type="number" min="0" step=".01" value="0"></label>
+<label>Amount received<input name="paid" type="number" min="0" step=".01" value="0"></label>
+</div><label>Payment method<select name="paymentMethod"><option>Bank transfer</option><option>Cash</option><option>POS terminal</option><option>Card</option><option>Mobile money</option><option>Other</option></select></label><label>Notes / payment instructions<textarea name="notes" rows="3" maxlength="800"></textarea></label>
+<p class="hint">Amounts received are recorded manually; this workspace does not independently verify bank transfers or card payments.</p></div>
+</form>
+<div class="preview-column"><div class="preview-tools"><strong>LIVE PREVIEW</strong><div><button type="button" class="btn outline small" id="printDoc">Print / PDF</button><button type="button" class="btn outline small" id="shareDoc">Share</button></div></div><div id="preview" class="paper-wrap" aria-live="polite"></div><p class="hint">Use Print / PDF, then select “Save as PDF” to export. Sharing uses your device's available options.</p></div>
+</div></section>
+<section class="view hidden" id="view-documents">
+<div class="heading compact"><div><p class="eyebrow">RECORDS</p><h1>All documents</h1><p>Find, reprint, edit, copy, and record payments.</p></div><button class="btn primary" data-view="create">+ Create</button></div>
+<div class="panel"><div class="filters"><input type="search" id="docSearch" placeholder="Search numbers, customers, items..."><select id="docFilter"><option value="">All types</option><option value="sales">Sales and billing</option><option value="drafts">Drafts</option><option value="unpaid">Unpaid / part-paid</option><option value="voided">Voided</option></select></div><div id="docsTable"></div></div></section>
+<section class="view hidden" id="view-customers">
+<div class="heading compact"><div><p class="eyebrow">RELATIONSHIPS</p><h1>Your customers</h1><p>Keep contact details and review purchase history.</p></div></div>
+<div class="two-columns minor"><form id="customerForm" class="panel"><h2>Add customer</h2><label>Name<input name="name" required maxlength="100"></label><label>Phone / WhatsApp<input name="phone" maxlength="35"></label><label>Email<input name="email" type="email" maxlength="140"></label><label>Address<input name="address" maxlength="240"></label><button class="btn primary" type="submit">Save customer</button></form><div class="panel"><h2>Customer directory</h2><div id="customerList"></div></div></div></section>
+<section class="view hidden" id="view-catalog"><div class="heading compact"><div><p class="eyebrow">STOCK CONTROL</p><h1>Products & services</h1><p>Save prices once. Track stock sold, adjust quantities, and catch low inventory.</p></div></div>
+<div class="two-columns minor"><form id="productForm" class="panel"><h2>Add a product / service</h2><label>Item name<input name="name" required maxlength="140"></label><div class="fields"><label>Price<input type="number" name="price" min="0" step=".01" required></label><label>SKU (optional)<input name="sku" maxlength="50"></label><label>Stock quantity<input type="number" name="stock" min="0" step=".001" value="0"></label><label>Low-stock alert at<input type="number" name="low" min="0" step=".001" value="5"></label></div><label class="check"><input type="checkbox" name="track" checked> Track inventory (untick for services)</label><button type="submit" class="btn primary">Add to catalog</button></form><div class="panel"><h2>Saved catalog</h2><div id="productList"></div></div></div></section>
+<section class="view hidden" id="view-expenses"><div class="heading compact"><div><p class="eyebrow">MONEY OUT</p><h1>Business expenses</h1><p>Track operating costs alongside the money you collect.</p></div></div>
+<div class="two-columns minor"><form id="expenseForm" class="panel"><h2>Record an expense</h2><label>What was it for?<input name="description" required maxlength="180"></label><div class="fields"><label>Amount<input type="number" name="amount" min=".01" step=".01" required></label><label>Date<input type="date" name="date" required></label></div><label>Category<select name="category"><option>Stock purchase</option><option>Transport</option><option>Rent</option><option>Utilities</option><option>Salaries</option><option>Marketing</option><option>Equipment</option><option>Other</option></select></label><button class="btn primary" type="submit">Record expense</button></form><div class="panel"><h2>Expense history</h2><div id="expenseList"></div></div></div></section>
+<section class="view hidden" id="view-settings"><div class="heading compact"><div><p class="eyebrow">YOUR BRAND</p><h1>Business profile</h1><p>These details appear on your next receipts and invoices.</p></div></div><form id="profileForm" class="panel profile-panel"><div class="fields">
+<label>Business name<input name="name" required maxlength="120"></label><label>Contact phone<input name="phone" maxlength="40"></label>
+<label>Email<input name="email" type="email" maxlength="140"></label><label>Business address<input name="address" maxlength="220"></label>
+<label>RC / Registration number<input name="registration" maxlength="70"></label><label>TIN / Tax number<input name="taxId" maxlength="70"></label>
+<label>Bank name<input name="bank" maxlength="80"></label><label>Account name<input name="accountName" maxlength="120"></label>
+<label>Account number<input name="accountNumber" maxlength="60"></label><label>Currency<select name="currency"><option value="NGN">NGN — Nigerian naira</option><option value="USD">USD — US dollar</option><option value="GBP">GBP — Pound sterling</option><option value="EUR">EUR — Euro</option><option value="GHS">GHS — Ghanaian cedi</option><option value="KES">KES — Kenyan shilling</option><option value="ZAR">ZAR — South African rand</option></select></label>
+<label>Default tax rate (%)<input type="number" name="taxDefault" min="0" max="100" step=".01" value="0"></label><label>Brand accent<input type="color" name="accent" value="#3b4ad9"></label>
+</div><label>Footer / receipt message<textarea name="footer" rows="2" maxlength="500"></textarea></label><label>Business logo (PNG, JPG, WEBP; max 600 KB)<input type="file" id="logoUpload" accept="image/png,image/jpeg,image/webp"></label><div id="logoPreview"></div><p class="hint">Tax defaults are editable. Confirm the rate and document requirements applicable to your business; this is not a tax-filing service.</p><button type="submit" class="btn primary">Save business profile</button></form></section>
+<section class="view hidden" id="view-data"><div class="heading compact"><div><p class="eyebrow">YOUR RECORDS</p><h1>Backups & exports</h1><p>Take your data with you. Nothing is held hostage behind a subscription.</p></div></div>
+<div class="panel"><h2>Download records</h2><p class="hint">Export a full JSON backup or a spreadsheet-ready CSV of your documents, customers, stock, or expenses.</p><div class="button-grid"><button type="button" class="btn outline" id="backup">Download complete backup</button><button type="button" class="btn outline" data-export="documents">Documents CSV</button><button type="button" class="btn outline" data-export="customers">Customers CSV</button><button type="button" class="btn outline" data-export="products">Products CSV</button><button type="button" class="btn outline" data-export="expenses">Expenses CSV</button></div></div>
+<div class="panel"><h2>Restore a backup</h2><p class="hint">Importing a MetaForge Business JSON backup REPLACES records on this device. Export your current data before restoring.</p><label>Choose a JSON backup<input type="file" id="restoreFile" accept="application/json,.json"></label><button type="button" class="btn outline" id="restoreBtn">Restore selected backup</button></div>
+<div class="panel warning"><h2>Important data limitations</h2><p>Local browser storage can be lost if you clear site data, change devices, use private browsing or lose this device. Backup regularly. Team access, cloud sync, verified customer document links, automatic messages and Paystack verification are not yet connected to this workspace.</p></div>
+</section>
+</main><footer class="footer">MetaForge Business · Your business, in order. <a href="../">Back to MetaForge</a></footer></div></div>
+</body></html>
