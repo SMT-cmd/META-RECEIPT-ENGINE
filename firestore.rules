@@ -207,6 +207,25 @@ service cloud.firestore {
         allow delete: if teamAdmin(bid);
       }
 
+      match /settings/{settingsId} {
+        allow get, list: if isBusinessMember(bid);
+        allow create, update: if teamAdmin(bid)
+          && settingsId == 'profile'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 120;
+        allow delete: if false;
+      }
+      match /counters/{counterId} {
+        allow get: if businessEditor(bid);
+        allow list: if false;
+        allow create: if businessEditor(bid)
+          && request.resource.data.last == 1
+          && request.resource.data.prefix is string;
+        allow update: if businessEditor(bid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['last'])
+          && request.resource.data.last == resource.data.last + 1;
+        allow delete: if false;
+      }
       match /documents/{docId} {
         allow read: if isBusinessMember(bid);
         allow create: if businessEditor(bid)
