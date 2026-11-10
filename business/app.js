@@ -134,7 +134,7 @@ function addLine(item){
   const input=document.createElement('input');input.className='item-name';input.placeholder='Product / service';input.maxLength=180;input.setAttribute('list','catalogItems');input.value=item?.description||'';name.appendChild(input);
   const q=document.createElement('label');q.textContent='Qty';const qi=document.createElement('input');qi.className='item-qty';qi.type='number';qi.min='0.001';qi.step='0.001';qi.value=item?.qty??1;q.appendChild(qi);
   const p=document.createElement('label');p.textContent='Price';const pi=document.createElement('input');pi.className='item-price';pi.type='number';pi.min='0';pi.step='0.01';pi.value=item?.price??'';p.appendChild(pi);
-  const del=document.createElement('button');del.type='button';del.className='icon-btn';del.textContent='×';del.setAttribute('aria-label','Remove line');del.addEventListener('click',()=>{if($$('.item-row','#itemRows').length>1){row.remove();renderPreview();}});
+  const del=document.createElement('button');del.type='button';del.className='icon-btn';del.textContent='×';del.setAttribute('aria-label','Remove line');del.addEventListener('click',()=>{if($('.item-row',$('#itemRows')).length>1){row.remove();renderPreview();}});
   row.dataset.productId=item?.productId||'';
   input.addEventListener('change',()=>{const match=state.products.find(x=>x.name.toLowerCase()===input.value.trim().toLowerCase());row.dataset.productId=match?.id||'';if(match){pi.value=match.price;renderPreview();}});
   input.addEventListener('input',()=>{const chosen=state.products.find(x=>x.id===row.dataset.productId);if(chosen && chosen.name!==input.value)row.dataset.productId='';renderPreview();});
