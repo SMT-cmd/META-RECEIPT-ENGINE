@@ -256,3 +256,26 @@ WHEN NEW.paid_minor < 0 OR NEW.paid_minor > NEW.total_minor
 BEGIN
   SELECT RAISE(ABORT,'Invalid paid amount');
 END;
+
+-- Issued documents with money received cannot be voided until a refund workflow is recorded.
+CREATE TRIGGER IF NOT EXISTS trg_void_paid_guard
+BEFORE UPDATE OF status ON documents
+WHEN NEW.status='voided' AND OLD.paid_minor>0
+BEGIN SELECT RAISE(ABORT,'Cannot void a paid document without reconciliation'); END;
+
+-- Reversal of item stock is bound to the actual issued -> voided transition.
+-- A failed status update therefore cannot accidentally return inventory.
+CREATE TRIGGER IF NOT EXISTS trg_restock_voided
+AFTER UPDATE OF status ON documents
+WHEN NEW.status='voided' AND OLD.status IN ('issued','part_paid','paid')
+BEGIN
+  UPDATE products
+  SET stock_milli=stock_milli+COALESCE((
+    SELECT SUM(l.quantity_milli) FROM document_lines l
+    WHERE l.tenant_id=NEW.tenant_id AND l.document_id=NEW.id AND l.product_id=products.id
+  ),0), updated_at=datetime('now')
+  WHERE tenant_id=NEW.tenant_id AND track_stock=1 AND id IN (
+    SELECT product_id FROM document_lines
+    WHERE tenant_id=NEW.tenant_id AND document_id=NEW.id AND product_id IS NOT NULL
+  );
+END;
