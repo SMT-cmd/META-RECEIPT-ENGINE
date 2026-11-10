@@ -32,3 +32,5 @@
 @media(max-width:430px){.topbar .btn.primary{display:none} .bottom-tab{min-height:50px}.paper-table{table-layout:fixed;width:100%}}
 @media(prefers-reduced-motion:reduce){.sidebar{transition:none!important}}
 @media print{.mobile-bottom-nav,.mobile-scrim{display:none!important}.workspace{padding-bottom:0!important}}
+
+.brand img.brand-icon{display:block;width:41px;height:41px;flex:none;object-fit:contain;border-radius:12px;background:#fff;padding:0;box-shadow:none}
