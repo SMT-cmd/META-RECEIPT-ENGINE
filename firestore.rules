@@ -60,5 +60,186 @@ service cloud.firestore {
     match /user_settings/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
+
+    // ================================================================
+    // MetaForge Business multi-tenant SaaS. Unlike the legacy engine,
+    // all workspace records are scoped to a single business and role.
+    // ================================================================
+    function verifiedUser() {
+      return request.auth != null
+        && request.auth.token.email_verified == true;
+    }
+    function memberRef(bid) {
+      return /databases/$(database)/documents/businesses/$(bid)/members/$(request.auth.uid);
+    }
+    function businessRef(bid) {
+      return /databases/$(database)/documents/businesses/$(bid);
+    }
+    function inviteRef(bid, inviteId) {
+      return /databases/$(database)/documents/businesses/$(bid)/invites/$(inviteId);
+    }
+    function isBusinessMember(bid) {
+      return request.auth != null
+        && exists(memberRef(bid))
+        && get(memberRef(bid)).data.status == 'active';
+    }
+    function hasBusinessRole(bid, roles) {
+      return isBusinessMember(bid)
+        && get(memberRef(bid)).data.role in roles;
+    }
+    function teamAdmin(bid) {
+      return hasBusinessRole(bid, ['owner','admin']);
+    }
+    function businessEditor(bid) {
+      return hasBusinessRole(bid, ['owner','admin','manager','staff']);
+    }
+
+    // Slugs are globally unique and reserved atomically with
+    // business creation. Expose only the slug-to-ID mapping.
+    match /business_slugs/{slug} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if verifiedUser()
+        && slug.matches('^[a-z0-9][a-z0-9-]{2,38}[a-z0-9]$')
+        && request.resource.data.keys().hasOnly(['slug','businessId','ownerUid','createdAt'])
+        && request.resource.data.slug == slug
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(businessRef(request.resource.data.businessId)).data.ownerUid == request.auth.uid
+        && getAfter(businessRef(request.resource.data.businessId)).data.slug == slug;
+      allow update, delete: if false;
+    }
+
+    // User-owned business pointers permit safe "My businesses" queries.
+    // A pointer alone never grants access: tenant membership controls that.
+    match /account_businesses/{userId}/items/{bid} {
+      allow get, list: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['businessId','createdAt'])
+        && request.resource.data.businessId == bid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/businesses/$(bid)/members/$(userId)).data.status == 'active';
+      allow update: if false;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /businesses/{bid} {
+      allow get, list: if isBusinessMember(bid);
+      allow create: if verifiedUser()
+        && request.resource.data.keys().hasOnly(['ownerUid','slug','name','createdAt','updatedAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/business_slugs/$(request.resource.data.slug)).data.businessId == bid;
+      allow update: if hasBusinessRole(bid, ['owner'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow get: if isBusinessMember(bid) &&
+          (request.auth.uid == uid || teamAdmin(bid));
+        allow list: if teamAdmin(bid);
+        allow create: if verifiedUser()
+          && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid','email','role','status','inviteId','joinedAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.status == 'active'
+          && request.resource.data.joinedAt == request.time
+          && (
+            (
+              getAfter(businessRef(bid)).data.ownerUid == uid
+              && request.resource.data.role == 'owner'
+              && request.resource.data.inviteId == ''
+            ) || (
+              request.resource.data.inviteId is string
+              && request.resource.data.inviteId.size() > 15
+              && get(inviteRef(bid,request.resource.data.inviteId)).data.email == request.auth.token.email
+              && get(inviteRef(bid,request.resource.data.inviteId)).data.expiresAt > request.time
+              && getAfter(inviteRef(bid,request.resource.data.inviteId)).data.usedBy == uid
+              && get(inviteRef(bid,request.resource.data.inviteId)).data.role == request.resource.data.role
+            )
+          );
+        // Only the owner may adjust member roles/status. Nobody may
+        // transfer the business owner role through ordinary client writes.
+        allow update: if hasBusinessRole(bid,['owner'])
+          && resource.data.role != 'owner'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role','status'])
+          && request.resource.data.role in ['admin','manager','staff','viewer']
+          && request.resource.data.status in ['active','suspended'];
+        allow delete: if false;
+      }
+
+      match /invites/{token} {
+        allow get: if teamAdmin(bid)
+          || (verifiedUser()
+            && resource.data.email == request.auth.token.email);
+        allow list: if teamAdmin(bid);
+        allow create: if teamAdmin(bid)
+          && token.size() >= 20
+          && request.resource.data.keys().hasOnly(['email','role','createdBy','createdAt','expiresAt','usedBy','usedAt'])
+          && request.resource.data.email is string
+          && request.resource.data.email.size() >= 5
+          && request.resource.data.email.size() <= 254
+          && request.resource.data.role in ['admin','manager','staff','viewer']
+          && (request.resource.data.role != 'admin' || hasBusinessRole(bid,['owner']))
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.expiresAt > request.time
+          && request.resource.data.usedBy == null
+          && request.resource.data.usedAt == null;
+        // The invited, verified email may consume an invitation exactly once.
+        allow update: if verifiedUser()
+          && resource.data.usedBy == null
+          && resource.data.email == request.auth.token.email
+          && resource.data.expiresAt > request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy','usedAt'])
+          && request.resource.data.usedBy == request.auth.uid
+          && request.resource.data.usedAt == request.time;
+        allow delete: if teamAdmin(bid);
+      }
+
+      match /documents/{docId} {
+        allow read: if isBusinessMember(bid);
+        allow create: if businessEditor(bid)
+          && request.resource.data.id == docId
+          && request.resource.data.number is string
+          && request.resource.data.number.size() <= 65;
+        allow update: if businessEditor(bid)
+          && resource.data.voided != true
+          && request.resource.data.id == docId;
+        allow delete: if false;
+      }
+      match /customers/{customerId} {
+        allow read: if isBusinessMember(bid);
+        allow create, update: if businessEditor(bid);
+        allow delete: if teamAdmin(bid);
+      }
+      match /products/{productId} {
+        allow read: if isBusinessMember(bid);
+        allow create, delete: if hasBusinessRole(bid,['owner','admin','manager']);
+        allow update: if hasBusinessRole(bid,['owner','admin','manager'])
+          || (hasBusinessRole(bid,['staff'])
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock','updatedAt']));
+      }
+      match /expenses/{expenseId} {
+        allow read, write: if teamAdmin(bid);
+      }
+      match /audit/{eventId} {
+        allow read: if teamAdmin(bid);
+        allow create: if isBusinessMember(bid)
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
   }
 }
