@@ -252,7 +252,7 @@ function populateEditor(doc,duplicate){
 function printDocument(){if(!previewDoc){announce('Create a document first.',true);return;}window.print();}
 function shareText(doc) {
   const s=C.calculate(doc),p=state.profile;
-  const docMoney=n=>docMoney(n,doc.currency);
+  const docMoney=n=>money(n,doc.currency);
   return [(doc.profileSnapshot?.name||p.name),typeInfo(doc.type).label+' '+doc.number,'Date: '+fmtDate(doc.date),'Customer: '+(doc.customer||'Walk-in'),...(doc.items||[]).map(i=>i.description+' × '+i.qty+' — '+docMoney(Number(i.qty)*Number(i.price))),
     'Total: '+docMoney(s.total),'Paid: '+docMoney(s.paid),'Balance: '+docMoney(s.balance),
     p.bank?'Payment details: '+[p.bank,p.accountName,p.accountNumber].filter(Boolean).join(' / '):'',
