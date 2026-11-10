@@ -1,5 +1,5 @@
 /**
- * MetaForge Business cloud layer.
+ * Bizlano cloud workspace layer (legacy MetaForge Auth identities stay intact).
  * Firebase Auth identifies people; Firestore rules enforce tenancy and roles.
  * A business subdomain is branding/routing, never an authorization boundary.
  */
@@ -36,7 +36,7 @@ export interface Member {uid:string;email:string;role:Role;status:'active'|'susp
 export interface Invitation {email:string;role:Exclude<Role,'owner'>;createdBy:string;expiresAt:Timestamp;usedBy:string|null;}
 export type CloudListener={stop:()=>void};
 const VALID_SLUG=/^[a-z0-9][a-z0-9-]{2,38}[a-z0-9]$/;
-const RESERVED=new Set(['www','app','api','admin','support','help','billing','login','signup','register','business','receipt','mail','smtp','assets','static','tenant','dashboard','root','metaforge','timi']);
+const RESERVED=new Set(['www','app','api','admin','support','help','billing','login','signup','register','business','receipt','mail','smtp','assets','static','tenant','dashboard','root','metaforge','bizlano','timi']);
 const rootDomain=(import.meta.env.VITE_TENANT_ROOT_DOMAIN||'').toLowerCase().replace(/^\.+|\.+$/g,'');
 export function slugify(value:string):string {
   return value.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40).replace(/-+$/,'');
@@ -54,7 +54,9 @@ export function slugFromAddress():string|null {
 export function businessUrl(slug:string):string {
   if(!validSlug(slug))throw Error('Choose a valid business address.');
   if(rootDomain)return 'https://'+slug+'.'+rootDomain+'/';
-  const target=new URL('/business/',window.location.origin);
+  // Keep invitations on the React workspace, never the unrelated /business/ local-only app.
+  // Works at / in development and at the eventual configured SPA path in production.
+  const target=new URL(window.location.pathname,window.location.origin);
   target.searchParams.set('shop',slug);
   return target.toString();
 }
@@ -214,6 +216,11 @@ export async function saveCloudDocument(businessId:string,incoming:BusinessDocum
     const previousSnapshot=await transaction.get(documentRef);
     const previous=previousSnapshot.exists()?previousSnapshot.data() as BusinessDocument:null;
     if(previous?.voided)throw Error('Voided documents cannot be edited.');
+    if(previous&&!previous.draft){
+      if(incoming.draft)throw Error('An issued document cannot be returned to draft.');
+      if(incoming.number!==previous.number)throw Error('An issued document number cannot be changed.');
+      if(incoming.paid!==previous.paid)throw Error('Payments changed. Refresh and use the Payment action to record a new payment.');
+    }
     if(!incoming.number.trim())throw Error('Enter a document reference.');
     calculate({...incoming,items:incoming.items.filter(x=>x.description.trim())});
     const final:BusinessDocument={...incoming,items:incoming.items.filter(x=>x.description.trim()),
@@ -274,6 +281,7 @@ export async function voidCloudDocument(businessId:string,documentId:string):Pro
     const snap=await tx.get(ref);if(!snap.exists())throw Error('Document not found.');
     const document=snap.data() as BusinessDocument;
     if(document.voided)throw Error('Already voided.');
+    if(document.paid>0)throw Error('Paid documents cannot be voided. Record a refund and issue a credit note instead.');
     const ids=[...new Set(document.items.map(i=>i.productId).filter(Boolean))];
     const products=await Promise.all(ids.map(id=>tx.get(doc(db,'businesses',businessId,'products',id))));
     const current=products.map(s=>s.exists()?s.data() as Product:null);

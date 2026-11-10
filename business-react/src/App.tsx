@@ -95,7 +95,7 @@ function ReceiptPreview({document,profile}:{document:BusinessDocument;profile:Bu
     <footer className="receipt-footer">
       {document.notes&&<><b>Notes</b><p>{document.notes}</p></>}
       {issuer.bank&&<><b>Payment details</b><p>{[issuer.bank,issuer.accountName,issuer.accountNumber].filter(Boolean).join(' · ')}</p></>}
-      <p>{issuer.footer}</p><small>Created with MetaForge Business · {document.number}</small>
+      <p>{issuer.footer}</p><small>Powered by Bizlano · {document.number}</small>
     </footer>
   </article>;
 }
@@ -107,7 +107,7 @@ function LoginScreen({user,alert,note}:{user:User|null;alert:(e:unknown)=>void;n
   if(user)return <div className="auth-layout"><Panel><h1>Verify your email</h1><p>Please open the verification email sent to <strong>{user.email}</strong>. Then return here.</p>
     <div className="actions"><Button onClick={async()=>{try{const ok=await refreshEmailVerification();if(ok)window.location.reload();else note('Email is not verified yet.');}catch(e){alert(e);}}} kind="primary">I verified my email</Button><Button onClick={()=>void signOutAccount()}>Sign out</Button></div>
     <p className="hint">Existing MetaForge accounts keep their same Firebase sign-in.</p></Panel></div>;
-  return <div className="auth-layout"><div className="auth-brand"><a href="../">M <strong>MetaForge</strong> Business</a><p>Beautiful business documents. Organized sales. One workspace for your team.</p></div>
+  return <div className="auth-layout"><div className="auth-brand"><a href="../"><span className="brandmark">B</span><strong>Bizlano</strong></a><p>Your business, beautifully managed. Receipts, sales and teams in one place.</p></div>
     <Panel><div className="eyebrow">YOUR BUSINESS ACCOUNT</div><h1>{mode==='login'?'Sign in':'Create a free account'}</h1>
       <p className="muted">No subscription gate is enabled while the product is being expanded.</p>
       <form onSubmit={submit}><Field label="Email" type="email" value={email} onChange={setEmail} required/>
@@ -124,7 +124,7 @@ function BusinessPicker({user,businesses,pick,refresh,alert,note,legacyCount}:{u
       await saveBusinessProfile(business.id,{name:business.name,phone:'',email:user.email||'',address:'',registration:'',taxId:'',bank:'',accountName:'',accountNumber:'',currency:'NGN',taxDefault:0,accent:'#4855d9',footer:'Thank you for your patronage!',logo:''});
       await refresh();pick(business);note('Business created. Your workspace is ready.');}
     catch(err){alert(err);}finally{setBusy(false);}};
-  return <div className="onboard-layout"><header><a href="../" className="brand-link">MetaForge Business</a>
+  return <div className="onboard-layout"><header><a href="../" className="brand-link">Bizlano</a>
     <div>{user.email} <button className="text-button" onClick={()=>void signOutAccount()}>Sign out</button></div></header>
     <main><div className="eyebrow">BUSINESS ONBOARDING</div><h1>Welcome to your business workspace.</h1><p className="muted">Create a business, or open one you belong to. Each workspace keeps its own staff and history.</p>
       {legacyCount>0&&<div className="legacy-alert"><strong>Upgrade available: {legacyCount} older receipt records detected</strong><p>Continue with your existing account. Create or select a business, then choose “Upgrade old records” to copy them safely. Your existing links stay available.</p></div>}
@@ -303,7 +303,7 @@ export default function App(){
         <button onClick={()=>{edit(d);setTimeout(()=>window.print(),150);}}>Print</button>
         <button onClick={()=>void share(d)}>Share</button>
         {canEditDocument(role,d.type,d.draft)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
-        {canAdmin(role)&&!d.voided&&<button onClick={()=>void voidDoc(d)}>Void</button>}
+        {canAdmin(role)&&!d.voided&&d.paid===0&&<button onClick={()=>void voidDoc(d)}>Void</button>}
       </div></td>}</tr>)}</tbody></table></div>;
   const saveContact=async(e:FormEvent)=>{e.preventDefault();if(!business)return;
     try{await createCloudCustomer(business.id,{...customer,id:newId()});setCustomer({name:'',phone:'',email:'',address:''});note('Customer saved.');}catch(err){alert(err);}
@@ -325,9 +325,9 @@ export default function App(){
     const csv=key==='documents'?documentExport(workspace.documents):
       key==='customers'?contactExport(workspace.customers):
       key==='products'?productExport(workspace.products):expenseExport(workspace.expenses);
-    downloadText('metaforge-'+key+'-'+today()+'.csv',csv,'text/csv;charset=utf-8');
+    downloadText('bizlano-'+key+'-'+today()+'.csv',csv,'text/csv;charset=utf-8');
   };
-  if(loading)return <div className="loading">Opening MetaForge Business…</div>;
+  if(loading)return <div className="loading">Opening Bizlano…</div>;
   if(!user||!user.emailVerified)return <><LoginScreen user={user} alert={alert} note={note}/>
     {message&&<div className={'floating-alert '+(message.error?'error':'')}>{message.text}</div>}</>;
   if(!business)return <><BusinessPicker user={user} businesses={businesses} pick={chooseBusiness} refresh={loadBusinesses} alert={alert} note={note} legacyCount={migrationSources.reduce((n,x)=>n+x.receiptCount,0)}/>
@@ -337,7 +337,7 @@ export default function App(){
   const finance=canFinance(role);
   const f=(n:number)=>money(n,workspace.profile.currency);
   return <div className="app-shell">
-    <aside className={'sidebar '+(mobile?'open':'')}><a className="brand" href="../"><span className="brandmark">M</span><span><strong>MetaForge</strong><small>BUSINESS</small></span></a>
+    <aside className={'sidebar '+(mobile?'open':'')}><a className="brand" href="../"><span className="brandmark">B</span><span><strong>Bizlano</strong><small>MANAGEMENT SUITE</small></span></a>
       <p className="nav-caption">WORKSPACE</p><nav aria-label="Business navigation">
         {PAGE_ITEMS.filter(p=>!p.roles||p.roles.includes(role)).map(p=><button key={p.id} className={'nav-item '+(page===p.id?'active':'')}
           onClick={()=>go(p.id)}><span>{p.symbol}</span> {p.label}</button>)}</nav>
@@ -470,7 +470,7 @@ export default function App(){
         <Heading eyebrow="DATA PORTABILITY" title="Export your business records" description="Access your business data independently of any subscription."/>
         <Panel><h2>Download reports</h2><div className="actions">
           {(['documents','customers','products','expenses'] as const).map(key=><Button key={key} onClick={()=>exportCsv(key)}>Export {key} CSV</Button>)}
-          <Button kind="primary" onClick={()=>downloadText('metaforge-business-'+today()+'.json',JSON.stringify(workspace,null,2),'application/json')}>Export JSON</Button>
+          <Button kind="primary" onClick={()=>downloadText('bizlano-business-'+today()+'.json',JSON.stringify(workspace,null,2),'application/json')}>Export JSON</Button>
         </div><p className="hint">JSON is a download for archival/review. Cross-business restore is intentionally disabled pending a secure, audited import workflow.</p></Panel>
       </>}
       {page==='migration'&&role==='owner'&&<>
@@ -488,6 +488,6 @@ export default function App(){
             <Empty text="No accessible legacy receipts were found in this account or browser. You may still use your old engine and export its history separately."/>}
           <p className="hint">Legacy records without proof of payment are never automatically counted as confirmed sales.</p></Panel>
       </>}
-    </main><footer className="page-footer">MetaForge Business · Your business, in order. <a href="../">MetaForge home</a></footer></div>
+    </main><footer className="page-footer">Bizlano · Your business, beautifully managed. <a href="../">Original MetaForge website</a></footer></div>
   </div>;
 }

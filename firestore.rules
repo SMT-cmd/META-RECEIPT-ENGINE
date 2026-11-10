@@ -248,6 +248,17 @@ service cloud.firestore {
         allow update: if businessEditor(bid)
           && resource.data.voided != true
           && request.resource.data.id == docId
+          && request.resource.data.paid is number
+          && request.resource.data.paid >= 0
+          // Never roll an issued document back or erase previously recorded receipts.
+          && (resource.data.draft == true || (
+            request.resource.data.draft == false
+            && request.resource.data.number == resource.data.number
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.paid >= resource.data.paid
+          ))
+          // A payment must first be reversed through a separate audited refund flow.
+          && (request.resource.data.voided != true || resource.data.paid == 0)
           && (!hasBusinessRole(bid,['cashier']) || (resource.data.draft == true && request.resource.data.type in ['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt']));
         allow delete: if false;
       }

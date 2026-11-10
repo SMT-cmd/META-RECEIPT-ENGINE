@@ -55,6 +55,11 @@ export function addAudit(data:WorkspaceData,action:string,detail:string):Workspa
 export function recordDocument(data:WorkspaceData,incoming:BusinessDocument):WorkspaceData {
   const existing=data.documents.find(d=>d.id===incoming.id);
   if(existing?.voided)throw Error('Voided documents cannot be changed. Duplicate instead.');
+  if(existing&&!existing.draft){
+    if(incoming.draft)throw Error('An issued document cannot be returned to draft.');
+    if(incoming.number!==existing.number)throw Error('Issued document numbers are immutable.');
+    if(incoming.paid!==existing.paid)throw Error('Record additional payments through the Payment action.');
+  }
   if(data.documents.some(d=>d.id!==incoming.id&&d.number.toLowerCase()===incoming.number.toLowerCase()))
     throw Error('This document number already exists.');
   calculate(incoming);
@@ -89,6 +94,7 @@ export function recordPayment(data:WorkspaceData,id:string,amount:number):Worksp
 export function voidDocument(data:WorkspaceData,id:string):WorkspaceData {
   const existing=data.documents.find(d=>d.id===id);
   if(!existing||existing.voided)throw Error('Document is missing or already voided.');
+  if(existing.paid>0)throw Error('Paid documents cannot be voided. Reconcile the refund and issue a credit note.');
   const products=reconcileStock(data.products,existing,null);
   return addAudit({...data,products,documents:data.documents.map(d=>
     d.id===id?{...d,voided:true,updatedAt:new Date().toISOString()}:d
