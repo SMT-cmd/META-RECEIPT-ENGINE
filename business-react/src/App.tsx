@@ -20,19 +20,22 @@ import {SalesInsights} from './SalesInsights';
 
 type Page='overview'|'create'|'documents'|'customers'|'products'|'expenses'|'team'|'profile'|'exports'|'migration';
 const PAGE_ITEMS:{id:Page;label:string;symbol:string;roles?:Role[]}[]=[
-  {id:'overview',label:'Overview',symbol:'▦'},{id:'create',label:'Create document',symbol:'＋',roles:['owner','admin','manager','staff']},
-  {id:'documents',label:'Documents',symbol:'▤'},{id:'customers',label:'Customers',symbol:'♙'},
-  {id:'products',label:'Products & stock',symbol:'▥'},
-  {id:'expenses',label:'Expenses',symbol:'↗',roles:['owner','admin']},
+  {id:'overview',label:'Overview',symbol:'▦',roles:['owner','admin','manager','accountant','cashier','sales','staff']},{id:'create',label:'Create document',symbol:'＋',roles:['owner','admin','manager','accountant','cashier','sales','staff']},
+  {id:'documents',label:'Documents',symbol:'▤'},{id:'customers',label:'Customers',symbol:'♙',roles:['owner','admin','manager','accountant','cashier','sales','staff']},
+  {id:'products',label:'Products & stock',symbol:'▥',roles:['owner','admin','manager','accountant','cashier','sales','staff']},
+  {id:'expenses',label:'Expenses',symbol:'↗',roles:['owner','admin','manager','accountant']},
   {id:'team',label:'Team & access',symbol:'♧',roles:['owner','admin']},
   {id:'profile',label:'Business profile',symbol:'⚙',roles:['owner','admin']},
-  {id:'exports',label:'Backup & export',symbol:'⇩',roles:['owner','admin']},
+  {id:'exports',label:'Backup & export',symbol:'⇩',roles:['owner','admin','manager','accountant']},
   {id:'migration',label:'Upgrade old records',symbol:'⇧',roles:['owner']}
 ];
 const kindName=(id:DocumentType)=>DOCUMENT_TYPES.find(t=>t[0]===id)?.[1]||id;
 const readableDate=(date:string)=>date?new Date(date+'T12:00:00').toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}):'—';
 const canWrite=(role:Role)=>role!=='viewer';
 const canAdmin=(role:Role)=>role==='owner'||role==='admin';
+const canFinance=(role:Role)=>['owner','admin','manager','accountant'].includes(role);
+const receiptOnly=(role:Role)=>role==='cashier';
+const canEditDocument=(role:Role,type:DocumentType)=>canWrite(role)&&(!receiptOnly(role)||['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt'].includes(type));
 const asError=(e:unknown)=>e instanceof Error?e.message:String(e);
 
 function Button({children,onClick,kind='outline',type='button',disabled=false}:{children:ReactNode;onClick?:()=>void;kind?:'outline'|'primary'|'dark';type?:'button'|'submit';disabled?:boolean}){
@@ -136,7 +139,7 @@ function BusinessPicker({user,businesses,pick,refresh,alert,note,legacyCount}:{u
           <Button kind="primary" type="submit" disabled={!validSlug(slug)||busy}>{busy?'Creating…':'Create workspace'}</Button></form></Panel>
     </main></div>;
 }
-function Editor({document,onChange,save,print,share,back,workspace,busy}:{document:BusinessDocument;onChange:(d:BusinessDocument)=>void;save:(draft:boolean)=>void;print:()=>void;share:()=>void;back:()=>void;workspace:WorkspaceData;busy:boolean}){
+function Editor({document,onChange,save,print,share,back,workspace,busy,role}:{document:BusinessDocument;onChange:(d:BusinessDocument)=>void;save:(draft:boolean)=>void;print:()=>void;share:()=>void;back:()=>void;workspace:WorkspaceData;busy:boolean;role:Role}){
   const set=<K extends keyof BusinessDocument>(key:K,value:BusinessDocument[K])=>onChange({...document,[key]:value});
   const patchLine=(i:number,item:LineItem)=>set('items',document.items.map((row,n)=>n===i?item:row));
   return <>
@@ -145,7 +148,7 @@ function Editor({document,onChange,save,print,share,back,workspace,busy}:{docume
         <Button kind="primary" onClick={()=>save(false)} disabled={busy}>Save & issue</Button></>}/>
     <div className="editor-grid"><div className="editor-form">
       <Panel><h2><span className="step">01</span> Document and style</h2><div className="field-grid">
-        <Select label="Document type" value={document.type} options={DOCUMENT_TYPES.map(t=>[t[0],t[1]])}
+        <Select label="Document type" value={document.type} options={DOCUMENT_TYPES.filter(t=>canEditDocument(role,t[0])).map(t=>[t[0],t[1]])}
           onChange={value=>{const type=value as DocumentType;onChange({...document,type,number:nextNumber(workspace.documents,type,today().slice(0,4))});}}/>
         <Field label="Document number" value={document.number} onChange={value=>set('number',value)}/>
         <Field label="Issue date" type="date" value={document.date} onChange={value=>set('date',value)}/>
@@ -195,12 +198,13 @@ export default function App(){
   const [profile,setProfile]=useState<BusinessProfile>(emptyWorkspace().profile);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState<{text:string;error:boolean}|null>(null);
   const [search,setSearch]=useState(''),[filter,setFilter]=useState('all');
-  const [staff,setStaff]=useState<Member[]>([]),[inviteEmail,setInviteEmail]=useState(''),[inviteRole,setInviteRole]=useState<'admin'|'manager'|'staff'|'viewer'>('staff'),[inviteLink,setInviteLink]=useState('');
+  const [staff,setStaff]=useState<Member[]>([]),[inviteEmail,setInviteEmail]=useState(''),[inviteRole,setInviteRole]=useState<'admin'|'manager'|'accountant'|'cashier'|'sales'|'viewer'>('cashier'),[inviteLink,setInviteLink]=useState('');
   const [customer,setCustomer]=useState({name:'',phone:'',email:'',address:''});
   const [product,setProduct]=useState({name:'',sku:'',price:0,stock:0,low:5,track:true});
   const [expense,setExpense]=useState({description:'',amount:0,date:today(),category:'Stock purchase'});
   const [migrationSources,setMigrationSources]=useState<LegacySource[]>([]),[migrationWarnings,setMigrationWarnings]=useState<string[]>([]);
   const role=member?.role||'viewer';
+  useEffect(()=>{if(member?.role==='viewer'&&page==='overview')setPage('documents');},[member?.role,page]);
   const totals=useMemo(()=>summarize(workspace),[workspace]);
   const alert=(e:unknown)=>setMessage({text:asError(e),error:true});
   const note=(text:string)=>setMessage({text,error:false});
@@ -244,7 +248,7 @@ export default function App(){
   },[page,business?.id,role]);
   const chooseBusiness=(b:Business)=>{setBusiness(b);setPage('overview');setMessage(null);};
   const go=(p:Page)=>{setPage(p);setMobile(false);setMessage(null);
-    if(p==='create')setDocument(newDocument(workspace));
+    if(p==='create')setDocument(newDocument(workspace,receiptOnly(role)?'receipt':'invoice'));
     if(p==='profile')setProfile({...workspace.profile});
     window.scrollTo(0,0);
   };
@@ -292,11 +296,11 @@ export default function App(){
     <tbody>{records.map(d=><tr key={d.id}><td><strong>{d.number}</strong><small>{kindName(d.type)}</small></td>
       <td>{d.customer||'Walk-in'}</td><td>{readableDate(d.date)}</td><td className="money">{money(calculate(d).total,d.currency)}</td><td><DocumentStatus document={d}/></td>
       {!compact&&<td><div className="table-actions">
-        {canWrite(role)&&!d.voided&&<button onClick={()=>edit(d)}>Edit</button>}
-        {canWrite(role)&&<button onClick={()=>clone(d)}>Copy</button>}
+        {canEditDocument(role,d.type)&&!d.voided&&<button onClick={()=>edit(d)}>Edit</button>}
+        {canEditDocument(role,d.type)&&<button onClick={()=>clone(d)}>Copy</button>}
         <button onClick={()=>{edit(d);setTimeout(()=>window.print(),150);}}>Print</button>
         <button onClick={()=>void share(d)}>Share</button>
-        {canWrite(role)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
+        {canEditDocument(role,d.type)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
         {canAdmin(role)&&!d.voided&&<button onClick={()=>void voidDoc(d)}>Void</button>}
       </div></td>}</tr>)}</tbody></table></div>;
   const saveContact=async(e:FormEvent)=>{e.preventDefault();if(!business)return;
@@ -328,6 +332,7 @@ export default function App(){
     {message&&<div className={'floating-alert '+(message.error?'error':'')}>{message.text}</div>}</>;
   if(!member)return <div className="loading">Checking business permissions… <Button onClick={()=>setBusiness(null)}>Back</Button>{message?.text}</div>;
   const manage=canAdmin(role);
+  const finance=canFinance(role);
   const f=(n:number)=>money(n,workspace.profile.currency);
   return <div className="app-shell">
     <aside className={'sidebar '+(mobile?'open':'')}><a className="brand" href="../"><span className="brandmark">M</span><span><strong>MetaForge</strong><small>BUSINESS</small></span></a>
@@ -353,7 +358,7 @@ export default function App(){
           ['Issued sales',f(totals.invoiced),'Invoices and issued receipts'],
           ['Received',f(totals.received),'Manually recorded'],
           ['Outstanding',f(totals.outstanding),'Unpaid customer balances'],
-          ...(manage?[['Expenses',f(totals.expenses),'Net cash: '+f(totals.netCash)]]:[])
+          ...(finance?[['Expenses',f(totals.expenses),'Net cash: '+f(totals.netCash)]]:[])
         ].map(([title,value,caption])=><div className="stat" key={title}><span>{title}</span><strong>{value}</strong><small>{caption}</small></div>)}</div>
         <SalesInsights businessId={business.id} documents={workspace.documents} currency={workspace.profile.currency} role={role}/>
         <div className="two-columns"><Panel><div className="panel-row"><h2>Recent documents</h2><button className="text-button" onClick={()=>go('documents')}>View all</button></div>
@@ -365,7 +370,7 @@ export default function App(){
           <Button onClick={()=>void navigator.clipboard.writeText(businessUrl(business.slug)).then(()=>note('Address copied.')).catch(alert)}>Copy address</Button></div>
       </>}
       {page==='create'&&canWrite(role)&&<Editor document={document} onChange={setDocument} save={d=>void persistDocument(d)}
-        print={()=>window.print()} share={()=>void share(document)} back={()=>go('documents')} workspace={workspace} busy={busy}/>}
+        print={()=>window.print()} share={()=>void share(document)} back={()=>go('documents')} workspace={workspace} busy={busy} role={role}/>}
       {page==='documents'&&<>
         <Heading eyebrow="DOCUMENT HISTORY" title="Receipts & invoices" description="View, edit, reprint, share and track payments."
           action={canWrite(role)&&<Button kind="primary" onClick={()=>go('create')}>+ Create document</Button>}/>
@@ -401,7 +406,7 @@ export default function App(){
             <div className="list-entry" key={p.id}><div><strong>{p.name}</strong><small>{p.sku||'No SKU'} · {f(p.price)}</small></div><div><strong>{p.track?p.stock+' left':'Service'}</strong>{p.track&&p.stock<=p.low&&<small className="low">Low stock</small>}</div></div>)}
             {!workspace.products.length&&<Empty text="No products yet."/>}</Panel></div>
       </>}
-      {page==='expenses'&&manage&&<>
+      {page==='expenses'&&finance&&<>
         <Heading eyebrow="FINANCIAL RECORDS" title="Expenses" description="Only owners and administrators can see this section."/>
         <div className="two-columns narrow"><Panel><h2>Record expense</h2><form onSubmit={e=>void saveExpense(e)}>
           <Field label="Description" value={expense.description} onChange={v=>setExpense(p=>({...p,description:v}))} required/>
@@ -417,7 +422,7 @@ export default function App(){
         <div className="two-columns narrow"><Panel><h2>Invite staff</h2><form onSubmit={e=>void invite(e)}>
           <Field label="Staff email" type="email" required value={inviteEmail} onChange={setInviteEmail}/>
           <Select label="Role" value={inviteRole} onChange={v=>setInviteRole(v as typeof inviteRole)} options={
-            (role==='owner'?['admin','manager','staff','viewer']:['manager','staff','viewer']).map(r=>[r,r.charAt(0).toUpperCase()+r.slice(1)])}/>
+            (role==='owner'?['admin','manager','accountant','cashier','sales','viewer']:['manager','accountant','cashier','sales','viewer']).map(r=>[r,r.charAt(0).toUpperCase()+r.slice(1)])}/>
           <Button kind="primary" type="submit" disabled={busy}>Create invite link</Button></form>
           {inviteLink&&<div className="invite-output"><label>Private invitation link<input readOnly value={inviteLink}/></label>
             <Button onClick={()=>void navigator.clipboard.writeText(inviteLink).then(()=>note('Invitation link copied.')).catch(alert)}>Copy invitation</Button></div>}
