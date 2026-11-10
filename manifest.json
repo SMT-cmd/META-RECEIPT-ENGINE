@@ -1,17 +1,17 @@
-{ 
-   "name": "METAFORGE ENGINE", 
-   "short_name": "Metaforge", 
-   "description": "Professional Document & Receipt System", 
-   "start_url": "/", 
-   "display": "standalone", 
-   "background_color": "#1a1a2e", 
-   "theme_color": "#FF6B00", 
-   "icons": [ 
-     { 
-       "src": "/metaforge-icon.svg", 
-       "sizes": "any", 
-       "type": "image/svg+xml", 
-       "purpose": "any maskable" 
-     } 
-   ] 
- }
+{
+  "name": "Bizlano — Business Management",
+  "short_name": "Bizlano",
+  "description": "Your business, beautifully managed. Create receipts and invoices; manage sales, staff and stock.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#171d37",
+  "theme_color": "#612de0",
+  "icons": [
+    {
+      "src": "/bizlano-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
