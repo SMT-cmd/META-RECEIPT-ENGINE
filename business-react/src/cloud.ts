@@ -12,13 +12,13 @@ import {
 import {
   collection,doc,getDoc,getDocs,onSnapshot,runTransaction,serverTimestamp,
   setDoc,Timestamp,updateDoc,writeBatch,
-  type DocumentData,type Unsubscribe
+  type Unsubscribe
 } from 'firebase/firestore';
 import {getFirestore} from 'firebase/firestore';
 import {
-  BILLABLE_TYPES,calculate,newId,reconcileStock,
+  BILLABLE_TYPES,calculate,reconcileStock,
   type BusinessDocument,type BusinessProfile,type Customer,type Expense,
-  type Product,type WorkspaceData
+  type Product
 } from './domain';
 
 const config={
