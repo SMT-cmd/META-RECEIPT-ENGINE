@@ -3,12 +3,12 @@ import type {User} from 'firebase/auth';
 import {
   BILLABLE_TYPES,DOCUMENT_TYPES,TEMPLATES,CURRENCIES,calculate,emptyWorkspace,money,
   newDocument,newId,nextNumber,status,summarize,today,
-  type BusinessDocument,type BusinessProfile,type Customer,type DocumentType,
-  type Expense,type LineItem,type Product,type WorkspaceData
+  type BusinessDocument,type BusinessProfile,type DocumentType,
+  type LineItem,type WorkspaceData
 } from './domain';
 import {
   auth,acceptInvitation,businessUrl,createBusiness,createCloudCustomer,createCloudExpense,
-  createCloudProduct,getBusinessProfile,inviteStaff,listMyBusinesses,listStaff,myMembership,
+  createCloudProduct,inviteStaff,listMyBusinesses,listStaff,myMembership,
   observeBusiness,observeProfile,onAccountChanged,parseInviteFromAddress,
   recordCloudPayment,refreshEmailVerification,register,saveBusinessProfile,
   saveCloudDocument,setStaffRole,signIn,signOutAccount,slugFromAddress,slugify,
