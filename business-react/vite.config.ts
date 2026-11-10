@@ -3,10 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins:[react()],
-  base:'/business/',
+  base:'/app/',
   build:{
-    outDir:'../business',
-    emptyOutDir:false,
+    outDir:'../app',
+    emptyOutDir:true,
     assetsDir:'assets',
     sourcemap:false
   }
