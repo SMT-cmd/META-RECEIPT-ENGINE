@@ -35,7 +35,9 @@ const canWrite=(role:Role)=>role!=='viewer';
 const canAdmin=(role:Role)=>role==='owner'||role==='admin';
 const canFinance=(role:Role)=>['owner','admin','manager','accountant'].includes(role);
 const receiptOnly=(role:Role)=>role==='cashier';
-const canEditDocument=(role:Role,type:DocumentType)=>canWrite(role)&&(!receiptOnly(role)||['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt'].includes(type));
+const allowedCashierTypes=['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt'];
+const canCreateType=(role:Role,type:DocumentType)=>canWrite(role)&&(!receiptOnly(role)||allowedCashierTypes.includes(type));
+const canEditDocument=(role:Role,type:DocumentType,draft=true)=>canCreateType(role,type)&&(!receiptOnly(role)||draft);
 const asError=(e:unknown)=>e instanceof Error?e.message:String(e);
 
 function Button({children,onClick,kind='outline',type='button',disabled=false}:{children:ReactNode;onClick?:()=>void;kind?:'outline'|'primary'|'dark';type?:'button'|'submit';disabled?:boolean}){
@@ -148,7 +150,7 @@ function Editor({document,onChange,save,print,share,back,workspace,busy,role}:{d
         <Button kind="primary" onClick={()=>save(false)} disabled={busy}>Save & issue</Button></>}/>
     <div className="editor-grid"><div className="editor-form">
       <Panel><h2><span className="step">01</span> Document and style</h2><div className="field-grid">
-        <Select label="Document type" value={document.type} options={DOCUMENT_TYPES.filter(t=>canEditDocument(role,t[0])).map(t=>[t[0],t[1]])}
+        <Select label="Document type" value={document.type} options={DOCUMENT_TYPES.filter(t=>canCreateType(role,t[0])).map(t=>[t[0],t[1]])}
           onChange={value=>{const type=value as DocumentType;onChange({...document,type,number:nextNumber(workspace.documents,type,today().slice(0,4))});}}/>
         <Field label="Document number" value={document.number} onChange={value=>set('number',value)}/>
         <Field label="Issue date" type="date" value={document.date} onChange={value=>set('date',value)}/>
@@ -296,11 +298,11 @@ export default function App(){
     <tbody>{records.map(d=><tr key={d.id}><td><strong>{d.number}</strong><small>{kindName(d.type)}</small></td>
       <td>{d.customer||'Walk-in'}</td><td>{readableDate(d.date)}</td><td className="money">{money(calculate(d).total,d.currency)}</td><td><DocumentStatus document={d}/></td>
       {!compact&&<td><div className="table-actions">
-        {canEditDocument(role,d.type)&&!d.voided&&<button onClick={()=>edit(d)}>Edit</button>}
-        {canEditDocument(role,d.type)&&<button onClick={()=>clone(d)}>Copy</button>}
+        {canEditDocument(role,d.type,d.draft)&&!d.voided&&<button onClick={()=>edit(d)}>Edit</button>}
+        {canCreateType(role,d.type)&&<button onClick={()=>clone(d)}>Copy</button>}
         <button onClick={()=>{edit(d);setTimeout(()=>window.print(),150);}}>Print</button>
         <button onClick={()=>void share(d)}>Share</button>
-        {canEditDocument(role,d.type)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
+        {canEditDocument(role,d.type,d.draft)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
         {canAdmin(role)&&!d.voided&&<button onClick={()=>void voidDoc(d)}>Void</button>}
       </div></td>}</tr>)}</tbody></table></div>;
   const saveContact=async(e:FormEvent)=>{e.preventDefault();if(!business)return;
