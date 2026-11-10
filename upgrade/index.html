@@ -27,6 +27,7 @@ button.btn:disabled{opacity:.5;cursor:not-allowed}.row{display:flex;flex-wrap:wr
 .status{border:1px solid #d8e3fb;background:#f1f5ff;padding:12px;border-radius:9px;font-size:12px;color:#344671;line-height:1.6;margin:13px 0}
 .status.error{background:#fff3f2;border-color:#f2c9c6;color:#a02a24}
 .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#f5f7fc;border:1px solid #ebedf5;padding:16px;border-radius:10px}.metric strong{font-size:26px;display:block}.metric small{font-size:11px;color:var(--muted)}.warn{background:#fffaf0;border:1px solid #f3dfb9;border-radius:11px;padding:15px;font-size:12px;color:#845b15;line-height:1.7}
+input[type=checkbox]{display:inline-block;width:auto;accent-color:#4856d4;margin:0 9px 0 0;vertical-align:middle}.local-optin{font-weight:500!important;line-height:1.6;cursor:pointer}
 ul{margin:0;padding-left:20px}li{margin:9px 0;font-size:12px;color:#566177;line-height:1.6}
 .footer{border-top:1px solid var(--line);padding:20px 0;color:#76849d;font-size:12px;margin-top:25px}
 @media(max-width:770px){.grid,.steps{grid-template-columns:1fr}.statgrid{grid-template-columns:repeat(3,1fr)}.step{padding:10px}.top{padding:15px}.step strong{width:25px;height:25px}}
@@ -60,6 +61,7 @@ ul{margin:0;padding-left:20px}li{margin:9px 0;font-size:12px;color:#566177;line-
     <p>Your old records will be converted into <strong>drafts marked for review</strong> in the new browser workspace, not counted as new sales. Their original source remains untouched.</p>
     <label>Business name to show on your new workspace<input id="business-name" value="" maxlength="120" placeholder="Your business name"></label>
     <p id="stage-preview" class="status">Download a backup first to enable staging.</p>
+    <label class="local-optin"><input id="include-local" type="checkbox"> Also include browser-only histories from this device (these cannot be verified against my account and may belong to another person).</label>
     <div class="row"><button class="btn" id="stage-button" disabled type="button">Stage records and open workspace</button><a class="btn secondary" href="../business/">Open workspace without import</a></div>
   </section>
 </div>
