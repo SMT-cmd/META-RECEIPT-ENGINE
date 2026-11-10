@@ -30,7 +30,7 @@ const config={
 };
 const app=getApps().length?getApp():initializeApp(config);
 export const auth=getAuth(app), db=getFirestore(app);
-export type Role='owner'|'admin'|'manager'|'staff'|'viewer';
+export type Role='owner'|'admin'|'manager'|'accountant'|'cashier'|'sales'|'staff'|'viewer';
 export interface Business {id:string;name:string;slug:string;ownerUid:string;}
 export interface Member {uid:string;email:string;role:Role;status:'active'|'suspended';inviteId:string;}
 export interface Invitation {email:string;role:Exclude<Role,'owner'>;createdBy:string;expiresAt:Timestamp;usedBy:string|null;}
@@ -144,7 +144,7 @@ export async function inviteStaff(business:Business,email:string,role:Exclude<Ro
   const user=requireVerified();
   const normalized=email.trim().toLowerCase();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized))throw Error('Enter a valid staff email.');
-  if(!['admin','manager','staff','viewer'].includes(role))throw Error('Choose a valid staff role.');
+  if(!['admin','manager','accountant','cashier','sales','viewer'].includes(role))throw Error('Choose an available staff role.');
   const token=invitationCode();
   const ref=doc(db,'businesses',business.id,'invites',token);
   await setDoc(ref,{
@@ -201,7 +201,7 @@ export function observeBusiness(
     },err=>onError(err)));
   };
   listen('documents');listen('customers');listen('products');
-  if(role==='owner'||role==='admin')listen('expenses');
+  if(['owner','admin','manager','accountant'].includes(role))listen('expenses');
   return {stop:()=>stop.forEach(unsub=>unsub())};
 }
 export function observeProfile(businessId:string,callback:(profile:BusinessProfile|null)=>void,onError:(e:Error)=>void):Unsubscribe {
