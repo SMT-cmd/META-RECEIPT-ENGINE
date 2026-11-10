@@ -16,6 +16,7 @@ import {
 } from './cloud';
 import {detectLegacy,importLegacySource,copyLegacyHistoryInfo,type LegacySource} from './legacy';
 import {contactExport,documentExport,downloadText,expenseExport,productExport} from './storage';
+import {SalesInsights} from './SalesInsights';
 
 type Page='overview'|'create'|'documents'|'customers'|'products'|'expenses'|'team'|'profile'|'exports'|'migration';
 const PAGE_ITEMS:{id:Page;label:string;symbol:string;roles?:Role[]}[]=[
@@ -354,6 +355,7 @@ export default function App(){
           ['Outstanding',f(totals.outstanding),'Unpaid customer balances'],
           ...(manage?[['Expenses',f(totals.expenses),'Net cash: '+f(totals.netCash)]]:[])
         ].map(([title,value,caption])=><div className="stat" key={title}><span>{title}</span><strong>{value}</strong><small>{caption}</small></div>)}</div>
+        <SalesInsights businessId={business.id} documents={workspace.documents} currency={workspace.profile.currency} role={role}/>
         <div className="two-columns"><Panel><div className="panel-row"><h2>Recent documents</h2><button className="text-button" onClick={()=>go('documents')}>View all</button></div>
           {docList.length?listTable(docList.slice(0,6),true):<Empty text="No documents yet. Create a receipt to get started."/>}</Panel>
           <Panel><h2>Outstanding invoices</h2>{workspace.documents.filter(d=>!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0).slice(0,6).map(d=>
