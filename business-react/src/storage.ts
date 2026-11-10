@@ -1,5 +1,5 @@
 import type {BusinessDocument,Customer,Expense,Product,WorkspaceData} from './domain';
-import {blankProfile,emptyWorkspace,newId} from './domain';
+import {BILLABLE_TYPES,calculate,reconcileStock,blankProfile,emptyWorkspace,newId} from './domain';
 
 const KEY='metaforge-business-react-v1';
 const LEGACY_KEY='metaforge-business-v1';
@@ -57,7 +57,6 @@ export function recordDocument(data:WorkspaceData,incoming:BusinessDocument):Wor
   if(existing?.voided)throw Error('Voided documents cannot be changed. Duplicate instead.');
   if(data.documents.some(d=>d.id!==incoming.id&&d.number.toLowerCase()===incoming.number.toLowerCase()))
     throw Error('This document number already exists.');
-  const {reconcileStock,calculate,BILLABLE_TYPES}=requireDomain();
   calculate(incoming);
   if(!incoming.draft&&BILLABLE_TYPES.has(incoming.type)&&
     (incoming.type.includes('receipt')||incoming.type==='cash-sale')&&incoming.paid<=0)
@@ -75,9 +74,6 @@ export function recordDocument(data:WorkspaceData,incoming:BusinessDocument):Wor
   }
   return addAudit({...data,products,documents,customers},existing?'document.updated':'document.created',updated.number);
 }
-/* Explicit import avoids importing domain values twice through a circular module. */
-import {BILLABLE_TYPES,calculate,reconcileStock} from './domain';
-function requireDomain(){return {BILLABLE_TYPES,calculate,reconcileStock};}
 export function recordPayment(data:WorkspaceData,id:string,amount:number):WorkspaceData {
   const existing=data.documents.find(d=>d.id===id);
   if(!existing||existing.draft||existing.voided||!BILLABLE_TYPES.has(existing.type))
