@@ -37,11 +37,18 @@ function announce(message,error=false) {
   const n=$('#notice');n.textContent=message;n.classList.remove('hidden');n.classList.toggle('error',error);window.scrollTo({top:0,behavior:'smooth'});
 }
 function closeNotice(){$('#notice').classList.add('hidden');}
+function setMobileMenu(open) {
+  $('#sidebar').classList.toggle('open',open);
+  document.body.classList.toggle('menu-open',open);
+  $('#menuBtn').setAttribute('aria-expanded',String(open));
+  $('#mobileMore').setAttribute('aria-expanded',String(open));
+  if(open)$('#sidebar').querySelector('button[data-view]')?.focus();
+}
 function openView(view,preserveEditor=false) {
   if (!$('#view-'+view)) return;
   $$('.view').forEach(el=>el.classList.toggle('hidden',el.id!=='view-'+view));
   $$('.nav').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
-  $('#sidebar').classList.remove('open');$('#menuBtn').setAttribute('aria-expanded','false');
+  setMobileMenu(false);
   closeNotice();
   if(view==='create'&&!preserveEditor) resetEditor();
   if(view==='dashboard') renderDashboard();
@@ -381,7 +388,10 @@ function bindEvents(){
     const exportBtn=event.target.closest('[data-export]');
     if(exportBtn)exportCsv(exportBtn.dataset.export);
   });
-  $('#menuBtn').addEventListener('click',()=>{const aside=$('#sidebar');aside.classList.toggle('open');$('#menuBtn').setAttribute('aria-expanded',String(aside.classList.contains('open')));});
+  $('#menuBtn').addEventListener('click',()=>setMobileMenu(!$('#sidebar').classList.contains('open')));
+  $('#mobileMore').addEventListener('click',()=>setMobileMenu(!$('#sidebar').classList.contains('open')));
+  $('#mobileScrim').addEventListener('click',()=>setMobileMenu(false));
+  window.addEventListener('keydown',event=>{if(event.key==='Escape')setMobileMenu(false);});
   $('#docType').addEventListener('change',()=>{if(!editingId)$('#docNumber').value=C.numberFor(state.documents,$('#docType').value,$('#docForm').elements.date.value);renderPreview();});
   $('#docForm').addEventListener('input',renderPreview);
   $('#docForm').addEventListener('change',renderPreview);
