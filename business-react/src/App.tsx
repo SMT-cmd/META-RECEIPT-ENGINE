@@ -17,6 +17,7 @@ import {
 import {detectLegacy,importLegacySource,copyLegacyHistoryInfo,type LegacySource} from './legacy';
 import {contactExport,documentExport,downloadText,expenseExport,productExport} from './storage';
 import {SalesInsights} from './SalesInsights';
+const bizlanoIcon=import.meta.env.BASE_URL+'bizlano-icon.svg';
 
 type Page='overview'|'create'|'documents'|'customers'|'products'|'expenses'|'team'|'profile'|'exports'|'migration';
 const PAGE_ITEMS:{id:Page;label:string;symbol:string;roles?:Role[]}[]=[
@@ -95,7 +96,7 @@ function ReceiptPreview({document,profile}:{document:BusinessDocument;profile:Bu
     <footer className="receipt-footer">
       {document.notes&&<><b>Notes</b><p>{document.notes}</p></>}
       {issuer.bank&&<><b>Payment details</b><p>{[issuer.bank,issuer.accountName,issuer.accountNumber].filter(Boolean).join(' · ')}</p></>}
-      <p>{issuer.footer}</p><small>Powered by Bizlano · {document.number}</small>
+      <p>{issuer.footer}</p><small className="receipt-powered"><img src={bizlanoIcon} alt="" aria-hidden="true"/>Powered by <strong>Bizlano</strong><span aria-hidden="true">·</span>{document.number}</small>
     </footer>
   </article>;
 }
@@ -107,7 +108,7 @@ function LoginScreen({user,alert,note}:{user:User|null;alert:(e:unknown)=>void;n
   if(user)return <div className="auth-layout"><Panel><h1>Verify your email</h1><p>Please open the verification email sent to <strong>{user.email}</strong>. Then return here.</p>
     <div className="actions"><Button onClick={async()=>{try{const ok=await refreshEmailVerification();if(ok)window.location.reload();else note('Email is not verified yet.');}catch(e){alert(e);}}} kind="primary">I verified my email</Button><Button onClick={()=>void signOutAccount()}>Sign out</Button></div>
     <p className="hint">Existing MetaForge accounts keep their same Firebase sign-in.</p></Panel></div>;
-  return <div className="auth-layout"><div className="auth-brand"><a href="../"><span className="brandmark">B</span><strong>Bizlano</strong></a><p>Your business, beautifully managed. Receipts, sales and teams in one place.</p></div>
+  return <div className="auth-layout"><div className="auth-brand"><a href="../"><img className="brandmark" src={bizlanoIcon} alt=""/><strong>Bizlano</strong></a><p>Your business, beautifully managed. Receipts, sales and teams in one place.</p></div>
     <Panel><div className="eyebrow">YOUR BUSINESS ACCOUNT</div><h1>{mode==='login'?'Sign in':'Create a free account'}</h1>
       <p className="muted">No subscription gate is enabled while the product is being expanded.</p>
       <form onSubmit={submit}><Field label="Email" type="email" value={email} onChange={setEmail} required/>
@@ -206,6 +207,11 @@ export default function App(){
   const [expense,setExpense]=useState({description:'',amount:0,date:today(),category:'Stock purchase'});
   const [migrationSources,setMigrationSources]=useState<LegacySource[]>([]),[migrationWarnings,setMigrationWarnings]=useState<string[]>([]);
   const role=member?.role||'viewer';
+  useEffect(()=>{if(!mobile)return;
+    const close=(event:KeyboardEvent)=>{if(event.key==='Escape')setMobile(false);};
+    window.addEventListener('keydown',close);
+    return ()=>window.removeEventListener('keydown',close);
+  },[mobile]);
   useEffect(()=>{if(member?.role==='viewer'&&page==='overview')setPage('documents');},[member?.role,page]);
   const totals=useMemo(()=>summarize(workspace),[workspace]);
   const alert=(e:unknown)=>setMessage({text:asError(e),error:true});
@@ -337,15 +343,17 @@ export default function App(){
   const finance=canFinance(role);
   const f=(n:number)=>money(n,workspace.profile.currency);
   return <div className="app-shell">
-    <aside className={'sidebar '+(mobile?'open':'')}><a className="brand" href="../"><span className="brandmark">B</span><span><strong>Bizlano</strong><small>MANAGEMENT SUITE</small></span></a>
+    <aside className={'sidebar '+(mobile?'open':'')} id="bizlano-sidebar" aria-label="Business navigation"><a className="brand" href="../"><img className="brandmark" src={bizlanoIcon} alt=""/><span><strong>Bizlano</strong><small>MANAGEMENT SUITE</small></span></a>
       <p className="nav-caption">WORKSPACE</p><nav aria-label="Business navigation">
         {PAGE_ITEMS.filter(p=>!p.roles||p.roles.includes(role)).map(p=><button key={p.id} className={'nav-item '+(page===p.id?'active':'')}
           onClick={()=>go(p.id)}><span>{p.symbol}</span> {p.label}</button>)}</nav>
       <div className="sidebar-bottom"><strong>{business.name}</strong><p>{role.toUpperCase()} · {business.slug}</p>
         <button onClick={()=>{setBusiness(null);setMember(null);}}>Switch business ↗</button>
-        <a href="../creator/">Advanced receipt designer ↗</a></div></aside>
+        <a href="../creator/">Advanced receipt designer ↗</a>
+        <button className="sidebar-signout" type="button" onClick={()=>void signOutAccount()}>Sign out</button></div></aside>
+    {mobile&&<button type="button" className="sidebar-scrim" onClick={()=>setMobile(false)} aria-label="Close navigation menu"/>}
     <div className="workspace"><header className="topbar">
-      <button className="menu-button" onClick={()=>setMobile(!mobile)} aria-label="Toggle navigation" aria-expanded={mobile}>☰</button>
+      <button className="menu-button" onClick={()=>setMobile(!mobile)} aria-label="Toggle navigation" aria-controls="bizlano-sidebar" aria-expanded={mobile}>{mobile?'×':'☰'}</button>
       <div><strong>{business.name}</strong><small>{business.slug} · {role}</small></div>
       <div className="top-actions"><span>● Secure team workspace</span>{canWrite(role)&&<Button kind="primary" onClick={()=>go('create')}>+ New document</Button>}<button className="signout" onClick={()=>void signOutAccount()}>Sign out</button></div>
     </header>
@@ -488,6 +496,13 @@ export default function App(){
             <Empty text="No accessible legacy receipts were found in this account or browser. You may still use your old engine and export its history separately."/>}
           <p className="hint">Legacy records without proof of payment are never automatically counted as confirmed sales.</p></Panel>
       </>}
-    </main><footer className="page-footer">Bizlano · Your business, beautifully managed. <a href="../">Original MetaForge website</a></footer></div>
+    </main><footer className="page-footer">Bizlano · Your business, beautifully managed. <a href="../">Original MetaForge website</a></footer>
+      <nav className="mobile-tabbar" aria-label="Quick navigation">
+        {role!=='viewer'&&<button type="button" className={'mobile-tab '+(page==='overview'?'selected':'')} aria-current={page==='overview'?'page':undefined} onClick={()=>go('overview')}><span aria-hidden="true">⌂</span><small>Home</small></button>}
+        <button type="button" className={'mobile-tab '+(page==='documents'?'selected':'')} aria-current={page==='documents'?'page':undefined} onClick={()=>go('documents')}><span aria-hidden="true">▤</span><small>Documents</small></button>
+        {canWrite(role)&&<button type="button" className={'mobile-tab create-tab '+(page==='create'?'selected':'')} aria-label="Create new receipt or invoice" aria-current={page==='create'?'page':undefined} onClick={()=>go('create')}><span aria-hidden="true">＋</span><small>Create</small></button>}
+        {role!=='viewer'&&<button type="button" className={'mobile-tab '+(page==='products'?'selected':'')} aria-current={page==='products'?'page':undefined} onClick={()=>go('products')}><span aria-hidden="true">◫</span><small>Stock</small></button>}
+        <button type="button" className={'mobile-tab '+(mobile?'selected':'')} aria-label="More workspace sections" aria-expanded={mobile} aria-controls="bizlano-sidebar" onClick={()=>setMobile(true)}><span aria-hidden="true">☷</span><small>More</small></button>
+      </nav></div>
   </div>;
 }
