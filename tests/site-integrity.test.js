@@ -106,7 +106,7 @@ test('site navigation links resolve to existing files and fragment targets', () 
 });
 
 test('homepage hero image uses the approved generated image endpoint', () => {
-  const match = indexHtml.match(/<img[^>]+src="([^"]+)"/);
+  const match = [...indexHtml.matchAll(/<img[^>]+src="([^"]+)"/g)].find(item=>item[1].startsWith('https://coresg-normal.trae.ai/'));
   assert.ok(match, 'Expected homepage hero image to be present');
   assert.match(
     match[1],
