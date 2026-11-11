@@ -321,22 +321,22 @@ async function importLegacy(archive,includeBrowser){
  await navigate('documents');
 }
 function globalWebstores(){
- const info=state.data||{};
- return heading('CONNECTED BUSINESS','Global Webstores + Bizlano','Connect your store once. Verified purchases can then prepare beautiful receipts in your business workspace.')+
+ const info=state.data||{},feed=info.feed||{};
+ const stat=(label,n)=>'<div class="stat"><strong>'+e(n??0)+'</strong><span>'+e(label)+'</span></div>';
+ return heading('CONNECTED BUSINESS','Global Webstores + Bizlano','Link your store once to keep verified sales receipts and connected business updates organized.')+
  '<div class="cols"><section class="panel"><div class="eyebrow">YOUR STORE CONNECTION</div><h2>'+(info.connected?'Your store is connected':'Connect Global Webstores')+'</h2>'+
- (info.connected?'<div class="banner"><strong>Connected</strong><br>Since '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Last sale: '+e(info.lastSaleAt):'New sales will appear here.')+'</div>'+
- '<p class="muted">Paid orders can automatically prepare receipts with your saved document design. You will find them under Receipt notifications.</p><button class="btn" data-action="disconnect-gws">Disconnect this store</button>':
- '<p class="muted">Open your Global Webstores vendor dashboard and choose <strong>Connect Bizlano</strong>. Generate a private connection code here and paste it in that dashboard. You will not need to share any account password.</p>'+
+ (info.connected?'<div class="banner"><strong>Connected</strong><br>Since '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Last receipt event: '+e(info.lastSaleAt):'No recorded paid sales yet.')+'</div>'+
+ '<p class="muted">When your store sends verified events, Bizlano records receipts, catalog snapshots, delivery updates and reconciliation details. Your direct Bizlano stock stays separate.</p><button class="btn" data-action="disconnect-gws">Disconnect this store</button>':
+ '<p class="muted">Open your Global Webstores vendor dashboard and choose Connect Bizlano. Generate a secure one-time code here and enter it in that dashboard. Do not share account passwords.</p>'+
  '<button class="btn primary" data-action="gws-code">Generate a secure connection code</button><div id="gws-link-result" class="banner hidden"></div>')+
  '<div style="margin-top:18px"><a href="https://www.globalwebstores.com/dashboard" class="btn" target="_blank" rel="noopener noreferrer">Open Global Webstores dashboard ↗</a></div></section>'+
- '<section class="panel"><h2>After every paid order</h2><div class="stack">'+
- '<div class="rowcard"><span><strong>1. Payment verified</strong><small>Global Webstores confirms the sale before syncing.</small></span><span class="mini muted">Automatic</span></div>'+
- '<div class="rowcard"><span><strong>2. Receipt prepared</strong><small>Bizlano generates a receipt using your saved template.</small></span><span class="mini muted">Automatic</span></div>'+
- '<div class="rowcard"><span><strong>3. You receive an update</strong><small>Open Receipt notifications, print or share the document.</small></span><span class="mini muted">Free</span></div>'+
- '<div class="rowcard"><span><strong>4. Send it to your customer</strong><small>Share a PDF or send it through your preferred messaging app.</small></span><span class="mini muted">Your choice</span></div></div>'+
- '</section></div>';
+ '<section class="panel"><h2>Connected business activity</h2><div class="stats" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">'+
+ stat('Synced products',feed.products)+stat('Order status updates',feed.orderUpdates)+stat('Refund records',feed.refunds)+stat('Payout records',feed.settlements)+'</div>'+
+ '<p class="muted">Figures show recorded events, not payments initiated by Bizlano. Refund and payout records are kept for reconciliation; they do not silently change issued receipts.</p><div class="stack">'+
+ '<div class="rowcard"><span><strong>Verified orders</strong><small>Receipts are prepared only from signed paid-order events.</small></span></div>'+
+ '<div class="rowcard"><span><strong>Products and fulfilment</strong><small>Connected catalog and order progress stay visible separately.</small></span></div>'+
+ '<div class="rowcard"><span><strong>Financial reconciliation</strong><small>Refund and payout events are recorded without double-counting sales.</small></span></div></div></section></div>';
 }
-
 async function removeWhiteBackground(file){
  // Fast local image editing: remove only near-white areas connected to the edge.
  // No remote service, private image upload or AI charge is involved.

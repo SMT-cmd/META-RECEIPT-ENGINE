@@ -498,7 +498,14 @@ async function api(req,env,url) {
  if(resource==='marketplace'){
   if(method==='GET'){
    const c=await env.DB.prepare("SELECT vendor_id,connected_at,last_sale_at FROM marketplace_connections WHERE provider='globalwebstores' AND tenant_id=? AND disconnected_at IS NULL").bind(tenant).first();
-   return json({connected:!!c, vendorId:c?.vendor_id||null, connectedAt:c?.connected_at||null,lastSaleAt:c?.last_sale_at||null});
+   const [catalog,orders,refunds,settlements]=await env.DB.batch([
+    env.DB.prepare('SELECT count(*) AS total FROM marketplace_catalog_products WHERE tenant_id=? AND active=1').bind(tenant),
+    env.DB.prepare('SELECT count(*) AS total FROM marketplace_order_status WHERE tenant_id=?').bind(tenant),
+    env.DB.prepare('SELECT count(*) AS total FROM marketplace_adjustments WHERE tenant_id=?').bind(tenant),
+    env.DB.prepare('SELECT count(*) AS total FROM marketplace_settlements WHERE tenant_id=?').bind(tenant)
+   ]);
+   return json({connected:!!c,vendorId:c?.vendor_id||null,connectedAt:c?.connected_at||null,lastSaleAt:c?.last_sale_at||null,feed:{products:catalog.results?.[0]?.total||0,orderUpdates:orders.results?.[0]?.total||0,refunds:refunds.results?.[0]?.total||0,settlements:settlements.results?.[0]?.total||0}});
+
   }
   if(method==='POST'){
    const b=await input(req),action=String(b.action||'link');
