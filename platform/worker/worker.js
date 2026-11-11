@@ -11,7 +11,7 @@ const reserved=['www','api','auth','app','admin','billing','support','bizlano','
 const baseHeaders={'cache-control':'no-store','x-content-type-options':'nosniff'};
 class ErrorWithStatus extends Error {constructor(code,message){super(message);this.code=code}}
 function fail(code,message){throw new ErrorWithStatus(code,message)}
-function json(data,status=200,headers={}){return new Response(JSON.stringify(data),{status,headers:{...baseHeaders,'content-type':'application/json; charset=utf-8',...headers}})}
+function json(data,status=200,headers={}){return new Response(JSON.stringify(data),{status,headers:{...baseHeaders,'x-frame-options':'DENY','referrer-policy':'strict-origin-when-cross-origin','permissions-policy':'camera=(), microphone=(), geolocation=()','content-type':'application/json; charset=utf-8',...headers}})}
 const dec=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
 const str=bytes=>new TextDecoder().decode(bytes);
 const hex=bytes=>[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -324,8 +324,8 @@ async function api(req,env,url) {
 }
 export default {async fetch(req,env){
  const url=new URL(req.url),p=url.pathname;
- if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','referrer-policy':'strict-origin-when-cross-origin'}});
- if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','referrer-policy':'strict-origin-when-cross-origin'}});
+ if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
+ if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
  if(req.method==='GET'&&p==='/favicon.svg')return Response.redirect(new URL('/assets/bizlano-mark.png',req.url),302);
  if(req.method==='GET'&&['/assets/bizlano-logo.png','/assets/bizlano-mark.png','/assets/bizlano-hero.jpg'].includes(p)){
