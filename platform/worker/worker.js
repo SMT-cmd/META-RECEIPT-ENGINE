@@ -1,4 +1,4 @@
-import {html,client} from './ui.js';
+import {html,client,icon} from './ui.js';
 const project='metaforge-6afdf';
 const issuer='https://securetoken.google.com/'+project;
 const jwks='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -261,7 +261,7 @@ export default {async fetch(req,env){
  const url=new URL(req.url),p=url.pathname;
  if(req.method==='GET'&&(p==='/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-cache'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
- if(req.method==='GET'&&p==='/favicon.svg')return new Response('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#181b43"/><path d="M19 10h17c18 0 20 17 8 23 14 5 12 21-8 21H10l9-44zm9 10-3 10h11c9 0 10-10 1-10h-9zm-5 20-3 9h15c8 0 9-9 0-9H23Z" fill="#9156ff"/></svg>',{headers:{'content-type':'image/svg+xml'}});
+ if(req.method==='GET'&&p==='/favicon.svg')return new Response(icon,{headers:{'content-type':'image/svg+xml','cache-control':'public,max-age=86400'}});
  if(req.method==='GET'&&/^\/media\/[a-f0-9-]{36}\/logo$/.test(p)){
   const id=p.split('/')[2],asset=await env.ASSETS.get('tenants/'+id+'/logo');
   return asset?new Response(asset.body,{headers:{'content-type':asset.httpMetadata?.contentType||'image/png','cache-control':'public,max-age=120'}}):new Response('Not found',{status:404});
