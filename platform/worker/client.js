@@ -216,7 +216,7 @@ function products(){
 }
 function payments(){
  const rows=state.data?.rows||[];
- return heading('PAYMENT JOURNAL','Recorded payments','Amounts entered by authorized staff. Always independently verify receipt of money.')+
+ return heading('PAYMENTS','Your recorded payments','Review the payments entered by your team and check them against your payment records.')+
  '<section class="panel">'+simpleRows(rows,p=>'<div class="rowcard"><div><strong>'+e(p.document_number)+'</strong><small>'+e(p.method)+' · '+e(p.received_at)+'</small></div><strong>'+curr(p.amount_minor)+'</strong></div>')+'</section>';
 }
 function expenses(){
@@ -260,32 +260,32 @@ function team(){
 function upgrade(){
  const a=state.legacyArchive;
  const total=(a?.engines||[]).reduce((v,x)=>v+x.receipts.length,0);
- return heading('YOUR BUSINESS HISTORY','Bring your previous receipts along','Your original MetaForge receipts stay untouched. Imported copies are review-only drafts in Bizlano.')+
+ return heading('YOUR RECEIPT HISTORY','Bring your old receipts into Bizlano','Your previous MetaForge receipts stay where they are. Choose which copies you want to keep here.')+
  '<div class="cols"><section class="panel"><h2>Scan your original account</h2><p class="muted">Find receipts linked to your previous account. Your original documents will not be changed.</p>'+
  '<div class="row"><button class="btn primary" data-action="scan-legacy">Scan old receipts</button>'+
  (a?'<button class="btn" data-action="download-legacy">Download original archive</button>':'')+'</div>'+
- (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Only accessible sources are included.'+
- (state.backupReady?'<br>Backup prepared; you may stage copies as drafts.':'<br>Download a backup before importing.')+'</div>'+
+ (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Your old receipts remain unchanged.'+
+ (state.backupReady?'<br>Your backup is ready. You can now review the receipts.':'<br>Save a backup before continuing.')+'</div>'+
  '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
  '<p class="mini muted">If some receipts are missing, try uploading your previous backup.</p></section>'+
  '<section class="panel"><h2>Already have a receipt backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
  '<form data-form="legacy-file"><label class="field">Backup archive (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
  '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include histories saved only on my old browser (may be unverified)</label>'+
  '<button type="submit" class="btn primary">Review and import backup</button></form>'+
- '<div class="banner">We never treat historical receipts as newly paid sales. Business and customer information stays scoped to your own workspace.</div></section></div>';
+ '<div class="banner">Older receipts stay separate from your new sales until you review them.</div></section></div>';
 }
 async function scanLegacy(){
  if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)throw Error('Only the verified owner can migrate history');
  const account=auth.currentUser,issues=[],engines=[];
  const found=await getDocs(query(collection(oldDb,'short_urls'),where('owner_uid','==',account.uid),limit(11)));
- if(found.size>10)issues.push('There are more than 10 engines; this scan only checks the first 10 to limit cloud reads.');
+ if(found.size>10)issues.push('Some older receipts may not appear in this quick search. You can also import a backup.');
  for(const engine of found.docs.slice(0,10)){
   if(!/^[A-Za-z0-9]{6}$/.test(engine.id))continue;
   try{
    const receipts=await getDocs(query(collection(oldDb,'short_urls',engine.id,'receipts'),limit(251)));
-   if(receipts.size>250)issues.push('Engine '+engine.id+' exceeds 250 receipts; use the original export for complete history.');
+   if(receipts.size>250)issues.push('There may be more receipts for '+engine.id+'. Try your original backup for the complete history.');
    engines.push({code:engine.id,brandName:engine.data().brandName||engine.id,receipts:receipts.docs.slice(0,250).map(x=>({id:x.id,...x.data()}))});
-  }catch(err){issues.push('Could not read engine '+engine.id+' — the original records remain available on the old site.');}
+  }catch(err){issues.push('We could not load the receipts for '+engine.id+'. You can try your original backup.');}
  }
  state.legacyArchive={kind:'metaforge-legacy',version:1,createdAt:new Date().toISOString(),userUid:account.uid,email:account.email,engines,settings:null,local:{histories:[],metadata:{},errors:[]},issues};
  state.backupReady=false;render();
@@ -336,7 +336,7 @@ function globalWebstores(){
  '<div class="rowcard"><span><strong>2. Receipt prepared</strong><small>Bizlano generates a receipt using your saved template.</small></span><span class="mini muted">Automatic</span></div>'+
  '<div class="rowcard"><span><strong>3. You receive an update</strong><small>Open Receipt notifications, print or share the document.</small></span><span class="mini muted">Free</span></div>'+
  '<div class="rowcard"><span><strong>4. Send it to your customer</strong><small>Share a PDF or send it through your preferred messaging app.</small></span><span class="mini muted">Your choice</span></div></div>'+
- '<p class="mini muted" style="margin-top:14px">Customer email automation and advanced delivery settings will be introduced separately, once tested and approved.</p></section></div>';
+ '</section></div>';
 }
 
 async function removeWhiteBackground(file){
