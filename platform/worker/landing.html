@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light;--ink:#19213e;--ink2:#303b56;--muted:#718099;--purple:#6935df;--blue:#327ff4;--line:#e9eaf1;--bg:#fcfbff;--shadow:0 20px 70px rgba(31,28,83,.065);font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-synthesis:none;scroll-behavior:smooth}
+:root{color-scheme:light;--ink:#19213e;--ink2:#303b56;--muted:#56647f;--purple:#6935df;--blue:#327ff4;--line:#e9eaf1;--bg:#fcfbff;--shadow:0 20px 70px rgba(31,28,83,.065);font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-synthesis:none;scroll-behavior:smooth}
 *,*:before,*:after{box-sizing:border-box}
 body{margin:0;min-width:320px;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}button,a{touch-action:manipulation}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #a996fc;outline-offset:4px}
@@ -96,6 +96,19 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 @media(max-width:560px){.container{width:calc(100% - 36px)}.topline{font-size:10px}.site-header{height:66px}.site-nav{top:65px}.brand img{width:154px;height:52px}.header-actions .button{padding:11px 12px;font-size:11px;min-height:40px}.hero{padding:53px 0 63px}.eyebrow{font-size:9px;margin-bottom:19px}.hero h1{font-size:clamp(35px,10vw,47px);letter-spacing:-.06em}.hero-lead{font-size:13px;line-height:1.8}.hero-actions{align-items:stretch}.hero-actions .button{min-height:48px}.hero-points{gap:12px;margin-top:23px;font-size:10px}.hero-visual{padding:0 0 20px 8px}.app-mock{grid-template-columns:76px minmax(0,1fr);border-radius:12px}.mock-side{padding:13px 5px}.mock-brand{font-size:10px;gap:0;margin-bottom:23px}.mock-brand img{width:22px;height:22px}.mock-menu{font-size:7px;padding:8px 3px;gap:3px}.mock-menu svg{height:10px;width:10px}.mock-content{padding:15px 11px 13px}.mock-top strong{font-size:10px}.mock-tag{font-size:7px;padding:5px}.mock-stats{gap:5px}.mock-stat{padding:7px 5px}.mock-stat strong{font-size:10px}.mock-stat small,.mock-stat span{font-size:6px}.mock-chart{padding:10px 8px 4px}.mock-charthead strong{font-size:8px}.mock-list-card{padding:8px 6px;font-size:7px}.mock-list-card strong{font-size:7px}.mock-list-card p{font-size:7px}.float-receipt{left:-8px;bottom:-4px;width:137px;padding:11px;border-radius:8px}.float-receipt .icon{width:24px;height:24px;margin-bottom:8px;font-size:14px}.float-receipt strong{font-size:8px}.float-receipt small,.float-receipt .split{font-size:7px;margin:3px 0}.mock-caption{font-size:8px}.value-band{padding:23px 0}.value-row strong{font-size:13px}.value-items{font-size:10px;gap:12px}.section{padding:72px 0}.section-head{margin-bottom:32px}.section-head h2{font-size:31px}.section-head p{font-size:12px}.feature-grid{grid-template-columns:1fr;gap:10px}.feature{min-height:auto;padding:22px}.feature-icon{margin-bottom:17px}.showcase h2{font-size:34px}.showcase-sheet{padding:20px 13px}.receipt-paper{padding:23px 19px}.workflow{grid-template-columns:1fr;gap:20px}.step{display:grid;grid-template-columns:46px 1fr;column-gap:15px}.step-num{grid-row:span 2;margin:0}.step h3{margin:0}.step p{margin:5px 0 0}.cta{padding:60px 0}.cta-inner{padding:39px 25px;display:block;border-radius:17px}.cta h2{font-size:31px}.cta .button{margin-top:25px}.faq{padding-bottom:60px}.faq summary{font-size:12px}.footer-links{gap:26px}.footer-bottom{margin-top:30px}}
 @media(max-width:375px){.header-inner{gap:7px}.header-actions{gap:5px}.brand img{width:129px;height:44px}.header-actions .button{padding:8px 9px;font-size:10px;min-height:39px}.menu-toggle{width:39px;height:39px}.hero h1{font-size:35px}.hero-actions .button{font-size:11px;padding:10px 13px}.float-receipt{width:128px}.mock-content{padding:12px 9px}.mock-stat strong{font-size:9px}}
 @media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}.button,.feature{transition:none}}
+@media screen{
+.hero-lead,.section-head p,.showcase p,.feature p,.step p,.faq details p{color:#53627c}
+.feature p{font-size:13px}.section-head p,.faq details p{font-size:13px}
+.site-nav a{font-size:13px;color:#485570}.footer p,.footer-links a,.footer-bottom{color:#c6cce0}
+.hero-points{color:#52617c}
+}
+@media screen and (max-width:560px){
+.hero-lead{font-size:14px}.site-nav a{font-size:14px}
+.feature p,.section-head p,.faq details p{font-size:13px;line-height:1.75}
+.hero-actions .button{min-height:46px;font-size:12px}
+.footer-bottom{line-height:1.65}
+}
+
 </style>
 </head>
 <body>
