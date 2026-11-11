@@ -178,12 +178,12 @@ function recoveryMessage(){
  return 'Lost a receipt from '+state.biz.business_name+'? Find it here: '+recoveryHref()+' \nSign in using the email on your receipt, or enter your private receipt code.';
 }
 function recoveryTools(){
- return '<div class="recovery-share"><label class="field">Customer recovery link<input readonly aria-label="Customer receipt recovery link" value="'+e(recoveryHref())+'" class="recovery-link" data-recovery-url></label><div class="row"><button type="button" class="btn primary" data-action="copy-recovery">Copy customer link</button><button type="button" class="btn" data-action="copy-recovery-message">Copy ready-to-send message</button></div><p class="mini muted">Share this with customers. Your link always matches the website you are using.</p><a href="'+e(businessHref())+'" class="mini recovery-business-link" target="_blank" rel="noopener noreferrer">View business page ↗</a></div>';
+ return '<div class="recovery-share"><label class="field">Customer recovery link<input readonly aria-label="Customer receipt recovery link" value="'+e(recoveryHref())+'" class="recovery-link" data-recovery-url></label><div class="row"><button type="button" class="btn primary" data-action="copy-recovery">Copy customer link</button><button type="button" class="btn" data-action="copy-recovery-message">Copy ready-to-send message</button></div><p class="mini muted">Share this link with your customers.</p><a href="'+e(businessHref())+'" class="mini recovery-business-link" target="_blank" rel="noopener noreferrer">View business page ↗</a></div>';
 }
 async function copyShareText(value){
  if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(value);flash('Copied. Ready to share.');return}catch{}}
  const input=document.createElement('textarea');input.value=value;input.style.position='fixed';input.style.opacity='0';document.body.append(input);input.focus();input.select();
- const copied=document.execCommand('copy');input.remove();
+ let copied=false;try{copied=Boolean(document.execCommand?.('copy'))}catch{}input.remove();
  if(copied)flash('Copied. Ready to share.');
  else {const link=document.querySelector('[data-recovery-url]');if(link){link.focus();link.select()}flash('Select and copy the link above.',true)}
 }
