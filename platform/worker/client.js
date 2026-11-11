@@ -263,14 +263,14 @@ function upgrade(){
  return heading('YOUR RECEIPT HISTORY','Bring your old receipts into Bizlano','Your previous MetaForge receipts stay where they are. Choose which copies you want to keep here.')+
  '<div class="cols"><section class="panel"><h2>Scan your original account</h2><p class="muted">Find receipts linked to your previous account. Your original documents will not be changed.</p>'+
  '<div class="row"><button class="btn primary" data-action="scan-legacy">Scan old receipts</button>'+
- (a?'<button class="btn" data-action="download-legacy">Download original archive</button>':'')+'</div>'+
- (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Your old receipts remain unchanged.'+
+ (a?'<button class="btn" data-action="download-legacy">Download backup</button>':'')+'</div>'+
+ (a?'<div class="banner"><strong>'+a.engines.length+' receipt collections · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Your old receipts remain unchanged.'+
  (state.backupReady?'<br>Your backup is ready. You can now review the receipts.':'<br>Save a backup before continuing.')+'</div>'+
  '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
  '<p class="mini muted">If some receipts are missing, try uploading your previous backup.</p></section>'+
  '<section class="panel"><h2>Already have a receipt backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
- '<form data-form="legacy-file"><label class="field">Backup archive (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
- '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include histories saved only on my old browser (may be unverified)</label>'+
+ '<form data-form="legacy-file"><label class="field">Backup file (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
+ '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include receipts saved on this device</label>'+
  '<button type="submit" class="btn primary">Review and import backup</button></form>'+
  '<div class="banner">Older receipts stay separate from your new sales until you review them.</div></section></div>';
 }
