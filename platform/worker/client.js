@@ -80,11 +80,11 @@ function loginScreen(){
  const logged=Boolean(state.user&&state.user.emailVerified);
  app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and collaborate with your team from anywhere.</p></div><small>Your business, your team, your next chapter. Register for free today.</small></div>'+
  '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+(verify?'Verify your email':logged?(state.connectError?'Connection needs attention':'Connecting securely…'):state.authMode==='register'?'Register for free':'Welcome back')+'</h2>'+
- (verify?'<p class="muted">Your existing MetaForge login is preserved. Verify the email for this account to access a secure cloud workspace.</p><div class="stack"><button class="btn primary" data-action="resend">Send verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>':logged?'<p class="muted">'+e(state.connectError||'Please wait while we connect your secure business session.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>':
+ (verify?'<p class="muted">Verify your email to keep your business records secure.</p><div class="stack"><button class="btn primary" data-action="resend">Send verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>':logged?'<p class="muted">'+e(state.connectError||'Please wait while we connect your secure business session.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>':
  '<p class="muted">'+(state.authMode==='register'?'Create your free Bizlano account with your everyday email address.':'New to Bizlano? Register for free, or sign in with your existing MetaForge account.')+'</p>'+
  '<form data-form="auth" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+input('Password','password','password','',true,'minlength="'+(state.authMode==='register'?'8':'6')+'" autocomplete="'+(state.authMode==='register'?'new-password':'current-password')+'"')+
  '<button class="btn primary" type="submit">'+(state.authMode==='register'?'Register for free':'Sign in')+'</button></form><div class="row" style="margin-top:15px"><button class="btn" data-action="toggle-auth">'+(state.authMode==='register'?'Already registered? Sign in':'Register for free')+'</button><button class="btn" data-action="reset">Reset password</button></div>')+
- '<div class="banner">Previously used MetaForge? Sign in with your existing account. Your earlier receipts stay in your original workspace until you choose to bring them into Bizlano.</div><p class="mini muted">Bizlano · Helping you stay on top of your business, every day.</p><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
+ '<p class="mini muted">Previously used MetaForge? You can sign in with your existing account.</p><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
 }
 function businessPicker(){
  const businesses=state.me?.businesses||[];
@@ -93,7 +93,7 @@ function businessPicker(){
  '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO YOUR WORKSPACE</div><h2>'+(businesses.length?'Choose a business':'Set up your business')+'</h2><p class="muted">Each business has its own protected records, documents and staff permissions.</p>'+owned+
  '<div class="eyebrow">'+(businesses.length?'CREATE ANOTHER BUSINESS':'GET STARTED')+'</div>'+
  '<form data-form="business">'+input('Business name','name','text','',true)+input('Short business address','slug','text','',true,'pattern="[a-z0-9-]{4,40}" placeholder="e.g. timi-store"')+
- '<p class="mini muted">Reserve a short, unique business address. The dedicated subdomain will be available when our brand domain is connected.</p><button type="submit" class="btn primary">Create business workspace →</button></form>'+
+ '<p class="mini muted">Choose a short address customers can easily remember.</p><button type="submit" class="btn primary">Create business workspace →</button></form>'+
  '<p style="margin-top:23px" class="row"><a class="btn" href="/">Visit website</a><button class="btn ghost" data-action="logout">Sign out</button></p></div></div></section>';
 }
 const TEMPLATE_LIST=["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"];
@@ -119,7 +119,7 @@ function shell(body){
  app.innerHTML='<div class="shell"><aside class="sidebar" id="sidebar"><a class="brand" href="/">'+brand()+'</a><div class="caption">WORKSPACE</div><nav class="nav" aria-label="Main navigation">'+navigation()+'</nav>'+
  '<div class="sidebar-bottom"><strong>'+e(t.business_name)+'</strong>'+e(t.slug)+' · '+e(t.role)+'<div style="margin-top:17px"><button class="btn" data-action="picker">Switch business</button></div><button class="btn" style="margin-top:8px" data-action="logout">Sign out</button></div></aside>'+
  '<div class="workspace"><header class="topbar"><div class="row"><button class="menu-toggle" aria-label="Open navigation" data-action="menu">☰</button><div><strong>'+e(t.business_name)+'</strong><small>'+e(t.slug)+' · '+e(t.role)+'</small></div></div><button class="btn primary" data-nav="create">+ New document</button></header>'+
- '<main class="workspace-main">'+body+'</main><footer class="footer">Bizlano · Your business, beautifully managed. · <strong>Powered by Bizlano</strong></footer>'+
+ '<main class="workspace-main">'+body+'</main><footer class="footer">© Bizlano · Your business, beautifully managed.</footer>'+
  '<nav class="mobile-nav" aria-label="Quick navigation"><button data-nav="overview" class="'+(state.view==='overview'?'active':'')+'"><span>⌂</span>Home</button>'+
  '<button data-nav="documents" class="'+(state.view==='documents'?'active':'')+'"><span>▤</span>Documents</button>'+
  (edit()?'<button data-nav="create" class="create '+(state.view==='create'?'active':'')+'"><span>＋</span>Create</button>':'')+
@@ -166,20 +166,41 @@ function salesChart(){
  out+='<div style="border-top:1px solid #eceef4;margin-top:18px;padding-top:13px"><div class="row" style="justify-content:space-between"><strong>Monthly target: '+(target?curr(target):'Not set')+'</strong><span class="mini muted">'+progress+'% reached</span></div><div style="height:9px;background:#e8e4f3;border-radius:8px;margin-top:9px;overflow:hidden"><div style="width:'+progress+'%;height:100%;background:#6735df"></div></div></div>';
  return out;
 }
+function recoveryHref(){
+ const u=new URL('/receipts',location.origin);
+ u.searchParams.set('business',state.biz.slug);
+ return u.toString();
+}
+function businessHref(){
+ return new URL('/s/'+encodeURIComponent(state.biz.slug),location.origin).toString();
+}
+function recoveryMessage(){
+ return 'Lost a receipt from '+state.biz.business_name+'? Find it here: '+recoveryHref()+' \nSign in using the email on your receipt, or enter your private receipt code.';
+}
+function recoveryTools(){
+ return '<div class="recovery-share"><label class="field">Customer recovery link<input readonly aria-label="Customer receipt recovery link" value="'+e(recoveryHref())+'" class="recovery-link" data-recovery-url></label><div class="row"><button type="button" class="btn primary" data-action="copy-recovery">Copy customer link</button><button type="button" class="btn" data-action="copy-recovery-message">Copy ready-to-send message</button></div><p class="mini muted">Share this with customers. Your link always matches the website you are using.</p><a href="'+e(businessHref())+'" class="mini recovery-business-link" target="_blank" rel="noopener noreferrer">View business page ↗</a></div>';
+}
+async function copyShareText(value){
+ if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(value);flash('Copied. Ready to share.');return}catch{}}
+ const input=document.createElement('textarea');input.value=value;input.style.position='fixed';input.style.opacity='0';document.body.append(input);input.focus();input.select();
+ const copied=document.execCommand('copy');input.remove();
+ if(copied)flash('Copied. Ready to share.');
+ else {const link=document.querySelector('[data-recovery-url]');if(link){link.focus();link.select()}flash('Select and copy the link above.',true)}
+}
 function overview(){
  const r=state.data;if(!r)return '<div class="empty">Loading your business overview…</div>';
- const metrics=[['Issued sales',curr(r.invoiced),'Issued documents'],['Payments entered',curr(r.received),'Operator-recorded'],['Outstanding',curr(r.outstanding),'Unpaid balances'],['Customers',r.customers,'Business records']];
- return heading('BUSINESS INTELLIGENCE','Every sale, clearly accounted for.','Your real cloud data, accessible to your authorized team.',edit()?'<button data-nav="create" class="btn primary">+ Create document</button>':'')+
+ const metrics=[['Total sales',curr(r.invoiced),'Issued documents'],['Payments received',curr(r.received),'Recorded payments'],['Outstanding',curr(r.outstanding),'Unpaid balances'],['Customers',r.customers,'Saved customers']];
+ return heading('YOUR BUSINESS AT A GLANCE','See how your business is doing.','Track sales, payments and customers in one place.',edit()?'<button data-nav="create" class="btn primary">+ Create document</button>':'')+
  '<div class="metrics">'+metrics.map(m=>'<div class="metric"><span>'+m[0]+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></div>').join('')+'</div>'+
  '<section class="panel"><h2>Sales analytics</h2>'+salesChart()+'</section>'+
  '<div class="cols"><section class="panel"><h2>Get started with Bizlano</h2><p class="muted">Build your business one step at a time. Add customers, organise your products, and create receipts or invoices ready to print or save.</p><div class="row"><button class="btn primary" data-nav="create">Create your first receipt</button><button class="btn" data-nav="documents">View history</button></div></section>'+
- '<section class="panel"><h2>Your business address</h2><p class="muted">Bizlano business key</p><h3>'+e(state.biz.slug)+'</h3><p class="mini muted">A custom branded subdomain will be enabled when the Bizlano domain is connected. This address is already unique within the database.</p></section></div>';
+ '<section class="panel"><h2>Share your business page</h2><p class="muted">Customers can find lost receipts, while your team signs in separately.</p>'+recoveryTools()+'</section></div>';
 }
 function gridRows(rows,headers,fn){return '<div class="table-scroll"><table><thead><tr>'+headers.map(h=>'<th>'+e(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(fn).join('')+'</tbody></table></div>'}
 function docs(){
  const rows=state.data?.rows||[];
- return heading('RECORDS','Receipts and invoices','Issue, print, and review business documents.',edit()?'<button class="btn primary" data-nav="create">+ New document</button>':'')+
- '<section class="panel">'+(rows.length?gridRows(rows,['Document','Customer','Total','Status','Actions'],d=>'<tr><td><strong>'+e(d.document_number)+'</strong><br><small>'+e(d.kind)+' · '+e(d.issued_on)+'</small></td><td>'+e(d.recipient_name)+'</td><td>'+curr(d.total_minor)+'</td><td>'+e(d.status)+'</td><td><button class="btn" data-doc="'+e(d.id)+'">Preview / Print</button>'+(!['voided','draft','paid'].includes(d.status)&&edit()?'<button class="btn" data-payment="'+e(d.id)+'">Payment</button>':'')+(d.status==='draft'&&edit()?'<button class="btn" data-issue="'+e(d.id)+'">Issue</button>':'')+'</td></tr>'):'<div class="empty">Your document history is empty. Create the first receipt or invoice to begin.</div>')+'</section>';
+ return heading('RECEIPTS & INVOICES','Your business documents','Create, view and share every receipt in one place.',edit()?'<button class="btn primary" data-nav="create">+ New document</button>':'')+
+ '<section class="panel"><div class="recovery-quick"><strong>Customer lost a receipt?</strong><span>Send them your recovery link.</span><button class="btn" data-action="copy-recovery">Copy link</button><button class="btn" data-action="copy-recovery-message">Copy message</button></div>'+(rows.length?gridRows(rows,['Document','Customer','Total','Status','Actions'],d=>'<tr><td><strong>'+e(d.document_number)+'</strong><br><small>'+e(d.kind)+' · '+e(d.issued_on)+'</small></td><td>'+e(d.recipient_name)+'</td><td>'+curr(d.total_minor)+'</td><td>'+e(d.status)+'</td><td><button class="btn" data-doc="'+e(d.id)+'">Preview / Print</button>'+(!['voided','draft','paid'].includes(d.status)&&edit()?'<button class="btn" data-payment="'+e(d.id)+'">Payment</button>':'')+(d.status==='draft'&&edit()?'<button class="btn" data-issue="'+e(d.id)+'">Issue</button>':'')+'</td></tr>'):'<div class="empty">Your document history is empty. Create the first receipt or invoice to begin.</div>')+'</section>';
 }
 function customers(){
  const rows=state.data?.rows||[];
@@ -219,13 +240,13 @@ function branding(){
  image(biz.logo_url,'Business logo')+
  '<form data-form="logo"><label class="field">Choose your logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required></label>'+
  '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
- '<p class="mini muted">Works best with a solid white background. Detailed photographs and complex backgrounds may require a prepared transparent PNG.</p>'+
+ '<p class="mini muted">For the best result, upload a transparent PNG.</p>'+
  '<div class="artwork-preview hidden" data-artwork-preview="logo"></div><button class="btn primary">Save my logo</button></form></section>'+
  '<section class="panel"><h2>Authorized signature <span class="mini muted">(optional)</span></h2><p class="muted">Add a transparent business signature for your document signatory area. It only appears when you enable it in the Document studio.</p>'+
  image(design.signature_url,'Authorized signature')+
  '<form data-form="signature"><label class="field">Choose a signature image<input type="file" name="signature" accept="image/png,image/jpeg,image/webp" required></label>'+
  '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
- '<p class="mini muted">Use a signature you are comfortable displaying to receipt recipients. Anyone with a copy could reproduce it. For sensitive personal signatures, leave this feature off.</p>'+
+ '<p class="mini muted">Only use a signature you’re happy to show customers.</p>'+
  '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></section></div>'+
  '<section class="panel"><h2>Business details</h2><p><strong>'+e(biz.business_name)+'</strong></p><p class="muted">Your business link: <a href="/s/'+e(biz.slug)+'" target="_blank" rel="noopener noreferrer">bizlano.pages.dev/s/'+e(biz.slug)+'</a></p><p class="mini muted">When a custom domain is connected, this same business and its existing records will be available through the new address.</p>'+
  '<button type="button" class="btn" data-nav="design">Manage document designs and signature visibility</button></section>';
@@ -246,8 +267,8 @@ function upgrade(){
  (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Only accessible sources are included.'+
  (state.backupReady?'<br>Backup prepared; you may stage copies as drafts.':'<br>Download a backup before importing.')+'</div>'+
  '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
- '<p class="mini muted">Scans are capped to avoid excessive legacy database reads. If history is missing, use your original MetaForge export and review warnings.</p></section>'+
- '<section class="panel"><h2>Already have a legacy backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
+ '<p class="mini muted">If some receipts are missing, try uploading your previous backup.</p></section>'+
+ '<section class="panel"><h2>Already have a receipt backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
  '<form data-form="legacy-file"><label class="field">Backup archive (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
  '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include histories saved only on my old browser (may be unverified)</label>'+
  '<button type="submit" class="btn primary">Review and import backup</button></form>'+
@@ -431,7 +452,7 @@ function receipt(doc,number,stored=false){
  '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+(doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
  '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
- '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(state.design?.show_signature&&state.design?.signature_url?'<div class="r-signature"><img src="'+e(state.design.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at bizlano.pages.dev/receipts</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
+ '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(state.design?.show_signature&&state.design?.signature_url?'<div class="r-signature"><img src="'+e(state.design.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
@@ -467,6 +488,8 @@ document.addEventListener('click',async ev=>{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='login'?'register':'login';render();return}
+ if(action==='copy-recovery'){await copyShareText(recoveryHref());return}
+ if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
  if(action==='logout'){await api('/logout',{});await signOut(auth);state.me=null;state.biz=null;render();return}
