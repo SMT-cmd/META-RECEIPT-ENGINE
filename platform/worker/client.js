@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:''};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -76,12 +76,12 @@ function loginScreen(){
  const verify=Boolean(state.user&&!state.user.emailVerified);
  const logged=Boolean(state.user&&state.user.emailVerified);
  app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and collaborate with your team from anywhere.</p></div><small>One platform. Every business. No subscription gate.</small></div>'+
- '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+(verify?'Verify your email':logged?'Connecting securely…':state.authMode==='register'?'Create your account':'Welcome back')+'</h2>'+
- (verify?'<p class="muted">Your existing MetaForge login is preserved. Verify the email for this account to access a secure cloud workspace.</p><div class="stack"><button class="btn primary" data-action="resend">Send verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>':
+ '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+(verify?'Verify your email':logged?(state.connectError?'Connection needs attention':'Connecting securely…'):state.authMode==='register'?'Create your account':'Welcome back')+'</h2>'+
+ (verify?'<p class="muted">Your existing MetaForge login is preserved. Verify the email for this account to access a secure cloud workspace.</p><div class="stack"><button class="btn primary" data-action="resend">Send verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>':logged?'<p class="muted">'+e(state.connectError||'Please wait while we connect your secure business session.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>':
  '<p class="muted">'+(state.authMode==='register'?'Start with your regular email address. No company email needed.':'Sign in with your existing MetaForge email or create a Bizlano account.')+'</p>'+
- '<form data-form="auth" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+input('Password','password','password','',true,'minlength="8" autocomplete="'+(state.authMode==='register'?'new-password':'current-password')+'"')+
+ '<form data-form="auth" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+input('Password','password','password','',true,'minlength="'+(state.authMode==='register'?'8':'6')+'" autocomplete="'+(state.authMode==='register'?'new-password':'current-password')+'"')+
  '<button class="btn primary" type="submit">'+(state.authMode==='register'?'Create account':'Sign in')+'</button></form><div class="row" style="margin-top:15px"><button class="btn" data-action="toggle-auth">'+(state.authMode==='register'?'Already have an account? Sign in':'Create an account')+'</button><button class="btn" data-action="reset">Reset password</button></div>')+
- '<div class="banner">Existing MetaForge receipts and links will not be deleted or moved automatically. Your new Bizlano data is stored separately in Cloudflare D1.</div><p class="mini muted">Powered by Bizlano · Secure account access via Firebase</p></div></div></section>';
+ '<div class="banner">Existing MetaForge receipts and links will not be deleted or moved automatically. Your new Bizlano data is stored separately in Cloudflare D1.</div><p class="mini muted">Powered by Bizlano · Secure account access via Firebase</p><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
 }
 function businessPicker(){
  const businesses=state.me?.businesses||[];
@@ -357,6 +357,7 @@ document.addEventListener('click',async ev=>{
  if(action==='picker'){state.biz=null;render();return}
  if(action==='logout'){await api('/logout',{});await signOut(auth);state.me=null;state.biz=null;render();return}
  if(action==='resend'){await sendEmailVerification(auth.currentUser);flash('Verification email requested. Check your inbox.');return}
+ if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified)throw Error('Email is not yet verified.');await attach();return}
  if(action==='reset'){const address=prompt('Email for password reset');if(address){await sendPasswordResetEmail(auth,address);flash('Password reset email requested.')}return}
  if(action==='scan-legacy'){await scanLegacy();return}
@@ -429,5 +430,5 @@ onAuthStateChanged(auth,async user=>{
  state.user=user;
  if(!user){state.me=null;state.biz=null;render();return}
  if(!user.emailVerified){state.me=null;loginScreen();return}
- try{await attach()}catch(err){state.me=null;flash(err.message,true);render()}
+ try{state.connectError='';await attach()}catch(err){state.me=null;state.connectError=err.message||'Unable to reach the business workspace.';flash(state.connectError,true);render()}
 });
