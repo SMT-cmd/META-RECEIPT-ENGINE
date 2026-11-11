@@ -58,6 +58,7 @@ async function load(){
   state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
  }
  if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;render();return}
+ if(section==='branding'){const [main,details]=await Promise.all([api(t+'/overview'),api(t+'/design')]);state.data=main;state.design=details.design;render();return}
  if(section==='create') {
   const [p,c,d]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design')]);
   state.design=d.design;
@@ -209,12 +210,25 @@ function targets(){
  '<div class="cols"><section class="panel"><h2>Set sales target</h2><form data-form="target">'+input('Month','month','month',today().slice(0,7),true)+input('Monthly target (₦)','amount','number','',true,'min=".01" step=".01"')+'<button class="btn primary">Save target</button></form></section>'+
  '<section class="panel"><h2>Saved goals</h2>'+simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.label)+'</strong><small>'+e(x.period_start)+' to '+e(x.period_end)+'</small></div><strong>'+curr(x.target_minor)+'</strong></div>')+'</section></div>';
 }
-function branding(){const b=state.data?.business||state.biz;
- return heading('BUSINESS IDENTITY','Your brand, your documents','Upload your business logo and keep your workspace recognizable.')+
- '<div class="cols"><section class="panel"><h2>Business logo</h2><p class="muted">PNG, JPEG or WebP, maximum 400 KB. Uploaded logos stay in your dedicated Cloudflare R2 bucket.</p>'+
- (b.logo_url?'<img style="max-width:160px;max-height:100px;object-fit:contain" src="'+e(b.logo_url)+'" alt="Business logo">':'<div class="banner">No logo uploaded yet</div>')+
- '<form data-form="logo"><label class="field">Upload a logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn primary">Save logo</button></form></section>'+ 
- '<section class="panel"><h2>Business information</h2><p><strong>'+e(b.business_name)+'</strong></p><p class="muted">Unique business address: '+e(b.slug)+'</p><p class="mini muted">Until your brand domain is connected, Bizlano uses the Cloudflare worker address for your secure workspace.</p></section></div>';
+function branding(){
+ const biz=state.data?.business||state.biz,design=state.design||{};
+ const image=(src,label)=>src?'<div class="artwork-frame"><img src="'+e(src)+'" alt="'+e(label)+'"></div>':'<div class="artwork-empty">No '+e(label.toLowerCase())+' uploaded yet</div>';
+ return heading('BUSINESS IDENTITY','Your brand, beautifully presented','Keep your business logo and optional signature consistent across receipts and invoices.')+
+ '<div class="cols">'+
+ '<section class="panel"><h2>Business logo</h2><p class="muted">For the clearest result, use a high-resolution transparent PNG. Square and horizontal logos are both supported.</p>'+
+ image(biz.logo_url,'Business logo')+
+ '<form data-form="logo"><label class="field">Choose your logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required></label>'+
+ '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
+ '<p class="mini muted">Works best with a solid white background. Detailed photographs and complex backgrounds may require a prepared transparent PNG.</p>'+
+ '<div class="artwork-preview hidden" data-artwork-preview="logo"></div><button class="btn primary">Save my logo</button></form></section>'+
+ '<section class="panel"><h2>Authorized signature <span class="mini muted">(optional)</span></h2><p class="muted">Add a transparent business signature for your document signatory area. It only appears when you enable it in the Document studio.</p>'+
+ image(design.signature_url,'Authorized signature')+
+ '<form data-form="signature"><label class="field">Choose a signature image<input type="file" name="signature" accept="image/png,image/jpeg,image/webp" required></label>'+
+ '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
+ '<p class="mini muted">Use a signature you are comfortable displaying to receipt recipients. Anyone with a copy could reproduce it. For sensitive personal signatures, leave this feature off.</p>'+
+ '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></section></div>'+
+ '<section class="panel"><h2>Business details</h2><p><strong>'+e(biz.business_name)+'</strong></p><p class="muted">Your business link: <a href="/s/'+e(biz.slug)+'" target="_blank" rel="noopener noreferrer">bizlano.pages.dev/s/'+e(biz.slug)+'</a></p><p class="mini muted">When a custom domain is connected, this same business and its existing records will be available through the new address.</p>'+
+ '<button type="button" class="btn" data-nav="design">Manage document designs and signature visibility</button></section>';
 }
 function team(){
  const rows=state.data?.rows||[];
