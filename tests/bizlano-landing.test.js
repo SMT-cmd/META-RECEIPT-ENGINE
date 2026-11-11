@@ -11,7 +11,12 @@ test('public Bizlano landing has genuine brand assets and a separate sign-in rou
  assert.match(landing,/\/assets\/bizlano-mark\.png/);
  assert.match(landing,/href="\/app"/);
  assert.match(landing,/aria-label="Main navigation"/);
- assert.match(landing,/Create your free workspace/);
+ assert.match(landing,/Register for free now/);
+ assert.match(landing,/href="\/app\?mode=register"/);
+ assert.doesNotMatch(landing,/subscription/i);
+ const workspace=read('platform/worker/client.js');
+ assert.match(workspace,/authMode:new URL\(location.href\).searchParams.get\('mode'\)==='register'/);
+ assert.doesNotMatch(workspace,/Cloudflare D1|subscription|Secure account access via Firebase/i);
  assert.match(landing,/Illustrative data/);
 });
 
