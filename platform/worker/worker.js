@@ -213,10 +213,16 @@ async function api(req,env,url) {
  const user=await identity(req,env);
  if(path==='/api/customer/me'&&method==='GET')return json({email:user.email,name:user.display_name,verified:true});
  if(path==='/api/customer/receipts'&&method==='GET'){
-  // A verified Firebase session is required: never list customer documents by name or product.
-  const data=await env.DB.prepare("SELECT DISTINCT d.tenant_id,d.id,d.document_number,d.kind,d.issued_on,d.total_minor,d.paid_minor,d.status,d.currency,t.business_name,t.slug,t.logo_url,COALESCE((SELECT group_concat(description,' · ') FROM (SELECT description FROM document_lines l WHERE l.tenant_id=d.tenant_id AND l.document_id=d.id LIMIT 3)),'') AS items_summary FROM documents d JOIN tenants t ON t.id=d.tenant_id LEFT JOIN customer_receipt_claims rc ON rc.tenant_id=d.tenant_id AND rc.document_id=d.id AND rc.user_id=? WHERE t.disabled_at IS NULL AND (d.recipient_email=? COLLATE NOCASE OR rc.user_id IS NOT NULL) AND d.paid_minor>0 AND d.status IN ('paid','part_paid','issued') ORDER BY d.issued_on DESC LIMIT 250")
-   .bind(user.id,user.email.toLowerCase()).all();
-  return json({email:user.email,rows:data.results||[],limit:250});
+  // Cursor-based pagination supports history from many stores without loading it all.
+  // Do not resolve customer identity from name or product: email is from the verified session.
+  const cursor=url.searchParams.get('cursor')||'';
+  if(cursor&&!/^\d{4}-\d{2}-\d{2}\|[a-f0-9-]{36}$/.test(cursor))fail(400,'Invalid purchase-history cursor');
+  const [beforeDate,beforeId]=cursor?cursor.split('|'):['9999-12-31','zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz'];
+  const data=await env.DB.prepare("SELECT DISTINCT d.tenant_id,d.id,d.document_number,d.kind,d.issued_on,d.total_minor,d.paid_minor,d.status,d.currency,t.business_name,t.slug,t.logo_url,COALESCE((SELECT group_concat(description,' · ') FROM (SELECT description FROM document_lines l WHERE l.tenant_id=d.tenant_id AND l.document_id=d.id LIMIT 3)),'') AS items_summary FROM documents d JOIN tenants t ON t.id=d.tenant_id LEFT JOIN customer_receipt_claims rc ON rc.tenant_id=d.tenant_id AND rc.document_id=d.id AND rc.user_id=? WHERE t.disabled_at IS NULL AND (d.recipient_email=? COLLATE NOCASE OR rc.user_id IS NOT NULL) AND d.paid_minor>0 AND d.status IN ('paid','part_paid','issued') AND (d.issued_on<? OR (d.issued_on=? AND d.id<?)) ORDER BY d.issued_on DESC,d.id DESC LIMIT 51")
+   .bind(user.id,user.email.toLowerCase(),beforeDate,beforeDate,beforeId).all();
+  const all=data.results||[],rows=all.slice(0,50);
+  const last=rows[rows.length-1];
+  return json({email:user.email,rows,nextCursor:all.length>50&&last?last.issued_on+'|'+last.id:null});
  }
  const privateDetail=path.match(/^\/api\/customer\/receipts\/([a-f0-9-]{36})$/);
  if(privateDetail&&method==='GET'){
