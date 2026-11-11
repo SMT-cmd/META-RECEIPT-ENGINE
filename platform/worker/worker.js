@@ -1,4 +1,4 @@
-import {html,client,icon} from './ui.js';
+import {html,landing,client,icon} from './ui.js';
 const project='metaforge-6afdf';
 const issuer='https://securetoken.google.com/'+project;
 const jwks='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -324,9 +324,17 @@ async function api(req,env,url) {
 }
 export default {async fetch(req,env){
  const url=new URL(req.url),p=url.pathname;
- if(req.method==='GET'&&(p==='/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-cache'}});
+ if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','referrer-policy':'strict-origin-when-cross-origin'}});
+ if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
- if(req.method==='GET'&&p==='/favicon.svg')return new Response(icon,{headers:{'content-type':'image/svg+xml','cache-control':'public,max-age=86400'}});
+ if(req.method==='GET'&&p==='/favicon.svg')return Response.redirect(new URL('/assets/bizlano-mark.png',req.url),302);
+ if(req.method==='GET'&&['/assets/bizlano-logo.png','/assets/bizlano-mark.png','/assets/bizlano-hero.jpg'].includes(p)){
+  const key=p.endsWith('-logo.png')?'brand/bizlano-logo.png':p.endsWith('-mark.png')?'brand/bizlano-mark.png':'brand/bizlano-hero.jpg';
+  const contentType=p.endsWith('.jpg')?'image/jpeg':'image/png';
+  const asset=await env.ASSETS.get(key);
+  if(!asset)return new Response('Brand asset unavailable',{status:404});
+  return new Response(asset.body,{headers:{'content-type':contentType,'x-content-type-options':'nosniff','cache-control':'public,max-age=604800','access-control-allow-origin':'*'}});
+ }
  if(req.method==='GET'&&/^\/media\/[a-f0-9-]{36}\/logo$/.test(p)){
   const id=p.split('/')[2],asset=await env.ASSETS.get('tenants/'+id+'/logo');
   return asset?new Response(asset.body,{headers:{'content-type':asset.httpMetadata?.contentType||'image/png','cache-control':'public,max-age=120'}}):new Response('Not found',{status:404});
