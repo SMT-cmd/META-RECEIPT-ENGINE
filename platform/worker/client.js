@@ -115,11 +115,52 @@ function shell(body){
  '<button data-nav="'+(edit()?'products':'overview')+'"><span>▥</span>'+(edit()?'Stock':'Home')+'</button>'+
  '<button data-action="menu"><span>☷</span>More</button></nav></div></div>';
 }
+function salesChart(){
+ const raw=state.data?.trends||[],days=state.chartDays,mode=state.chartMode;
+ const now=new Date();now.setUTCHours(12,0,0,0);
+ const entries=Array.from({length:days},(_,i)=>{
+  const d=new Date(now);d.setUTCDate(d.getUTCDate()-days+1+i);
+  const key=d.toISOString().slice(0,10);
+  return {day:key,value:raw.filter(x=>x.day===key).reduce((n,r)=>n+Number(r.total_minor||0),0)};
+ });
+ const total=entries.reduce((n,x)=>n+x.value,0),month=today().slice(0,7);
+ const target=state.data?.goals?.find(g=>g.id===month)?.target_minor||0;
+ const actual=raw.filter(x=>x.day.startsWith(month)).reduce((n,x)=>n+Number(x.total_minor||0),0);
+ const progress=target?Math.min(100,Math.round(actual/target*100)):0;
+ let out='<div class="row" style="justify-content:space-between;margin:9px 0 17px"><div><div class="eyebrow">ISSUED SALES · '+days+' DAYS</div><strong style="font:800 25px Manrope">'+curr(total)+'</strong></div>'+
+ '<div class="row" style="gap:5px">'+['bar','line','pie'].map(m=>'<button class="btn '+(mode===m?'ghost':'')+'" data-chart="'+m+'">'+m.charAt(0).toUpperCase()+m.slice(1)+'</button>').join('')+'</div></div>'+
+ '<div class="row" style="margin-bottom:13px"><span class="mini muted">Period:</span>'+[7,30,90].map(n=>'<button class="btn '+(n===days?'ghost':'')+'" data-days="'+n+'">'+n+' days</button>').join('')+'</div>';
+ if(total<=0)out+='<div class="empty" style="min-height:180px">No issued sales in this period. Your real D1 sales history will appear here.</div>';
+ else if(mode==='pie'){
+  const tally=new Map(),earliest=entries[0].day;
+  for(const row of raw)if(row.day>=earliest)tally.set(row.kind,(tally.get(row.kind)||0)+Number(row.total_minor||0));
+  const sorted=[...tally].sort((a,b)=>b[1]-a[1]);const values=sorted.slice(0,4);
+  if(sorted.length>4)values.push(['Other',sorted.slice(4).reduce((n,x)=>n+x[1],0)]);
+  const colors=['#6331dd','#40a8c7','#a57deb','#e4b569','#8a96c2'];
+  let offset=0;const circles=values.map(([kind,value],i)=>{
+   const p=value/total,from=offset;offset+=p;
+   return '<circle cx="110" cy="110" r="67" fill="none" stroke="'+colors[i]+'" stroke-width="35" stroke-dasharray="'+(p*421)+' 421" stroke-dashoffset="'+(-from*421)+'" transform="rotate(-90 110 110)"><title>'+e(kind)+' '+curr(value)+'</title></circle>';
+  }).join('');
+  out+='<div class="row" style="align-items:center;gap:25px"><svg viewBox="0 0 220 220" width="230" role="img" aria-label="Sales by document type">'+circles+'<text x="110" y="115" text-anchor="middle" font-size="15" font-weight="800" fill="#2d3656">Sales</text></svg><div class="stack">'+values.map(([kind,value],i)=>'<div class="row"><span style="width:11px;height:11px;border-radius:3px;background:'+colors[i]+'"></span><span>'+e(kind)+'</span><strong>'+curr(value)+'</strong></div>').join('')+'</div></div>';
+ }else{
+  const w=740,h=218,left=25,top=16,iw=695,ih=166,max=Math.max(1,...entries.map(x=>x.value));
+  const data=entries.map((d,i)=>({x:left+(i+.5)*iw/days,y:top+ih*(1-d.value/max),amount:d.value,day:d.day}));
+  let shapes='';
+  if(mode==='bar')shapes=data.map(p=>'<rect x="'+(p.x-Math.max(3,iw/days*.32))+'" y="'+p.y+'" width="'+Math.max(6,iw/days*.64)+'" height="'+(top+ih-p.y)+'" rx="3" fill="#6937df"><title>'+e(p.day)+' '+curr(p.amount)+'</title></rect>').join('');
+  else shapes='<polyline fill="none" stroke="#6937df" stroke-width="3" points="'+data.map(p=>p.x+','+p.y).join(' ')+'"/>'+data.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3" fill="#6937df"><title>'+e(p.day)+' '+curr(p.amount)+'</title></circle>').join('');
+  const grid=[0,.25,.5,.75,1].map(v=>'<line x1="'+left+'" y1="'+(top+ih*(1-v))+'" x2="'+(w-10)+'" y2="'+(top+ih*(1-v))+'" stroke="#e8eaf3" stroke-dasharray="3 4"/>').join('');
+  const labels=data.filter((p,i)=>i===0||i===data.length-1||i%Math.max(1,Math.floor(days/6))===0).map(p=>'<text x="'+p.x+'" y="210" text-anchor="middle" font-size="10" fill="#8995ab">'+e(p.day.slice(5))+'</text>').join('');
+  out+='<svg viewBox="0 0 '+w+' '+h+'" style="display:block;width:100%;height:auto" role="img" aria-label="Issued sales trend">'+grid+shapes+labels+'</svg>';
+ }
+ out+='<div style="border-top:1px solid #eceef4;margin-top:18px;padding-top:13px"><div class="row" style="justify-content:space-between"><strong>Monthly target: '+(target?curr(target):'Not set')+'</strong><span class="mini muted">'+progress+'% reached</span></div><div style="height:9px;background:#e8e4f3;border-radius:8px;margin-top:9px;overflow:hidden"><div style="width:'+progress+'%;height:100%;background:#6735df"></div></div></div>';
+ return out;
+}
 function overview(){
  const r=state.data;if(!r)return '<div class="empty">Loading your business overview…</div>';
  const metrics=[['Issued sales',curr(r.invoiced),'Issued documents'],['Payments entered',curr(r.received),'Operator-recorded'],['Outstanding',curr(r.outstanding),'Unpaid balances'],['Customers',r.customers,'Business records']];
  return heading('BUSINESS INTELLIGENCE','Every sale, clearly accounted for.','Your real cloud data, accessible to your authorized team.',edit()?'<button data-nav="create" class="btn primary">+ Create document</button>':'')+
  '<div class="metrics">'+metrics.map(m=>'<div class="metric"><span>'+m[0]+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></div>').join('')+'</div>'+
+ '<section class="panel"><h2>Sales analytics</h2>'+salesChart()+'</section>'+
  '<div class="cols"><section class="panel"><h2>Get started with Bizlano</h2><p class="muted">Your secure workspace is connected to Cloudflare D1. Add customers, manage stock and issue invoices that can be printed or saved as PDF.</p><div class="row"><button class="btn primary" data-nav="create">Create your first receipt</button><button class="btn" data-nav="documents">View history</button></div></section>'+
  '<section class="panel"><h2>Your business address</h2><p class="muted">Bizlano business key</p><h3>'+e(state.biz.slug)+'</h3><p class="mini muted">A custom branded subdomain will be enabled when the Bizlano domain is connected. This address is already unique within the database.</p></section></div>';
 }
@@ -315,6 +356,8 @@ document.addEventListener('click',async ev=>{
  if(action==='scan-legacy'){await scanLegacy();return}
  if(action==='download-legacy'){downloadLegacy();return}
  if(action==='import-scanned'){if(!state.backupReady)throw Error('Download a backup before importing');await importLegacy(state.legacyArchive,false);return}
+ if(el.dataset.chart){state.chartMode=el.dataset.chart;render();return}
+ if(el.dataset.days){state.chartDays=Number(el.dataset.days);render();return}
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(action==='print-preview'){window.print();return}
