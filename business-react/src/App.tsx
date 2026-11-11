@@ -458,7 +458,7 @@ export default function App(){
                   {['admin','manager','accountant','cashier','sales','staff','viewer'].map(r=>
                     <option key={r} value={r}>{r==='staff'?'Staff (legacy)':r[0].toUpperCase()+r.slice(1)}</option>)}
                 </select>
-                <button className="text-button" onClick={async()=>{try{await setStaffRole(business.id,m.uid,m.role,m.status!=='active');await listStaff(business.id).then(setStaff);}catch(e){alert(e);}}}>{m.status==='active'?'Suspend':'Reactivate'}</button></div>}
+                <button className="text-button" onClick={async()=>{try{const memberRole=m.role;if(memberRole==='owner')return;await setStaffRole(business.id,m.uid,memberRole,m.status!=='active');await listStaff(business.id).then(setStaff);}catch(e){alert(e);}}}>{m.status==='active'?'Suspend':'Reactivate'}</button></div>}
             </div>)}{!staff.length&&<Empty text="No team members yet."/>}</Panel></div>
       </>}
       {page==='profile'&&manage&&<>
