@@ -53,7 +53,8 @@ test('receipt issue stores buyer email and shows recovery code in print',()=>{
  assert.match(worker,/recipient_email,recipient_phone,issued_on/);
  assert.match(worker,/b\.customerEmail\?email\(b\.customerEmail\):null/);
  assert.match(worker,/emailAddress,recipientPhone,issueDate/);
- assert.match(vendor,/Customer email for receipt recovery/);
+ assert.match(vendor,/Customer email/);
+ assert.match(vendor,/Customer phone/);
  assert.match(vendor,/doc\.recoveryCode/);
  assert.match(vendor,/Powered by <strong/);
 });
