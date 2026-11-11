@@ -1193,6 +1193,43 @@ button:hover:not(:disabled){filter:brightness(.975)}
 .studio-card-actions .btn{flex:1;min-width:0;padding:8px 7px;min-height:43px;font-size:11px}
 .studio-all{max-width:540px}
 .studio-all select{margin-top:8px}
+
+/* Receipt design browsing: one category and one horizontally scrollable carousel at a time. */
+.studio-explore-note{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:13px;margin:15px 0 20px;background:#f7f5fc;border:1px solid #e6def5;border-radius:12px;padding:13px 16px}
+.studio-explore-note span{color:#5d6680;font-size:12px;font-weight:650}
+.studio-explore-note .btn{border-color:#a88fdf;color:#552b9f;font-weight:800}
+.studio-department-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0}
+.studio-department-heading strong{display:block;font-size:14px;color:#2d3651}
+.studio-department-heading small{display:block;font-size:12px;color:#65718b;margin-top:4px;line-height:1.5}
+.studio-department-tabs{display:flex;gap:9px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:thin;padding:6px 2px 12px;max-width:100%;-webkit-overflow-scrolling:touch}
+.studio-department-tab{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 13px;min-height:43px;border:1px solid #dfe3ec;border-radius:10px;background:#fff;color:#35415d;font-size:12px;font-weight:750;white-space:nowrap;cursor:pointer;scroll-snap-align:start}
+.studio-department-tab:hover{background:#f5f1fd;border-color:#a78edc}
+.studio-department-tab.active{border:2px solid #6a43cb;background:#f0eafa;color:#4d258c;padding:9px 12px}
+.studio-department-tab span{background:#eef0f7;color:#5b6580;min-width:24px;height:24px;padding:4px 6px;border-radius:7px;font-size:11px;font-weight:900}
+.studio-department-tab.active span{background:#dcd0fa;color:#4d2b96}
+.studio-carousel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:13px 2px 0}
+.studio-carousel-head strong{font-size:13px;color:#35405c}
+.studio-carousel-head .studio-arrows .btn{min-width:44px;min-height:43px;font-size:17px}
+.studio-department-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 2px 18px;padding:12px 0;border-bottom:1px solid #e8e8f1}
+.studio-department-switch span{font-size:11px;font-weight:700;color:#65718b;text-align:center}
+.studio-department-switch .btn{min-height:43px;font-size:11px;padding:9px 11px}
+.studio-department-switch .btn:disabled{opacity:.45;cursor:default}
+.studio-selected-summary{border-top:1px solid #e8e9f1;padding:13px 2px 0;margin-top:8px;color:#5d6780;font-size:12px}
+.studio-selected-summary strong{color:#5331a2}
+.studio-selected-summary span{color:#8190a3;font-size:11px}
+.studio-carousel:focus-visible{outline:2px solid #754fd5;outline-offset:3px}
+@media(max-width:650px){
+ .studio-department-heading{align-items:flex-start}
+ .studio-department-heading .btn{min-height:40px}
+ .studio-explore-note{align-items:flex-start}
+ .studio-explore-note .btn{width:100%}
+ .studio-department-switch{gap:6px}
+ .studio-department-switch .btn{padding:8px 7px;font-size:10px;min-width:0}
+ .studio-department-switch span{font-size:10px}
+ .studio-slide .template-thumbnail{height:340px}
+}
+
+
 .studio-full-preview{position:fixed;inset:0;background:#1a1d38c9;z-index:1000;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto}
 .studio-full-preview.hidden{display:none!important}
 .studio-modal-inner{background:#f5f5f9;max-height:95dvh;overflow:auto;width:min(850px,100%);padding:15px;border-radius:14px;box-shadow:0 15px 65px #08132d88}
