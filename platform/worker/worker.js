@@ -279,6 +279,7 @@ async function api(req,env,url) {
  }
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
+ if(user.email.endsWith('@accounts.bizlano.invalid')&&!path.startsWith('/api/customer/'))fail(403,'Customer-only accounts cannot access business management');
  if(path==='/api/customer/me'&&method==='GET'){const phoneOnly=user.email.endsWith('@accounts.bizlano.invalid');return json({email:phoneOnly?null:user.email,name:user.display_name,phone:user.contact_phone||null,verified:!phoneOnly,phoneOnly});}
  if(path==='/api/customer/profile'&&method==='POST'){
   const b=await input(req),contact=phone(b.phone),name=b.name?field(b.name,'display name',120):user.display_name;
