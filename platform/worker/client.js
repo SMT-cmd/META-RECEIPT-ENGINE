@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:''};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -51,14 +51,16 @@ async function load(){
  state.data=null;render();
  const t='/b/'+state.biz.slug;
  const section=state.view;
- let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section;
+ let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section;
  if(section==='upgrade'){state.data={};render();return}
  if(section==='overview'){
   const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
   state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
  }
+ if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;render();return}
  if(section==='create') {
-  const [p,c]=await Promise.all([api(t+'/products'),api(t+'/customers')]);
+  const [p,c,d]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design')]);
+  state.design=d.design;
   state.products=p.rows;state.customers=c.rows;state.data={};
  }else state.data=await api(t+'/'+resource);
  render();
@@ -67,8 +69,8 @@ function brand(){return '<img class="brand-icon" src="/assets/bizlano-mark.png" 
 function input(label,name,type='text',value='',required=false,extra=''){
  return '<label class="field">'+e(label)+'<input name="'+e(name)+'" type="'+type+'" value="'+e(value)+'" '+(required?'required':'')+' '+extra+'></label>';
 }
-function select(label,name,choices){
- return '<label class="field">'+e(label)+'<select name="'+e(name)+'">'+choices.map(x=>'<option value="'+e(x[0])+'">'+e(x[1])+'</option>').join('')+'</select></label>';
+function select(label,name,choices,selected){
+ return '<label class="field">'+e(label)+'<select name="'+e(name)+'">'+choices.map(x=>'<option value="'+e(x[0])+'" '+(selected===x[0]?'selected':'')+'>'+e(x[1])+'</option>').join('')+'</select></label>';
 }
 function heading(k,title,desc,actions=''){return '<div class="page-head"><div><div class="eyebrow">'+e(k)+'</div><h1>'+e(title)+'</h1><p>'+e(desc)+'</p></div>'+actions+'</div>'}
 function simpleRows(rows,fn){return rows?.length?rows.map(fn).join(''):'<div class="empty">Nothing here yet. Your records will appear as you add them.</div>'}
@@ -93,16 +95,19 @@ function businessPicker(){
  '<p class="mini muted">Reserve a short, unique business address. The dedicated subdomain will be available when our brand domain is connected.</p><button type="submit" class="btn primary">Create business workspace →</button></form>'+
  '<p style="margin-top:23px" class="row"><a class="btn" href="/">Visit website</a><button class="btn ghost" data-action="logout">Sign out</button></p></div></div></section>';
 }
+const TEMPLATE_LIST=["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"];
+const DESIGN_PALETTE=["#6935df","#212d52","#b18748","#168c78","#383c4b","#bc577b","#f08c42","#2b87ab","#6a9842","#a63f53"];
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['alerts','♧','Receipt notifications'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
   if(v==='upgrade')return state.biz?.role==='owner';
-  if(v==='team'||v==='branding')return admin();
+  if(v==='team'||v==='branding'||v==='design')return admin();
+  if(v==='alerts')return true;
   if(v==='products'||v==='customers'||v==='payments')return edit();
   if(v==='create')return edit();return true;
  });
@@ -282,13 +287,36 @@ async function importLegacy(archive,includeBrowser){
  flash('Import complete: '+imported+' review drafts staged. '+skipped+' skipped or previously imported.');
  await navigate('documents');
 }
+function designStudio(){
+ const design=state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1};
+ const current=state.templateChoice||design.template;
+ const catalog=TEMPLATE_LIST.map((id,i)=>{const title=id.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' '),selected=current===id;return '<button type="button" class="design-card '+(selected?'selected':'')+'" data-template="'+e(id)+'" aria-pressed="'+selected+'"><span class="design-tiny style-'+e(id)+'" style="--receipt-accent:'+e(design.accent)+'"><span class="design-tiny-top"></span><span class="design-tiny-line"></span><span class="design-tiny-line short"></span><span class="design-tiny-table"></span><span class="design-tiny-total"></span></span><strong>'+e(title)+'</strong><small>'+(selected?'Selected · Ready to use':'Choose design')+'</small></button>'}).join('');
+ return heading('DOCUMENT DESIGN STUDIO','A look that belongs to your business','Choose from 36 receipt and invoice layouts. Your saved design automatically appears on every new document.')+
+ '<div class="panel"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:18px"><div><h2>Choose your permanent template</h2><p class="muted" style="font-size:12px;margin:0">Every layout includes your brand identity and clear payment details.</p></div><span class="eyebrow">36 DESIGNS</span></div><div class="design-grid">'+catalog+'</div></div>'+
+ '<section class="panel"><h2>Customize your document style</h2><form data-form="design">'+
+ '<div class="form-grid"><label class="field">Business accent color<input name="accent" type="color" value="'+e(design.accent)+'"></label>'+
+ select('Paper size','paper',[['a4','A4 · Standard print'],['letter','US Letter'],['80mm','80mm · POS roll'],['58mm','58mm · Compact roll']],design.paper)+
+ input('Business contact line','contact','text',design.contact)+
+ input('Optional header message','headerNote','text',design.header_note)+
+ input('Receipt footer message','footerNote','text',design.footer_note)+
+ '</div><div class="row" style="margin:10px 0 17px"><span class="mini muted">Quick colors</span>'+DESIGN_PALETTE.map(c=>'<button type="button" class="color-swatch" data-accent="'+c+'" aria-label="Choose color '+c+'" style="background:'+c+'"></button>').join('')+'</div>'+
+ '<label class="field"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+' style="display:inline;width:auto;margin-right:7px">Display my business logo on receipts</label>'+
+ '<div class="row"><button type="submit" class="btn primary">Save as business default</button><button type="button" data-action="preview-design" class="btn">See sample document</button></div></form></section>'+
+ '<p class="mini muted">Your design is saved for your business. Previously issued documents keep the template selected when they were created.</p>';
+}
+function alerts(){
+ const rows=state.data?.rows||[];
+ return heading('BUSINESS UPDATES','Your receipts are ready','See receipts prepared from business activity and share them with customers.')+
+ '<section class="panel">'+(rows.length?rows.map(n=>'<div class="rowcard"><div><strong>'+e(n.title)+'</strong><small>'+e(n.body||'')+' · '+e(n.created_at)+'</small></div><div class="row">'+(!n.read_at?'<button class="btn" data-read-alert="'+e(n.id)+'">Mark read</button>':'<span class="mini muted">Read</span>')+
+ (n.document_id?'<button class="btn primary" data-doc="'+e(n.document_id)+'">Open receipt</button>':'')+'</div></div>').join(''):'<div class="empty">No new receipt updates. When a connected sale is completed, its prepared receipt will appear here.</div>')+'</section>';
+}
 function docEditor(){
- const tpl=['signature','classic','executive','retail','thermal','minimal','editorial','bold','artisan','medical','education','hospitality'];
+ const tpl=TEMPLATE_LIST;
  const options=state.biz.role==='cashier'?[['receipt','Sales receipt'],['cash-sale','Cash sale'],['service-receipt','Service receipt'],['thermal-receipt','Thermal POS']]:
  [['receipt','Sales receipt'],['invoice','Sales invoice'],['quotation','Quotation'],['estimate','Estimate'],['proforma','Proforma'],['retail-receipt','Retail receipt'],['service-receipt','Service receipt'],['tax-invoice','Tax invoice'],['thermal-receipt','Thermal POS']];
  return heading('DOCUMENT STUDIO','Create a business document','Live preview, flexible details and professionally branded output.')+
  '<div class="editor"><section class="panel editor-form"><form data-form="document">'+
- '<h2>01 · Document and style</h2><div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+input('Due date','dueDate','date')+select('Template','template',tpl.map(x=>[x,x.charAt(0).toUpperCase()+x.slice(1)]))+'</div>'+
+ '<h2>01 · Document and style</h2><div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+input('Due date','dueDate','date')+select('Template','template',tpl.map(x=>[x.split('-').join('-'),x.split('-').map(y=>y.charAt(0).toUpperCase()+y.slice(1)).join(' ')]),state.design?.template||'signature')+'</div>'+
  '<h2>02 · Customer information</h2>'+input('Customer or recipient','customer','text','Walk-in customer',true)+
  '<h2>03 · Products and services</h2><datalist id="products-data">'+state.products.map(p=>'<option value="'+e(p.name)+'"></option>').join('')+'</datalist><div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div><button class="btn ghost" type="button" data-action="add-line">+ Add item</button>'+
  '<h2 style="margin-top:25px">04 · Charges and payments</h2><div class="form-grid">'+input('Discount (%)','discountPct','number','0',false,'min="0" max="100" step=".01"')+input('VAT / Tax (%)','taxPct','number','0',false,'min="0" max="100" step=".01"')+input('Other charges (₦)','shipping','number','0',false,'min="0" step=".01"')+input('Received (₦)','received','number','0',false,'min="0" step=".01"')+'</div>'+select('Payment method','method',[['Bank transfer','Bank transfer'],['Cash','Cash'],['POS terminal','POS terminal'],['Other','Other']])+
@@ -312,12 +340,14 @@ function receipt(doc,number,stored=false){
  let subtotal=0;const rows=lines.filter(i=>i.description).map(i=>{const total=Number(i.price)*Number(i.qty);subtotal+=total;return '<tr><td>'+e(i.description)+'</td><td>'+e(i.qty)+'</td><td>'+oldMoney(total)+'</td></tr>'}).join('');
  const discount=Math.round(subtotal*(Number(doc.discountPct)||0))/100,vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
  const total=stored?doc.total_minor/100:subtotal-discount+vat+Number(doc.shipping||0);
- const template=String(doc.template||'signature');const logo=state.biz.logo_url||state.data?.business?.logo_url||'';
- return '<article class="receipt style-'+e(template)+'" id="printable"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">Official business document</div></div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
+ const template=String(doc.template||state.design?.template||'signature');const logo=state.biz.logo_url||state.data?.business?.logo_url||'';
+ const accent=/^#[0-9a-fA-F]{6}$/.test(state.design?.accent||'')?state.design.accent:'#6935df';
+ const paper=state.design?.paper||'a4',contact=state.design?.contact||'',headerNote=state.design?.header_note||'',footerNote=state.design?.footer_note||'';
+ return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
  '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div></div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
  '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
- '<p class="r-small" style="margin-top:23px">'+e(doc.notes||'Thank you for your business.')+'</p><div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
+ '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p><div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
@@ -331,7 +361,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
@@ -360,6 +390,10 @@ document.addEventListener('click',async ev=>{
  if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified)throw Error('Email is not yet verified.');await attach();return}
  if(action==='reset'){const address=prompt('Email for password reset');if(address){await sendPasswordResetEmail(auth,address);flash('Password reset email requested.')}return}
+ if(el.dataset.template){state.templateChoice=el.dataset.template;render();return}
+ if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field)field.value=el.dataset.accent;return}
+ if(action==='preview-design'){const sample={kind:'receipt',template:state.templateChoice||state.design?.template||'signature',customer:'Sample customer',date:today(),items:[{description:'Sample product',qty:2,price:7500}],discountPct:0,taxPct:0,shipping:0,received:15000,notes:state.design?.footer_note};printPage(sample);return}
+ if(el.dataset.readAlert){await api('/b/'+state.biz.slug+'/notifications',{id:el.dataset.readAlert});flash('Marked as read');await navigate('alerts');return}
  if(action==='scan-legacy'){await scanLegacy();return}
  if(action==='download-legacy'){downloadLegacy();return}
  if(action==='import-scanned'){if(!state.backupReady)throw Error('Download a backup before importing');await importLegacy(state.legacyArchive,false);return}
@@ -408,6 +442,11 @@ document.addEventListener('submit',async ev=>{
     const backup=JSON.parse(await file.text());
     await importLegacy(backup,form.elements.namedItem('includeBrowser').checked);
     state.busy=false;return;
+  }
+  if(kind==='design'){
+    const template=state.templateChoice||state.design?.template||'signature';
+    await api(t+'/design',{template,accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked});
+    state.templateChoice=null;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
   }
   if(kind==='logo'){
     const file=form.elements.namedItem('logo')?.files?.[0];
