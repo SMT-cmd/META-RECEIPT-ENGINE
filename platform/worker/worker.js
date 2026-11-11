@@ -132,7 +132,7 @@ async function api(req,env,url) {
  const t=await member(env,user,slug,scope),tenant=t.id;
  if(resource==='overview'&&method==='GET'){
   const [docs,customers,products,expenses]=await env.DB.batch([
-   env.DB.prepare("SELECT count(*) AS count,coalesce(sum(total_minor),0) AS total,coalesce(sum(paid_minor),0) AS paid FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt','invoice','tax-invoice','recurring-invoice')").bind(tenant),
+   env.DB.prepare("SELECT count(*) AS count,coalesce(sum(total_minor),0) AS total,coalesce(sum(paid_minor),0) AS paid FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice')").bind(tenant),
    env.DB.prepare('SELECT count(*) AS count FROM customers WHERE tenant_id=?').bind(tenant),
    env.DB.prepare('SELECT count(*) AS count FROM products WHERE tenant_id=?').bind(tenant),
    env.DB.prepare('SELECT coalesce(sum(amount_minor),0) AS total FROM expenses WHERE tenant_id=?').bind(tenant)
@@ -246,6 +246,11 @@ async function api(req,env,url) {
   const ct=req.headers.get('content-type');
   if(!['image/png','image/jpeg','image/webp'].includes(ct))fail(400,'Use PNG, JPEG or WebP');
   const content=await req.arrayBuffer();if(content.byteLength<30||content.byteLength>400000)fail(413,'Logo must be under 400 KB');
+  const bytes=new Uint8Array(content);
+  const png=bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71;
+  const jpeg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+  const webp=bytes[0]===82&&bytes[1]===73&&bytes[2]===70&&bytes[3]===70&&bytes[8]===87&&bytes[9]===69&&bytes[10]===66&&bytes[11]===80;
+  if((ct==='image/png'&&!png)||(ct==='image/jpeg'&&!jpeg)||(ct==='image/webp'&&!webp))fail(400,'The uploaded image contents do not match its format');
   await env.ASSETS.put('tenants/'+tenant+'/logo',content,{httpMetadata:{contentType:ct}});
   await env.DB.prepare('UPDATE tenants SET logo_url=? WHERE id=?').bind('/media/'+tenant+'/logo',tenant).run();
   return json({url:'/media/'+tenant+'/logo'});
