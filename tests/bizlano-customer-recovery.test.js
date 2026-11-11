@@ -74,5 +74,6 @@ test('business subdomain points to main customer account; staff entry is separat
  assert.match(worker,/\/receipts\?business=/);
  assert.match(worker,/\/app\?biz=/);
  assert.match(worker,/Lost your receipt\?/);
- assert.match(worker,/https:\/\/bizlano\.pages\.dev/);
+ assert.match(worker,/BIZLANO_PUBLIC_ORIGIN/);
+ assert.match(worker,/BIZLANO_BUSINESS_DOMAIN/);
 });
