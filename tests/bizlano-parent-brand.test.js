@@ -1,9 +1,10 @@
 // Ensures Bizlano's public surfaces identify Global Webstores as the parent brand.
 // This is a marketing navigation link, not an integration dependency or a Timi referral.
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const source=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const gws='https://www.globalwebstores.com/explore';
 const logo='https://www.globalwebstores.com/brand/global-webstores-full.png';
 
