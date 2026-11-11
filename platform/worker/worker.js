@@ -128,7 +128,7 @@ async function api(req,env,url) {
  const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
- const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':'view';
+ const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
