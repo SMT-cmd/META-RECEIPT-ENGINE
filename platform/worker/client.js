@@ -248,7 +248,7 @@ function branding(){
  '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
  '<p class="mini muted">Only use a signature you’re happy to show customers.</p>'+
  '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></section></div>'+
- '<section class="panel"><h2>Business details</h2><p><strong>'+e(biz.business_name)+'</strong></p><p class="muted">Your business link: <a href="/s/'+e(biz.slug)+'" target="_blank" rel="noopener noreferrer">bizlano.pages.dev/s/'+e(biz.slug)+'</a></p><p class="mini muted">When a custom domain is connected, this same business and its existing records will be available through the new address.</p>'+
+ '<section class="panel"><h2>Your business page</h2><p><strong>'+e(biz.business_name)+'</strong></p><p class="muted"><a href="'+e(businessHref())+'" target="_blank" rel="noopener noreferrer">'+e(businessHref())+'</a></p><div class="row"><button type="button" class="btn primary" data-action="copy-recovery">Copy receipt recovery link</button><button type="button" class="btn" data-action="copy-recovery-message">Copy customer message</button></div>'+
  '<button type="button" class="btn" data-nav="design">Manage document designs and signature visibility</button></section>';
 }
 function team(){
@@ -326,7 +326,7 @@ function globalWebstores(){
  const info=state.data||{};
  return heading('CONNECTED BUSINESS','Global Webstores + Bizlano','Connect your store once. Verified purchases can then prepare beautiful receipts in your business workspace.')+
  '<div class="cols"><section class="panel"><div class="eyebrow">YOUR STORE CONNECTION</div><h2>'+(info.connected?'Your store is connected':'Connect Global Webstores')+'</h2>'+
- (info.connected?'<div class="banner"><strong>Connected</strong><br>Store connection ID: '+e(info.vendorId)+'<br>Connected: '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Latest receipt: '+e(info.lastSaleAt):'Waiting for a new verified sale.')+'</div>'+
+ (info.connected?'<div class="banner"><strong>Connected</strong><br>Since '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Last sale: '+e(info.lastSaleAt):'New sales will appear here.')+'</div>'+
  '<p class="muted">Paid orders can automatically prepare receipts with your saved document design. You will find them under Receipt notifications.</p><button class="btn" data-action="disconnect-gws">Disconnect this store</button>':
  '<p class="muted">Open your Global Webstores vendor dashboard and choose <strong>Connect Bizlano</strong>. Generate a private connection code here and paste it in that dashboard. You will not need to share any account password.</p>'+
  '<button class="btn primary" data-action="gws-code">Generate a secure connection code</button><div id="gws-link-result" class="banner hidden"></div>')+
