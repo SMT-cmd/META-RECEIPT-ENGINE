@@ -17,7 +17,7 @@ test('public Bizlano landing has genuine brand assets and a separate sign-in rou
  const workspace=read('platform/worker/client.js');
  assert.match(workspace,/authMode:new URL\(location.href\).searchParams.get\('mode'\)==='register'/);
  assert.doesNotMatch(workspace,/Cloudflare D1|subscription|Secure account access via Firebase/i);
- assert.match(landing,/Illustrative data/);
+ assert.doesNotMatch(landing,/Illustrative data|Demonstration figures|All business figures shown/);
 });
 
 test('mobile-first header and product previews fit small devices',()=>{
