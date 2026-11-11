@@ -12,7 +12,7 @@ function collectHtmlFiles(dirPath) {
   const htmlFiles = [];
 
   for (const entry of entries) {
-    if (entry.name === '.trae-html-share-packages') {
+    if (new Set(['.trae-html-share-packages','node_modules','.git','dist','.next','.vercel','coverage']).has(entry.name)) {
       continue;
     }
 
