@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,docStep:1};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -55,7 +55,7 @@ async function load(){
   const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
   state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
  }
- if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;render();return}
+ if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;state.designIndustry=state.designIndustry||x.industry||state.biz.industry||'general';render();return}
  if(section==='branding'){const [main,details]=await Promise.all([api(t+'/overview'),api(t+'/design')]);state.data=main;state.design=details.design;render();return}
  if(section==='create') {
   const [p,c,d]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design')]);
@@ -95,6 +95,50 @@ function businessPicker(){
  '<p style="margin-top:23px" class="row"><a class="btn" href="/">Visit website</a><button class="btn ghost" data-action="logout">Sign out</button></p></div></div></section>';
 }
 const TEMPLATE_LIST=["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"];
+
+// Business-specific suggestions only guide selection; all original template IDs stay valid.
+const BUSINESS_TYPES=[
+ {id:'general',name:'General business',templates:['signature','modern','classic','minimal'],item:'Product or service'},
+ {id:'electronics',name:'Electronics & gadgets',templates:['modern','sapphire','digital','retail'],item:'Wireless speaker'},
+ {id:'bakery',name:'Baking, food & cafés',templates:['artisan-paper','artisan','restaurant','boutique'],item:'Freshly baked cake'},
+ {id:'retail',name:'Retail, grocery & supermarkets',templates:['retail','grocery','thermal','modern'],item:'Household supplies'},
+ {id:'fashion',name:'Fashion, beauty & salons',templates:['boutique','salon','luxury','editorial'],item:'Customer order'},
+ {id:'services',name:'Professional services',templates:['service','formal','corporate','minimal'],item:'Professional service'},
+ {id:'trades',name:'Electrical, repairs & construction',templates:['service','ledger','corporate','wholesale'],item:'Equipment installation'},
+ {id:'health',name:'Health & education',templates:['medical','education','formal','classic'],item:'Service charges'},
+ {id:'hospitality',name:'Hotels, events & hospitality',templates:['hospitality','event','festival','premium-dark'],item:'Booking service'},
+ {id:'logistics',name:'Logistics & wholesale',templates:['logistics','wholesale','ledger','executive'],item:'Delivery service'}
+];
+const TEMPLATE_FAMILIES=[
+ ['Everyday business',['signature','classic','executive','minimal','modern','retail','digital','startup']],
+ ['Retail & food',['thermal','restaurant','grocery','wholesale','artisan','artisan-paper']],
+ ['Fashion & premium',['boutique','salon','luxury','editorial','premium-dark','festival']],
+ ['Services & specialist',['service','legal','medical','education','real-estate','logistics','hospitality','event']],
+ ['Corporate & colour',['corporate','ledger','bold','monochrome','gradient','formal','emerald','sapphire']]
+];
+const businessCategory=id=>BUSINESS_TYPES.find(x=>x.id===id)||BUSINESS_TYPES[0];
+const templateTitle=id=>String(id).split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' ');
+function activeDesign(){return state.designDraft||state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1,show_signature:0};}
+function captureDesignForm(){
+ const f=document.querySelector('[data-form=design]');if(!f)return;
+ const previous=activeDesign();
+ state.designDraft={...previous,accent:val(f,'accent'),paper:val(f,'paper'),contact:val(f,'contact'),header_note:val(f,'headerNote'),footer_note:val(f,'footerNote'),show_logo:f.elements.namedItem('showLogo').checked?1:0,show_signature:f.elements.namedItem('showSignature').checked?1:0};
+}
+function sampleDocument(template){
+ const sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
+ return {kind:'receipt',template,date:today(),customer:'Sample customer',items:[{description:sector.item,qty:2,price:5500}],discountPct:0,taxPct:0,shipping:0,received:11000,notes:'Thank you for your business.'};
+}
+function sampleHtml(template){
+ const design={...activeDesign(),paper:'a4',show_signature:0};
+ return receipt(sampleDocument(template),'BZ-00021',false,design);
+}
+function groupedTemplateOptions(selected){
+ return TEMPLATE_FAMILIES.map(([label,ids])=>'<optgroup label="'+e(label)+'">'+ids.map(id=>'<option value="'+e(id)+'" '+(selected===id?'selected':'')+'>'+e(templateTitle(id))+'</option>').join('')+'</optgroup>').join('');
+}
+function guidedSteps(labels,step){
+ return '<div class="wizard-steps" role="list" aria-label="Your progress">'+labels.map((label,i)=>'<div role="listitem" class="wizard-step '+(i+1===step?'current':i+1<step?'done':'')+'"><span class="wizard-number">'+(i+1)+'</span><span>'+e(label)+'</span></div>').join('')+'</div>';
+}
+
 const DESIGN_PALETTE=["#6935df","#212d52","#b18748","#168c78","#383c4b","#bc577b","#f08c42","#2b87ab","#6a9842","#a63f53"];
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
@@ -107,10 +151,14 @@ function navigation(){
   if(v==='upgrade')return state.biz?.role==='owner';
   if(v==='team'||v==='branding'||v==='design'||v==='gws')return admin();
   if(v==='alerts')return true;
-  if(v==='products'||v==='customers'||v==='payments')return edit();
-  if(v==='create')return edit();return true;
+  if(v==='products'||v==='customers'||v==='payments'||v==='create')return edit();
+  return true;
  });
- return filtered.map(([v,icon,label])=>'<button type="button" data-nav="'+v+'" data-active="'+(v===state.view)+'">'+icon+' &nbsp; '+e(label)+'</button>').join('');
+ const primary=['overview','documents','create','customers','products','payments'];
+ const item=([v,icon,label])=>'<button type="button" data-nav="'+v+'" data-active="'+(v===state.view)+'"><span aria-hidden="true">'+icon+'</span> '+e(label)+'</button>';
+ const main=filtered.filter(([v])=>primary.includes(v)).map(item).join('');
+ const other=filtered.filter(([v])=>!primary.includes(v));
+ return main+(other.length?'<details class="nav-group" '+(other.some(([v])=>v===state.view)?'open':'')+'><summary>More business tools</summary><div class="nav-more">'+other.map(item).join('')+'</div></details>':'');
 }
 function shell(body){
  const t=state.biz;
@@ -187,12 +235,17 @@ async function copyShareText(value){
 }
 function overview(){
  const r=state.data;if(!r)return '<div class="empty">Loading your business overview…</div>';
- const metrics=[['Total sales',curr(r.invoiced),'Issued documents'],['Payments received',curr(r.received),'Recorded payments'],['Outstanding',curr(r.outstanding),'Unpaid balances'],['Customers',r.customers,'Saved customers']];
- return heading('YOUR BUSINESS AT A GLANCE','See how your business is doing.','Track sales, payments and customers in one place.',edit()?'<button data-nav="create" class="btn primary">+ Create document</button>':'')+
- '<div class="metrics">'+metrics.map(m=>'<div class="metric"><span>'+m[0]+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></div>').join('')+'</div>'+
- '<section class="panel"><h2>Sales analytics</h2>'+salesChart()+'</section>'+
- '<div class="cols"><section class="panel"><h2>Get started with Bizlano</h2><p class="muted">Build your business one step at a time. Add customers, organise your products, and create receipts or invoices ready to print or save.</p><div class="row"><button class="btn primary" data-nav="create">Create your first receipt</button><button class="btn" data-nav="documents">View history</button></div></section>'+
- '<section class="panel"><h2>Share your business page</h2><p class="muted">Customers can find lost receipts, while your team signs in separately.</p>'+recoveryTools()+'</section></div>';
+ const metrics=[['Total sales',curr(r.invoiced)],['Payments received',curr(r.received)],['Outstanding',curr(r.outstanding)],['Customers',r.customers]];
+ return heading('BUSINESS OVERVIEW','Welcome to '+state.biz.business_name,'Your most useful business tools in one place.')+
+ '<div class="metrics">'+metrics.map(m=>'<div class="metric"><span>'+m[0]+'</span><strong>'+m[1]+'</strong></div>').join('')+'</div>'+
+ '<section class="panel quick-work"><h2>What would you like to do?</h2><div class="quick-work-grid">'+
+ (edit()?'<button type="button" class="quick-tile" data-nav="create"><strong>＋ Create document</strong><span>Receipt, invoice or quote</span></button>':'')+
+ '<button type="button" class="quick-tile" data-nav="documents"><strong>▤ View documents</strong><span>History and printing</span></button>'+
+ (edit()?'<button type="button" class="quick-tile" data-nav="products"><strong>▥ Products & stock</strong><span>Prices and stock levels</span></button>':'')+
+ (admin()?'<button type="button" class="quick-tile" data-nav="design"><strong>◈ Receipt designs</strong><span>Styles for your business</span></button>':'')+
+ '</div></section>'+
+ '<details class="panel tidy-details" id="sales-details"><summary><strong>Sales insights</strong><span>View charts and trends</span></summary><div class="tidy-content">'+salesChart()+'</div></details>'+
+ '<details class="panel tidy-details" id="share-details"><summary><strong>Share your business page</strong><span>Customer receipt recovery link</span></summary><div class="tidy-content">'+recoveryTools()+'</div></details>';
 }
 function gridRows(rows,headers,fn){return '<div class="table-scroll"><table><thead><tr>'+headers.map(h=>'<th>'+e(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(fn).join('')+'</tbody></table></div>'}
 function docs(){
@@ -384,22 +437,46 @@ async function uploadBusinessArtwork(form,kind,slugValue){
  return payload;
 }
 function designStudio(){
- const design=state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1};
- const current=state.templateChoice||design.template;
- const catalog=TEMPLATE_LIST.map((id,i)=>{const title=id.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' '),selected=current===id;return '<button type="button" class="design-card '+(selected?'selected':'')+'" data-template="'+e(id)+'" aria-pressed="'+selected+'"><span class="design-tiny style-'+e(id)+'" style="--receipt-accent:'+e(design.accent)+'"><span class="design-tiny-top"></span><span class="design-tiny-line"></span><span class="design-tiny-line short"></span><span class="design-tiny-table"></span><span class="design-tiny-total"></span></span><strong>'+e(title)+'</strong><small>'+(selected?'Selected · Ready to use':'Choose design')+'</small></button>'}).join('');
- return heading('DOCUMENT DESIGN STUDIO','A look that belongs to your business','Choose from 36 receipt and invoice layouts. Your saved design automatically appears on every new document.')+
- '<div class="panel"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:18px"><div><h2>Choose your permanent template</h2><p class="muted" style="font-size:12px;margin:0">Every layout includes your brand identity and clear payment details.</p></div><span class="eyebrow">36 DESIGNS</span></div><div class="design-grid">'+catalog+'</div></div>'+
- '<section class="panel"><h2>Customize your document style</h2><form data-form="design">'+
- '<div class="form-grid"><label class="field">Business accent color<input name="accent" type="color" value="'+e(design.accent)+'"></label>'+
+ const design=activeDesign(),sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
+ const current=state.templateChoice||design.template||'signature';
+ const selected=[...new Set([current,...sector.templates])].slice(0,5);
+ const back=state.designStep>1?'<button type="button" class="btn" data-action="design-back">← Back</button>':'';
+ const top=heading('DOCUMENT DESIGN STUDIO','Make your documents look professional','A few simple choices. Your preview shows the actual printable receipt style.')+
+ guidedSteps(['Your business','Choose a look','Personalise'],state.designStep);
+ if(state.designStep===1){
+  return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 1 OF 3</div><h2>What kind of business do you run?</h2><p class="muted">We will recommend designs that fit your work. You can still use any design later.</p>'+
+  '<label class="field">Business category<select id="business-category" name="industry" data-business-category>'+BUSINESS_TYPES.map(x=>'<option value="'+e(x.id)+'" '+(x.id===sector.id?'selected':'')+'>'+e(x.name)+'</option>').join('')+'</select></label>'+
+  '<div class="wizard-actions"><button class="btn primary" type="button" data-action="design-next">Show my recommended designs →</button></div></section>';
+ }
+ if(state.designStep===2){
+  const cards=selected.map(id=>{
+   const active=current===id;
+   return '<button type="button" class="design-card real-template '+(active?'selected':'')+'" data-template="'+e(id)+'" aria-pressed="'+active+'" aria-label="'+e(templateTitle(id))+' receipt design">'+
+    '<span class="template-thumbnail" aria-hidden="true"><span class="template-thumbnail-inner">'+sampleHtml(id)+'</span></span>'+
+    '<strong>'+e(templateTitle(id))+'</strong><small>'+(active?'✓ Selected':'Select design')+'</small></button>';
+  }).join('');
+  return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 2 OF 3</div><h2>Recommended for '+e(sector.name)+'</h2>'+
+  '<p class="muted">Choose a style. These are miniature versions of the actual receipt, not generic placeholders.</p>'+
+  '<div class="studio-choice-layout"><div><div class="design-grid">'+cards+'</div><label class="field" style="margin-top:20px">Looking for a different style?<select data-design-browse aria-label="Browse all 36 receipt designs"><option value="">Browse all 36 designs…</option>'+groupedTemplateOptions(current)+'</select></label></div>'+
+  '<details class="studio-receipt-preview" '+(window.innerWidth>1100?'open':'')+'><summary>See the full-size receipt preview</summary><div class="full-receipt-sample">'+sampleHtml(current)+'</div><p class="mini muted">This is the real printable layout with sample details.</p></details></div>'+
+  '<div class="wizard-actions">'+back+'<button type="button" class="btn primary" data-action="design-next">Personalise this design →</button></div></section>';
+ }
+ return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 3 OF 3</div><h2>Finish your document style</h2><div class="studio-choice-layout"><form data-form="design" class="design-custom-fields">'+
+ '<div class="form-grid"><label class="field">Accent colour<input name="accent" type="color" value="'+e(design.accent)+'"></label>'+
  select('Paper size','paper',[['a4','A4 · Standard print'],['letter','US Letter'],['80mm','80mm · POS roll'],['58mm','58mm · Compact roll']],design.paper)+
  input('Business contact line','contact','text',design.contact)+
- input('Optional header message','headerNote','text',design.header_note)+
- input('Receipt footer message','footerNote','text',design.footer_note)+
- '</div><div class="row" style="margin:10px 0 17px"><span class="mini muted">Quick colors</span>'+DESIGN_PALETTE.map(c=>'<button type="button" class="color-swatch" data-accent="'+c+'" aria-label="Choose color '+c+'" style="background:'+c+'"></button>').join('')+'</div>'+
- '<label class="field"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+' style="display:inline;width:auto;margin-right:7px">Display my business logo on receipts</label>'+
- '<label class="field"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+' style="display:inline;width:auto;margin-right:7px">Show my uploaded signature at the signatory area (optional)</label><p class="mini muted">A signature is visible to everyone receiving the document. Use only a business signature intended for public use. You can manage it in Business identity.</p>'+
- '<div class="row"><button type="submit" class="btn primary">Save as business default</button><button type="button" data-action="preview-design" class="btn">See sample document</button></div></form></section>'+
- '<p class="mini muted">Your design is saved for your business. Previously issued documents keep the template selected when they were created.</p>';
+ input('Header message (optional)','headerNote','text',design.header_note)+
+ input('Thank-you / footer message','footerNote','text',design.footer_note)+'</div>'+
+ '<div class="row colour-row"><span class="mini muted">Quick colours</span>'+DESIGN_PALETTE.map(c=>'<button type="button" class="color-swatch" data-accent="'+c+'" aria-label="Choose '+c+'" style="background:'+c+'"></button>').join('')+'</div>'+
+ '<label class="field inline-check"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+'> Show my business logo</label>'+
+ '<label class="field inline-check"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+'> Show uploaded business signature</label>'+
+ '<p class="mini muted">Only use a signature that you are happy to display on customer documents.</p>'+
+ '<div class="wizard-actions">'+back+'<button type="submit" class="btn primary">Save my document design ✓</button></div></form>'+
+ '<details class="studio-receipt-preview" '+(window.innerWidth>1100?'open':'')+'><summary>See my updated document preview</summary><div class="full-receipt-sample" id="studio-live-preview">'+sampleHtml(current)+'</div></details></div></section>';
+}
+function refreshStudioPreview(){
+ const target=document.getElementById('studio-live-preview');
+ if(target)target.innerHTML=sampleHtml(state.templateChoice||activeDesign().template||'signature');
 }
 function alerts(){
  const rows=state.data?.rows||[];
@@ -408,18 +485,66 @@ function alerts(){
  (n.document_id?'<button class="btn primary" data-doc="'+e(n.document_id)+'">Open receipt</button>':'')+'</div></div>').join(''):'<div class="empty">No new receipt updates. When a connected sale is completed, its prepared receipt will appear here.</div>')+'</section>';
 }
 function docEditor(){
- const tpl=TEMPLATE_LIST;
  const options=state.biz.role==='cashier'?[['receipt','Sales receipt'],['cash-sale','Cash sale'],['service-receipt','Service receipt'],['thermal-receipt','Thermal POS']]:
  [['receipt','Sales receipt'],['invoice','Sales invoice'],['quotation','Quotation'],['estimate','Estimate'],['proforma','Proforma'],['retail-receipt','Retail receipt'],['service-receipt','Service receipt'],['tax-invoice','Tax invoice'],['thermal-receipt','Thermal POS']];
- return heading('DOCUMENT STUDIO','Create a business document','Live preview, flexible details and professionally branded output.')+
- '<div class="editor"><section class="panel editor-form"><form data-form="document">'+
- '<h2>01 · Document and style</h2><div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+input('Due date','dueDate','date')+select('Template','template',tpl.map(x=>[x.split('-').join('-'),x.split('-').map(y=>y.charAt(0).toUpperCase()+y.slice(1)).join(' ')]),state.design?.template||'signature')+'</div>'+
- '<h2>02 · Customer information</h2>'+input('Customer or recipient','customer','text','Walk-in customer',true)+'<div class="form-grid">'+input('Customer email','customerEmail','email','',false,'autocomplete="off" placeholder="customer@example.com"')+input('Customer phone','customerPhone','tel','',false,'inputmode="tel" placeholder="080… or +234…"')+'</div><p class="mini muted" id="contact-help">Provide at least one: email or phone. A verified email links purchases automatically; for phone-only purchases, give the customer the private recovery code printed on their receipt.</p>'+
- '<h2>03 · Products and services</h2><datalist id="products-data">'+state.products.map(p=>'<option value="'+e(p.name)+'"></option>').join('')+'</datalist><div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div><button class="btn ghost" type="button" data-action="add-line">+ Add item</button>'+
- '<h2 style="margin-top:25px">04 · Charges and payments</h2><div class="form-grid">'+input('Discount (%)','discountPct','number','0',false,'min="0" max="100" step=".01"')+input('VAT / Tax (%)','taxPct','number','0',false,'min="0" max="100" step=".01"')+input('Other charges (₦)','shipping','number','0',false,'min="0" step=".01"')+input('Received (₦)','received','number','0',false,'min="0" step=".01"')+'</div>'+select('Payment method','method',[['Bank transfer','Bank transfer'],['Cash','Cash'],['POS terminal','POS terminal'],['Other','Other']])+
- '<label class="field">Notes or special instructions<textarea name="notes" rows="4" maxlength="1800" placeholder="Details, payment terms, instructions or a thank-you message">Thank you for your business.</textarea></label><div class="row"><button class="btn ghost" type="button" data-edit-notes>Expand notes editor</button></div>'+
- '<div class="row"><button type="submit" class="btn primary" data-document-action="issue">Save and issue</button><button type="submit" class="btn" data-document-action="draft">Save draft</button></div><p class="mini muted">Issue only after confirming payment. Unpaid sales should be invoices, not receipts.</p></form></section>'+
- '<aside class="receipt-stage"><h2>LIVE PREVIEW</h2><div id="preview"></div><button class="btn" type="button" data-action="print-preview" style="margin-top:13px">Print / Save PDF</button></aside></div>'+editorDialog();
+ const step=state.docStep||1;
+ const panel=(n,content)=>'<section class="doc-step" data-doc-panel="'+n+'" '+(n!==step?'hidden':'')+'>'+content+'</section>';
+ const forward='<button class="btn primary" type="button" data-action="doc-next">Continue →</button>';
+ const back='<button class="btn" type="button" data-action="doc-back">← Back</button>';
+ return heading('CREATE DOCUMENT','Make a new receipt or invoice','Just four short steps. You can review everything before issuing.')+
+ guidedSteps(['Document','Customer','Items','Review'],step)+
+ '<div class="editor guided-editor"><section class="panel editor-form"><form data-form="document">'+
+ panel(1,'<div class="eyebrow">STEP 1 OF 4</div><h2>What would you like to create?</h2>'+
+ '<div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+
+ input('Due date (optional)','dueDate','date')+
+ '<label class="field">Receipt design<select name="template" aria-label="Receipt design">'+groupedTemplateOptions(state.design?.template||'signature')+'</select></label></div>'+
+ '<p class="mini muted">The receipt will use this exact style. Change your business default any time in Document Studio.</p>'+
+ '<div class="wizard-actions">'+forward+'</div>')+
+ panel(2,'<div class="eyebrow">STEP 2 OF 4</div><h2>Who is this for?</h2>'+
+ input('Customer or recipient','customer','text','Walk-in customer',true)+
+ '<div class="form-grid">'+input('Customer email','customerEmail','email','',false,'autocomplete="off" placeholder="customer@example.com"')+
+ input('Customer phone','customerPhone','tel','',false,'inputmode="tel" placeholder="080… or +234…"')+'</div>'+
+ '<p class="mini muted" id="contact-help">Add an email or phone when issuing. A customer with a private receipt code can recover their document later.</p>'+
+ '<div class="wizard-actions">'+back+forward+'</div>')+
+ panel(3,'<div class="eyebrow">STEP 3 OF 4</div><h2>What did the customer buy?</h2>'+
+ '<datalist id="products-data">'+state.products.map(p=>'<option value="'+e(p.name)+'"></option>').join('')+'</datalist>'+
+ '<div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div>'+
+ '<button class="btn ghost" type="button" data-action="add-line">+ Add another item</button>'+
+ '<div class="wizard-actions">'+back+forward+'</div>')+
+ panel(4,'<div class="eyebrow">STEP 4 OF 4</div><h2>Review charges & finish</h2>'+
+ '<div class="form-grid">'+input('Discount (%)','discountPct','number','0',false,'min="0" max="100" step=".01"')+
+ input('VAT / Tax (%)','taxPct','number','0',false,'min="0" max="100" step=".01"')+
+ input('Other charges (₦)','shipping','number','0',false,'min="0" step=".01"')+
+ input('Received (₦)','received','number','0',false,'min="0" step=".01"')+'</div>'+
+ select('Payment method','method',[['Bank transfer','Bank transfer'],['Cash','Cash'],['POS terminal','POS terminal'],['Other','Other']])+
+ '<label class="field">Notes (optional)<textarea name="notes" rows="2" maxlength="1800" placeholder="Terms, delivery or thank-you message">Thank you for your business.</textarea></label>'+
+ '<div class="row"><button class="btn ghost" type="button" data-edit-notes>Expand notes</button></div>'+
+ '<p class="mini muted">For a paid receipt, enter the amount actually received. For unpaid sales, choose Invoice instead. Save as draft if you are not ready.</p>'+
+ '<div class="wizard-actions">'+back+'<button type="submit" class="btn" data-document-action="draft">Save draft</button><button type="submit" class="btn primary" data-document-action="issue">Save and issue</button></div>')+
+ '</form></section>'+
+ '<aside class="receipt-stage guided-preview"><details class="preview-fold" '+(step===4?'open':'')+'><summary>Actual document preview <span>Click to '+(step===4?'hide':'view')+'</span></summary><div id="preview"></div></details><button class="btn" type="button" data-action="print-preview" style="margin-top:13px">Print / Save PDF</button></aside></div>'+
+ editorDialog();
+}
+function setDocStep(target){
+ const form=document.querySelector('[data-form=document]');if(!form)return;
+ const current=state.docStep||1;
+ if(target>current){
+  const panel=form.querySelector('[data-doc-panel="'+current+'"]');
+  for(const field of panel.querySelectorAll('input[required],textarea[required],select[required]')){
+   if(!field.checkValidity()){field.reportValidity();field.focus();return}
+  }
+  if(current===3){
+   const items=currentDoc()?.items||[];
+   const problem=items.some(x=>!x.description.trim()||!(x.qty>0)||x.price<0||!Number.isFinite(x.price));
+   if(problem){flash('Add an item description, quantity and valid price before continuing.',true);return}
+  }
+ }
+ state.docStep=Math.max(1,Math.min(4,target));
+ form.querySelectorAll('[data-doc-panel]').forEach(panel=>panel.hidden=Number(panel.dataset.docPanel)!==state.docStep);
+ document.querySelectorAll('.wizard-step').forEach((el,i)=>{el.classList.toggle('current',i+1===state.docStep);el.classList.toggle('done',i+1<state.docStep)});
+ const preview=document.querySelector('.preview-fold');if(preview)preview.open=state.docStep===4;
+ drawPreview();
+ document.querySelector('.wizard-steps')?.scrollIntoView({behavior:'instant',block:'start'});
 }
 function lineHtml(item,n){
  const found=state.products.find(p=>p.id===item.productId);
@@ -438,19 +563,19 @@ function currentDoc(){
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
  return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
-function receipt(doc,number,stored=false){
+function receipt(doc,number,stored=false,style=state.design){
  const lines=doc.items||[];
  let subtotal=0;const rows=lines.filter(i=>i.description).map(i=>{const total=Number(i.price)*Number(i.qty);subtotal+=total;return '<tr><td>'+e(i.description)+'</td><td>'+e(i.qty)+'</td><td>'+oldMoney(total)+'</td></tr>'}).join('');
  const discount=Math.round(subtotal*(Number(doc.discountPct)||0))/100,vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
  const total=stored?doc.total_minor/100:subtotal-discount+vat+Number(doc.shipping||0);
- const template=String(doc.template||state.design?.template||'signature');const logo=state.design?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
- const accent=/^#[0-9a-fA-F]{6}$/.test(state.design?.accent||'')?state.design.accent:'#6935df';
- const paper=state.design?.paper||'a4',contact=state.design?.contact||'',headerNote=state.design?.header_note||'',footerNote=state.design?.footer_note||'';
+ const template=String(doc.template||style?.template||'signature');const logo=style?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
+ const accent=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:'#6935df';
+ const paper=style?.paper||'a4',contact=style?.contact||'',headerNote=style?.header_note||'',footerNote=style?.footer_note||'';
  return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
  '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+(doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
  '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
- '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(state.design?.show_signature&&state.design?.signature_url?'<div class="r-signature"><img src="'+e(state.design.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
+ '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(style?.show_signature&&style?.signature_url?'<div class="r-signature"><img src="'+e(style.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
@@ -470,7 +595,7 @@ function render(){
  if(state.view==='create')drawPreview();
 }
 async function navigate(view){
- closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];
+ closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];if(view==='create')state.docStep=1;if(view==='design'){state.designStep=1;state.designDraft=null;state.templateChoice=null;state.designIndustry=null;}
  try{await load()}catch(err){flash(err.message,true);render()}
  window.scrollTo(0,0);
 }
@@ -495,8 +620,12 @@ document.addEventListener('click',async ev=>{
  if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=null;await attach();return}
  if(action==='reset'){state.authMode='forgot';render();return}
- if(el.dataset.template){state.templateChoice=el.dataset.template;render();return}
- if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field)field.value=el.dataset.accent;return}
+ if(action==='design-next'){if(state.designStep<3){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
+ if(action==='design-back'){if(state.designStep>1){captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
+ if(action==='doc-next'){setDocStep(state.docStep+1);return}
+ if(action==='doc-back'){setDocStep(state.docStep-1);return}
+ if(el.dataset.template){captureDesignForm();state.templateChoice=el.dataset.template;render();return}
+ if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field){field.value=el.dataset.accent;captureDesignForm();refreshStudioPreview();}return}
  if(el.dataset.expandLine!==undefined||el.hasAttribute('data-edit-notes')){
   const dialog=document.getElementById('editor-dialog');
   if(!dialog)return;
@@ -535,14 +664,20 @@ document.addEventListener('click',async ev=>{
  if(el.dataset.days){state.chartDays=Number(el.dataset.days);render();return}
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
- if(action==='print-preview'){window.print();return}
+ if(action==='print-preview'){if(state.view==='create'&&state.docStep!==4){flash('Review the document details before printing.',true);return}window.print();return}
  if(el.dataset.doc){const [d,settings]=await Promise.all([api('/b/'+state.biz.slug+'/doc/'+el.dataset.doc),api('/b/'+state.biz.slug+'/design')]);state.design=settings.design;printPage(d.document);return}
  if(el.dataset.payment){const value=prompt('Amount actually received in ₦');if(value===null)return;await api('/b/'+state.biz.slug+'/payments',{documentId:el.dataset.payment,amount:Number(value),method:'Manual'});flash('Payment recorded.');await navigate('documents');return}
  if(el.dataset.issue){if(!confirm('Issue this draft? Issued documents cannot be edited.'))return;await api('/b/'+state.biz.slug+'/issue',{documentId:el.dataset.issue});flash('Draft issued.');await navigate('documents');return}
  }catch(err){flash(err.message,true)}
 });
-document.addEventListener('input',ev=>{if(ev.target.closest('[data-form=document]'))drawPreview()});
+document.addEventListener('input',ev=>{
+ if(ev.target.closest('[data-form=document]'))drawPreview();
+ if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
+});
 document.addEventListener('change',ev=>{
+ if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.templateChoice=businessCategory(ev.target.value).templates[0];return}
+ if(ev.target.matches('[data-design-browse]')){if(ev.target.value){state.templateChoice=ev.target.value;render()}return}
+ if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
  const artwork=ev.target.closest('[data-form=logo], [data-form=signature]');
  if(artwork&&(ev.target.type==='file'||ev.target.name==='removeWhite')){
   const file=artwork.querySelector('input[type=file]')?.files?.[0],preview=artwork.querySelector('[data-artwork-preview]');
@@ -558,6 +693,10 @@ document.addEventListener('change',ev=>{
  if(matched){row.querySelector('.li-description').value=matched.name;row.querySelector('.li-price').value=String(matched.price_minor/100)}
  drawPreview();
 });
+document.addEventListener('invalid',ev=>{
+ const panel=ev.target.closest('[data-doc-panel]');
+ if(panel){const number=Number(panel.dataset.docPanel);if(number!==state.docStep)setDocStep(number)}
+},true);
 let documentMode='issue';
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-document-action]');if(b)documentMode=b.dataset.documentAction;});
 document.addEventListener('submit',async ev=>{
@@ -597,9 +736,9 @@ document.addEventListener('submit',async ev=>{
     state.busy=false;return;
   }
   if(kind==='design'){
-    const template=state.templateChoice||state.design?.template||'signature';
-    await api(t+'/design',{template,accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
-    state.templateChoice=null;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
+    captureDesignForm();const template=state.templateChoice||state.design?.template||'signature';
+    await api(t+'/design',{template,industry:state.designIndustry||'general',accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
+    state.templateChoice=null;state.designDraft=null;state.designStep=1;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
   }
   if(kind==='logo'||kind==='signature'){
     await uploadBusinessArtwork(form,kind,state.biz.slug);
@@ -609,7 +748,8 @@ document.addEventListener('submit',async ev=>{
   if(kind==='invite'){const r=await api(t+'/invite',{email:val(form,'email'),role:val(form,'role')});const box=document.getElementById('invite-result');box.textContent='Invite link (share privately): '+r.url;box.classList.remove('hidden');flash('Invitation generated. Copy the private link.');state.busy=false;return}
   if(kind==='document'){
    const b=currentDoc();b.draft=documentMode==='draft';
-   if(!b.draft&&!b.customerEmail&&!b.customerPhone){document.querySelector('[data-form=document] [name=customerEmail]')?.focus();throw Error('Add a customer email or phone number before issuing this document')}
+   if(!b.draft&&!b.customerEmail&&!b.customerPhone){setDocStep(2);document.querySelector('[data-form=document] [name=customerEmail]')?.focus();throw Error('Add a customer email or phone number before issuing this document')}
+   if(!b.draft&&['receipt','cash-sale','retail-receipt','service-receipt','thermal-receipt'].includes(b.kind)&&!(b.received>0)){document.querySelector('[data-form=document] [name=received]')?.focus();throw Error('Enter the amount paid to issue a receipt, or select Invoice for an unpaid sale')}
    const result=await api(t+'/documents',b);
    flash('Saved '+result.number);await navigate('documents');
   }else{flash('Saved successfully');await navigate(state.view)}
