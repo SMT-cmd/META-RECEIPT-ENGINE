@@ -131,7 +131,6 @@ async function marketplaceApi(req,env,url){
   const customerExisting=emailAddress?await env.DB.prepare("SELECT id FROM customers WHERE tenant_id=? AND email=? LIMIT 1").bind(connection.tenant_id,emailAddress).first():null;
   const customerId=customerExisting?.id||crypto.randomUUID(),now=new Date(),issueDate=now.toISOString().slice(0,10);
   const plans=[
-   env.DB.prepare("INSERT INTO marketplace_events(id,provider,provider_event_id,tenant_id,vendor_id,document_id,event_type,event_hash) VALUES(?,'globalwebstores',?,?,?,?,?,?)").bind(crypto.randomUUID(),orderId,connection.tenant_id,vendorId,docId,'order.paid',await hash(JSON.stringify(order))),
    ...(!customerExisting?[env.DB.prepare("INSERT INTO customers(id,tenant_id,name,email,phone) VALUES(?,?,?,?,?)").bind(customerId,connection.tenant_id,customer,emailAddress,String(order.customerPhone||'').slice(0,70))]:[]),
    env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?,'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
     .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
@@ -140,6 +139,7 @@ async function marketplaceApi(req,env,url){
     .bind(crypto.randomUUID(),connection.tenant_id,docId,line.desc,line.qty,line.unit,line.amount));
   plans.push(env.DB.prepare("INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,reference,recorded_by) SELECT ?,?,?,?,?,?,created_by FROM tenants WHERE id=?")
     .bind(crypto.randomUUID(),connection.tenant_id,docId,amount,'Global Webstores',String(order.paymentReference||orderId).slice(0,140),connection.tenant_id));
+  plans.push(env.DB.prepare("INSERT INTO marketplace_events(id,provider,provider_event_id,tenant_id,vendor_id,document_id,event_type,event_hash) VALUES(?,'globalwebstores',?,?,?,?,?,?)").bind(crypto.randomUUID(),orderId,connection.tenant_id,vendorId,docId,'order.paid',await hash(JSON.stringify(order))));
   plans.push(env.DB.prepare("INSERT INTO receipt_notifications(id,tenant_id,document_id,kind,title,body) VALUES(?,?,?,'receipt_ready',?,?)")
    .bind(crypto.randomUUID(),connection.tenant_id,docId,'Your Global Webstores receipt is ready','Paid order '+orderId+' · '+title+' · Open, print or share.'));
   plans.push(env.DB.prepare("UPDATE marketplace_connections SET last_sale_at=datetime('now') WHERE provider='globalwebstores' AND vendor_id=? AND tenant_id=?")
