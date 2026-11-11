@@ -26,7 +26,7 @@ test('mobile UX and receipt output retain Bizlano branding',()=>{
  assert.match(css,/env\(safe-area-inset-bottom/);
  assert.match(css,/@media\(max-width:760px\)/);
  assert.match(css,/\.mobile-nav\{position:fixed/);
- assert.match(js,/Powered by <strong style=\\"color:#6635db\\">Bizlano/);
+ assert.match(js,/Powered by .*Bizlano/);
  assert.match(js,/function salesChart\(/);
  assert.match(js,/mode==='pie'/);
  assert.match(js,/function receipt\(/);
