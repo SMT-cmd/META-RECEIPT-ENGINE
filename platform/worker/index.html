@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#171c3b"><meta name="description" content="Bizlano — your business, beautifully managed. Secure receipts, invoices, products, customers and team workspaces.">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml"><title>Bizlano — Your business, beautifully managed</title>
+<link rel="icon" href="/assets/bizlano-mark.png" type="image/png"><title>Bizlano Workspace — Your business, beautifully managed</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 :root{font-family:'DM Sans',system-ui,sans-serif;--ink:#172040;--muted:#7f8ba2;--line:#e6e9f1;--purple:#6933e6;--background:#f7f8fc;background:var(--background);color:var(--ink)}
@@ -17,6 +17,13 @@ button:hover:not(:disabled){filter:brightness(.975)}
 .auth-art{background:radial-gradient(circle at 70% 5%,#7532fa 0,#4827b9 27%,#141b42 70%);color:#fff;display:flex;flex-direction:column;padding:clamp(25px,6vw,80px);justify-content:space-between;position:relative;overflow:hidden}
 .auth-art:after{content:'';position:absolute;inset:auto -10% -27% 20%;aspect-ratio:1;border:1px solid #fff2;border-radius:50%;box-shadow:0 0 0 70px #ffffff0a,0 0 0 140px #ffffff06;pointer-events:none}
 .brand{display:flex;gap:11px;align-items:center;font-weight:850;font:800 25px Manrope;color:inherit;text-decoration:none;letter-spacing:-1px}.brand-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:13px;background:linear-gradient(135deg,#ac7dff,#652af0,#3480ff);color:white;font:italic 900 28px Manrope;transform:skew(-5deg)}
+.brand img.brand-icon{background:transparent;transform:none;object-fit:contain;padding:0;box-shadow:none;border-radius:0}
+.auth-art .brand img.brand-icon{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(0,0,0,.12))}
+.auth-art{background:radial-gradient(ellipse at 0% 100%,#6040d0 0,transparent 44%),radial-gradient(ellipse at 90% 5%,#432c83 0,transparent 47%),linear-gradient(145deg,#151835,#272064)}
+.auth-art .kicker{color:#d9cafd}
+.auth-form-shell h2{font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-1.2px}
+.auth-form-shell .btn{border-radius:10px;min-height:47px}
+.auth-form-shell .field input:focus{box-shadow:0 0 0 3px #7842dd18}
 .auth-art h1{font-size:clamp(35px,4.8vw,65px);max-width:750px;line-height:1.1;letter-spacing:-2.2px}.auth-art p{line-height:1.8;color:#e1d9ff;max-width:480px;font-size:15px}.auth-art .kicker{font-size:11px;letter-spacing:2px;font-weight:800;color:#d8caff}
 .auth-form-shell{padding:40px clamp(22px,4vw,55px);display:flex;justify-content:center;flex-direction:column}.auth-form-shell>div{width:100%;max-width:430px;margin:auto}.auth-form-shell h2{font-size:28px}.auth-form-shell p{font-size:13px}
 .field{display:block;font-size:12px;font-weight:700;margin:13px 0;color:#4a5570}.field input,.field select,.field textarea,.control{display:block;width:100%;border:1px solid #dfe3ec;padding:11px 12px;border-radius:9px;min-width:0;margin-top:6px;background:#fff;color:#172040;outline-offset:2px}.field textarea{min-height:80px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:#855de5}
