@@ -50,7 +50,7 @@ test('receipt recovery codes are private hashed proofs and rate limited',()=>{
 
 test('receipt issue stores buyer email and shows recovery code in print',()=>{
  const worker=read('platform/worker/worker.js'),vendor=read('platform/worker/client.js');
- assert.match(worker,/recipient_email,issued_on/);
+ assert.match(worker,/recipient_email,recipient_phone,issued_on/);
  assert.match(worker,/b\.customerEmail\?email\(b\.customerEmail\):null/);
  assert.match(worker,/emailAddress,issueDate/);
  assert.match(vendor,/Customer email for receipt recovery/);
