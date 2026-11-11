@@ -125,11 +125,72 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=['expenses','targets'].includes(resource)?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
+ if(resource==='migrate'&&method==='POST'){
+  await member(env,user,slug,'owner');
+  const b=await input(req),source=field(b.source,'migration source',190),records=b.records||[];
+  if(!/^(engine:[A-Za-z0-9]{6}|browser:[A-Za-z0-9_ -]{3,150}_history)$/.test(source))fail(400,'Invalid legacy history source');
+  if(source.startsWith('browser:')&&b.includeBrowser!==true)fail(400,'Explicit consent is required for device-local records');
+  if(!Array.isArray(records)||records.length<1||records.length>25)fail(400,'Upload between 1 and 25 historical receipts per batch');
+  const original=await env.DB.prepare("SELECT legacy_uid FROM legacy_identity_links WHERE provider='firebase-metaforge' AND user_id=?").bind(user.id).first();
+  if(!original||original.legacy_uid!==b.ownerUid)fail(403,'This export does not match your verified legacy account');
+  const archiveHash=field(b.archiveHash,'archive hash',64);
+  if(!/^[a-f0-9]{64}$/.test(archiveHash))fail(400,'Invalid archive hash');
+  const platform=source.startsWith('browser:')?'browser-backup':'firebase-metaforge';
+  let job=await env.DB.prepare('SELECT id FROM legacy_migration_jobs WHERE tenant_id=? AND source_platform=? AND archive_hash=?').bind(tenant,platform,archiveHash).first();
+  if(!job){
+   try{const jobId=crypto.randomUUID();
+    await env.DB.prepare('INSERT INTO legacy_migration_jobs(id,tenant_id,user_id,state,source_platform,archive_hash,source_count) VALUES(?,?,?,?,?,?,?)')
+      .bind(jobId,tenant,user.id,'importing',platform,archiveHash,Number(b.totalCount)||records.length).run();
+    job={id:jobId}
+   }catch{
+    job=await env.DB.prepare('SELECT id FROM legacy_migration_jobs WHERE tenant_id=? AND source_platform=? AND archive_hash=?').bind(tenant,platform,archiveHash).first();
+   }
+  }
+  if(!job)fail(500,'Could not initialize the migration');
+  let imported=0,skipped=0;
+  const issues=[];
+  for(const rec of records){
+   if(!rec||typeof rec!=='object'||!Number.isInteger(rec.index)||rec.index<0){skipped++;continue}
+   const receipt=rec.receipt;
+   if(!receipt||typeof receipt!=='object'||!Array.isArray(receipt.data?.items)){skipped++;continue}
+   const lines=[];
+   for(const line of receipt.data.items.slice(0,150)){
+    const description=String(line.desc||line.description||'').trim().slice(0,200);
+    const qty=Number(line.qty||0),price=Number(String(line.price||0).replace(/[₦,$\s]/g,''));
+    if(!description||!Number.isFinite(qty)||qty<=0||!Number.isFinite(price)||price<0||price>1e9){lines.length=0;break}
+    const q=Math.round(qty*1000),p=Math.round(price*100),lineTotal=Math.round(q*p/1000);
+    if(q<=0){lines.length=0;break}
+    lines.push({description,q,p,lineTotal});
+   }
+   if(!lines.length){skipped++;issues.push(source+' #'+rec.index+' requires manual review');continue}
+   const sourceId=await hash(original.legacy_uid+'|'+source+'|'+String(receipt.id??rec.index));
+   const previous=await env.DB.prepare('SELECT 1 AS exists_ FROM legacy_document_sources WHERE tenant_id=? AND legacy_source_id=?').bind(tenant,sourceId).first();
+   if(previous){skipped++;continue}
+   const docId=crypto.randomUUID(),number='LEG-'+sourceId.slice(0,14).toUpperCase();
+   const kindName=String(receipt.type||'receipt').toLowerCase().replace(/[^a-z-]/g,'');
+   const kind=types.has(kindName)?kindName:'receipt';
+   const date=dateValid(String(receipt.date||''))?String(receipt.date):day();
+   const subtotal=lines.reduce((sum,line)=>sum+line.lineTotal,0);
+   const note='Imported historical record — REVIEW ONLY. Original source: '+source+'. Reported total: '+String(receipt.total||'unknown').slice(0,70)+'. No payment status has been presumed.';
+   const changes=[env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,recipient_name,issued_on,currency,subtotal_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,'draft',?,?)")
+    .bind(docId,tenant,number,kind,String(receipt.customer||'Legacy customer').slice(0,120),date,t.currency,subtotal,subtotal,note,user.id)];
+   for(const line of lines)changes.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(),tenant,docId,line.description,line.q,line.p,line.lineTotal));
+   changes.push(env.DB.prepare('INSERT INTO legacy_document_sources(tenant_id,legacy_source_id,job_id,original_document_number,new_document_id) VALUES(?,?,?,?,?)')
+    .bind(tenant,sourceId,job.id,String(receipt.id||'').slice(0,90),docId));
+   try{await env.DB.batch(changes);imported++}
+   catch(err){skipped++;issues.push(source+' #'+rec.index+' could not be imported: retry or inspect your backup')}
+  }
+  await env.DB.prepare("UPDATE legacy_migration_jobs SET imported_count=imported_count+?,skipped_count=skipped_count+?,state='partial',details=? WHERE tenant_id=? AND id=?")
+   .bind(imported,skipped,JSON.stringify(issues.slice(0,15)),tenant,job.id).run();
+  await audit(env,tenant,user,'legacy.imported',job.id);
+  return json({imported,skipped,issues:issues.slice(0,15)});
+ }
  if(resource==='overview'&&method==='GET'){
   const [docs,customers,products,expenses]=await env.DB.batch([
    env.DB.prepare("SELECT count(*) AS count,coalesce(sum(total_minor),0) AS total,coalesce(sum(paid_minor),0) AS paid FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice')").bind(tenant),
