@@ -152,6 +152,45 @@ button:hover:not(:disabled){filter:brightness(.975)}
 .form-grid{grid-template-columns:1fr}.line-item{grid-template-columns:minmax(0,1fr) 53px 77px 30px;gap:5px}.line-item .field input{padding:9px 7px;font-size:12px}.line-item .field{font-size:10px}.receipt{padding:21px 12px}
 .pie{grid-template-columns:1fr}.donut{margin:0 auto}.toast{bottom:calc(85px + env(safe-area-inset-bottom,0px));left:10px;right:10px;max-width:none}
 }
+
+/* Roomy, accessible document entry and optional expanded editor. */
+.editor-form{min-width:0}.editor-form h2{margin:25px 0 12px;line-height:1.4}
+.editor-form .field input,.editor-form .field select,.editor-form .field textarea{font-size:14px;line-height:1.55;min-height:46px}
+.editor-form textarea[name=notes]{min-height:125px;resize:vertical;line-height:1.7}
+.line-item{grid-template-columns:minmax(0,1fr) 88px 116px 36px;grid-template-areas:"lookup lookup lookup remove" "desc qty price remove";gap:4px 10px;padding:13px 0;border-bottom:1px solid #ebeaf4;align-items:end}
+.line-item .li-lookup{grid-area:lookup}.line-item .li-main-desc{grid-area:desc;margin:4px 0;position:relative;min-width:0}
+.line-item .li-qty-box{grid-area:qty}.line-item .li-price-box{grid-area:price}.line-item .remove-line{grid-area:remove;align-self:end}
+.line-item .li-description{display:block;width:100%;min-height:76px;resize:vertical;font-size:14px;line-height:1.55;padding:10px 12px;overflow-wrap:anywhere}
+.line-item .li-catalog{background:#f9faff;font-size:13px}
+.line-item .expand-editor{display:inline-flex;align-items:center;border:0;background:none;color:#663bd4;padding:6px 0;text-align:left;min-height:34px;font-size:11px;font-weight:800;letter-spacing:0}
+.line-item .expand-editor:hover{text-decoration:underline}.line-item .expand-editor:focus-visible{outline:2px solid #9768e8}
+.receipt td:first-child{white-space:pre-line;overflow-wrap:anywhere}
+.r-signature{display:flex;flex-direction:column;gap:6px;align-items:flex-start;width:min(230px,100%);margin:18px 0 8px;page-break-inside:avoid}
+.r-signature img{display:block;width:auto;max-width:210px;max-height:90px;object-fit:contain}
+.r-signature small{display:block;min-width:170px;border-top:1px solid #a6a6b5;padding-top:6px;color:#5a637b}
+.r-recovery{margin-top:18px;padding:12px;border:1px dashed #d0c5ed;border-radius:8px;background:#faf9ff;font-size:11px;break-inside:avoid}
+.r-recovery-code{font:800 13px ui-monospace,Consolas,monospace;letter-spacing:.8px;margin:6px 0;overflow-wrap:anywhere}
+.artwork-frame,.artwork-preview{display:grid;place-items:center;gap:8px;min-height:110px;padding:15px;border:1px solid #e3e5ee;border-radius:12px;margin:12px 0;background-color:#fafbfd;background-image:linear-gradient(45deg,#e9ebf0 25%,transparent 25%),linear-gradient(-45deg,#e9ebf0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9ebf0 75%),linear-gradient(-45deg,transparent 75%,#e9ebf0 75%);background-position:0 0,0 10px,10px -10px,-10px 0;background-size:20px 20px}
+.artwork-frame img,.artwork-preview img{max-width:100%;max-height:125px;object-fit:contain}.artwork-preview small{background:white;border-radius:8px;padding:8px;color:#646f85;text-align:center}
+.artwork-empty{padding:32px;text-align:center;color:#7b86a0;background:#f6f7fc;border:1px dashed #d9ddeb;border-radius:12px;margin:14px 0;font-size:12px}
+.artwork-option{display:flex;align-items:center;gap:9px;min-height:43px}.artwork-option input{width:auto!important;margin:0!important}
+.editor-dialog{position:fixed;width:min(650px,calc(100% - 28px));max-height:calc(100dvh - 32px);border:1px solid #e7e9f4;background:white;color:#243050;box-shadow:0 30px 90px #15163240;padding:26px;border-radius:18px;margin:auto}
+.editor-dialog::backdrop{background:#11162ea6;backdrop-filter:blur(3px)}
+.editor-dialog[open]{animation:editorIn .2s ease-out}
+.editor-dialog h2{font-size:23px;margin:3px 0 8px}.editor-dialog-header{margin-bottom:18px}
+.editor-dialog #editor-dialog-text{display:block;width:100%;min-height:220px;height:min(42dvh,350px);max-height:52dvh;resize:vertical;border:1px solid #d6dbea;border-radius:12px;padding:15px;line-height:1.65;color:#253049;background:#fcfcff;font-size:16px;outline-offset:3px}
+.editor-dialog #editor-dialog-text:focus{border-color:#7446da;box-shadow:0 0 0 3px #7545d515}
+.editor-dialog-actions{justify-content:flex-end;margin-top:18px}.editor-dialog-actions .btn{min-width:103px}
+@keyframes editorIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:760px){
+ .line-item{grid-template-columns:minmax(0,1fr) 83px 35px;grid-template-areas:"lookup lookup remove" "desc desc desc" "qty price price";gap:5px 9px;padding:12px 0}
+ .line-item .field{font-size:12px}.line-item .field input,.line-item .field textarea{font-size:16px;padding:10px 12px}
+ .line-item .remove-line{align-self:center}.editor-form .field input,.editor-form .field select,.editor-form .field textarea{font-size:16px}
+ .editor-dialog{width:100%;max-width:100%;max-height:90dvh;padding:23px 18px calc(20px + env(safe-area-inset-bottom,0px));border-radius:19px 19px 0 0;top:auto;bottom:0;margin:0}
+ .editor-dialog #editor-dialog-text{min-height:210px;height:34dvh}.editor-dialog-actions .btn{flex:1;min-height:46px}
+}
+@media(prefers-reduced-motion:reduce){.editor-dialog[open]{animation:none}}
+
 @media print{
 @page{margin:12mm}
 body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mobile-nav,.footer,.panel,.toast,.receipt-stage>h2,.receipt-stage>.btn{display:none!important}
