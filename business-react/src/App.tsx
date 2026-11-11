@@ -506,7 +506,7 @@ export default function App(){
             <Empty text="No accessible legacy receipts were found in this account or browser. You may still use your old engine and export its history separately."/>}
           <p className="hint">Legacy records without proof of payment are never automatically counted as confirmed sales.</p></Panel>
       </>}
-    </main><footer className="page-footer">Bizlano · Your business, beautifully managed. <a href="../">Original MetaForge website</a></footer>
+    </main><footer className="page-footer"><span>© 2026 Bizlano · Powered by Global Web Stores</span><a className="parent-company" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" width="43" height="43" alt="Global Web Stores official logo" loading="lazy"/><span><strong>A Global Web Stores brand</strong><small>Explore Global Web Stores ↗</small></span></a></footer>
       <nav className="mobile-tabbar" aria-label="Quick navigation">
         {role!=='viewer'&&<button type="button" className={'mobile-tab '+(page==='overview'?'selected':'')} aria-current={page==='overview'?'page':undefined} onClick={()=>go('overview')}><span aria-hidden="true">⌂</span><small>Home</small></button>}
         <button type="button" className={'mobile-tab '+(page==='documents'?'selected':'')} aria-current={page==='documents'?'page':undefined} onClick={()=>go('documents')}><span aria-hidden="true">▤</span><small>Documents</small></button>
