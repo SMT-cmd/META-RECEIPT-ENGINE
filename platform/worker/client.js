@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -30,8 +30,6 @@ async function api(path,data){
 }
 async function attach(){
  if(!state.user?.emailVerified)return;
- const token=await state.user.getIdToken();
- await api('/auth',{token});
  state.me=await api('/me');
  const desired=new URL(location.href).searchParams.get('biz');
  const linked=state.me.businesses.find(b=>b.slug===desired)||state.me.businesses.find(b=>b.slug===state.biz?.slug)||state.me.businesses[0];
@@ -487,16 +485,16 @@ document.addEventListener('click',async ev=>{
  try{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
- if(action==='toggle-auth'){state.authMode=state.authMode==='login'?'register':'login';render();return}
+ if(action==='toggle-auth'){state.authMode=state.authMode==='register'?'login':'register';state.resetToken=null;render();return}
  if(action==='copy-recovery'){await copyShareText(recoveryHref());return}
  if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
- if(action==='logout'){await api('/logout',{});await signOut(auth);state.me=null;state.biz=null;render();return}
- if(action==='resend'){await sendEmailVerification(auth.currentUser);flash('Verification email requested. Check your inbox.');return}
+ if(action==='logout'){await api('/logout',{});if(auth.currentUser)await signOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;render();return}
+ if(action==='resend'){await api('/account/resend',{email:state.pendingEmail});flash('If your account needs verification, a new email will arrive.');return}
  if(action==='retry-connect'){state.connectError='';await attach();return}
- if(action==='refresh'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified)throw Error('Email is not yet verified.');await attach();return}
- if(action==='reset'){const address=prompt('Email for password reset');if(address){await sendPasswordResetEmail(auth,address);flash('Password reset email requested.')}return}
+ if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=null;await attach();return}
+ if(action==='reset'){state.authMode='forgot';render();return}
  if(el.dataset.template){state.templateChoice=el.dataset.template;render();return}
  if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field)field.value=el.dataset.accent;return}
  if(el.dataset.expandLine!==undefined||el.hasAttribute('data-edit-notes')){
@@ -569,8 +567,19 @@ document.addEventListener('submit',async ev=>{
  const kind=form.dataset.form;
  if(kind==='auth'){
   const address=val(form,'email'),password=val(form,'password');
-  if(state.authMode==='register'){const result=await createUserWithEmailAndPassword(auth,address,password);await sendEmailVerification(result.user);flash('Welcome to Bizlano! Check your email to confirm your free registration.')}
-  else await signInWithEmailAndPassword(auth,address,password);
+  if(state.authMode==='register'){
+   await api('/account/register',{email:address,password,name:val(form,'name')});
+   state.pendingEmail=address;flash('Your verification link has been sent.');loginScreen();
+  }else{
+   const result=await api('/account/login',{email:address,password});
+   state.user=result.user;state.pendingEmail=null;await attach();
+  }
+ }else if(kind==='forgot'){
+  await api('/account/reset-request',{email:val(form,'email')});
+  state.authMode='login';render();flash('If this account exists, a reset link will arrive.');
+ }else if(kind==='reset'){
+  const result=await api('/account/reset',{token:state.resetToken,password:val(form,'password')});
+  state.resetToken=null;state.user=result.user;history.replaceState(null,'','/app');await attach();
  }else if(kind==='business'){
   const name=val(form,'name');const slugValue=slug(val(form,'slug'));
   await api('/businesses',{name,slug:slugValue});state.me=await api('/me');state.biz=state.me.businesses.find(b=>b.slug===slugValue)||state.me.businesses[0];flash('Business workspace created.');await navigate('overview');
@@ -608,9 +617,15 @@ document.addEventListener('submit',async ev=>{
  }catch(err){flash(err.message,true)}
  finally{state.busy=false}
 });
-onAuthStateChanged(auth,async user=>{
- state.user=user;
- if(!user){state.me=null;state.biz=null;render();return}
- if(!user.emailVerified){state.me=null;loginScreen();return}
- try{state.connectError='';await attach()}catch(err){state.me=null;state.connectError=err.message||'Unable to reach the business workspace.';flash(state.connectError,true);render()}
-});
+async function nativeBoot(){
+ const params=new URL(location.href).searchParams;
+ try{
+  const verify=params.get('verify');
+  if(verify){const result=await api('/account/verify',{token:verify});state.user=result.user;state.pendingEmail=null;history.replaceState(null,'','/app');}
+  else if(params.get('reset')){state.resetToken=params.get('reset');loginScreen();return;}
+  else {const result=await api('/account/session');state.user=result.user;}
+  if(state.user){state.connectError='';await attach();}
+  else loginScreen();
+ }catch(err){state.me=null;state.connectError=err.message||'Sign-in was not completed';flash(state.connectError,true);loginScreen();}
+}
+nativeBoot();
