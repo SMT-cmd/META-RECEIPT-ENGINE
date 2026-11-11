@@ -125,10 +125,10 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
- const scope=['expenses','targets'].includes(resource)?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':'view';
+ const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
@@ -190,6 +190,10 @@ async function api(req,env,url) {
    .bind(imported,skipped,JSON.stringify(issues.slice(0,15)),tenant,job.id).run();
   await audit(env,tenant,user,'legacy.imported',job.id);
   return json({imported,skipped,issues:issues.slice(0,15)});
+ }
+ if(resource==='trends'&&method==='GET'){
+  const r=await env.DB.prepare("SELECT issued_on AS day,kind,COUNT(*) AS count,SUM(total_minor) AS total_minor FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND issued_on>=date('now','-90 days') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice') GROUP BY issued_on,kind ORDER BY issued_on ASC LIMIT 500").bind(tenant).all();
+  return json({rows:r.results||[]});
  }
  if(resource==='overview'&&method==='GET'){
   const [docs,customers,products,expenses]=await env.DB.batch([
