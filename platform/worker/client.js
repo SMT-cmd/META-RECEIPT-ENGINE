@@ -51,7 +51,7 @@ async function load(){
  state.data=null;render();
  const t='/b/'+state.biz.slug;
  const section=state.view;
- let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section;
+ let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section==='gws'?'marketplace':section;
  if(section==='upgrade'){state.data={};render();return}
  if(section==='overview'){
   const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
@@ -100,13 +100,13 @@ const DESIGN_PALETTE=["#6935df","#212d52","#b18748","#168c78","#383c4b","#bc577b
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['alerts','♧','Receipt notifications'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
   if(v==='upgrade')return state.biz?.role==='owner';
-  if(v==='team'||v==='branding'||v==='design')return admin();
+  if(v==='team'||v==='branding'||v==='design'||v==='gws')return admin();
   if(v==='alerts')return true;
   if(v==='products'||v==='customers'||v==='payments')return edit();
   if(v==='create')return edit();return true;
@@ -287,6 +287,22 @@ async function importLegacy(archive,includeBrowser){
  flash('Import complete: '+imported+' review drafts staged. '+skipped+' skipped or previously imported.');
  await navigate('documents');
 }
+function globalWebstores(){
+ const info=state.data||{};
+ return heading('CONNECTED BUSINESS','Global Webstores + Bizlano','Connect your store once. Verified purchases can then prepare beautiful receipts in your business workspace.')+
+ '<div class="cols"><section class="panel"><div class="eyebrow">YOUR STORE CONNECTION</div><h2>'+(info.connected?'Your store is connected':'Connect Global Webstores')+'</h2>'+
+ (info.connected?'<div class="banner"><strong>Connected</strong><br>Store connection ID: '+e(info.vendorId)+'<br>Connected: '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Latest receipt: '+e(info.lastSaleAt):'Waiting for a new verified sale.')+'</div>'+
+ '<p class="muted">Paid orders can automatically prepare receipts with your saved document design. You will find them under Receipt notifications.</p><button class="btn" data-action="disconnect-gws">Disconnect this store</button>':
+ '<p class="muted">Open your Global Webstores vendor dashboard and choose <strong>Connect Bizlano</strong>. Generate a private connection code here and paste it in that dashboard. You will not need to share any account password.</p>'+
+ '<button class="btn primary" data-action="gws-code">Generate a secure connection code</button><div id="gws-link-result" class="banner hidden"></div>')+
+ '<div style="margin-top:18px"><a href="https://www.globalwebstores.com/dashboard" class="btn" target="_blank" rel="noopener noreferrer">Open Global Webstores dashboard ↗</a></div></section>'+
+ '<section class="panel"><h2>After every paid order</h2><div class="stack">'+
+ '<div class="rowcard"><span><strong>1. Payment verified</strong><small>Global Webstores confirms the sale before syncing.</small></span><span class="mini muted">Automatic</span></div>'+
+ '<div class="rowcard"><span><strong>2. Receipt prepared</strong><small>Bizlano generates a receipt using your saved template.</small></span><span class="mini muted">Automatic</span></div>'+
+ '<div class="rowcard"><span><strong>3. You receive an update</strong><small>Open Receipt notifications, print or share the document.</small></span><span class="mini muted">Free</span></div>'+
+ '<div class="rowcard"><span><strong>4. Send it to your customer</strong><small>Share a PDF or send it through your preferred messaging app.</small></span><span class="mini muted">Your choice</span></div></div>'+
+ '<p class="mini muted" style="margin-top:14px">Customer email automation and advanced delivery settings will be introduced separately, once tested and approved.</p></section></div>';
+}
 function designStudio(){
  const design=state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1};
  const current=state.templateChoice||design.template;
@@ -340,7 +356,7 @@ function receipt(doc,number,stored=false){
  let subtotal=0;const rows=lines.filter(i=>i.description).map(i=>{const total=Number(i.price)*Number(i.qty);subtotal+=total;return '<tr><td>'+e(i.description)+'</td><td>'+e(i.qty)+'</td><td>'+oldMoney(total)+'</td></tr>'}).join('');
  const discount=Math.round(subtotal*(Number(doc.discountPct)||0))/100,vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
  const total=stored?doc.total_minor/100:subtotal-discount+vat+Number(doc.shipping||0);
- const template=String(doc.template||state.design?.template||'signature');const logo=state.biz.logo_url||state.data?.business?.logo_url||'';
+ const template=String(doc.template||state.design?.template||'signature');const logo=state.design?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
  const accent=/^#[0-9a-fA-F]{6}$/.test(state.design?.accent||'')?state.design.accent:'#6935df';
  const paper=state.design?.paper||'a4',contact=state.design?.contact||'',headerNote=state.design?.header_note||'',footerNote=state.design?.footer_note||'';
  return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
@@ -361,7 +377,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,gws:globalWebstores,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
@@ -394,6 +410,15 @@ document.addEventListener('click',async ev=>{
  if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field)field.value=el.dataset.accent;return}
  if(action==='preview-design'){const sample={kind:'receipt',template:state.templateChoice||state.design?.template||'signature',customer:'Sample customer',date:today(),items:[{description:'Sample product',qty:2,price:7500}],discountPct:0,taxPct:0,shipping:0,received:15000,notes:state.design?.footer_note};printPage(sample);return}
  if(el.dataset.readAlert){await api('/b/'+state.biz.slug+'/notifications',{id:el.dataset.readAlert});flash('Marked as read');await navigate('alerts');return}
+ if(action==='gws-code'){
+    const result=await api('/b/'+state.biz.slug+'/marketplace',{action:'link'});
+    const code=result.code;
+    const box=document.getElementById('gws-link-result');
+    box.classList.remove('hidden');box.innerHTML='<p class="mini">Valid for '+result.expiresInMinutes+' minutes. Never share publicly.</p><code style="display:block;overflow-wrap:anywhere;font-weight:800;user-select:all">'+e(code)+'</code><button class="btn" type="button" data-copy="'+e(code)+'">Copy connection code</button>';
+    return;
+ }
+ if(el.dataset.copy){await navigator.clipboard.writeText(el.dataset.copy);flash('Connection code copied.');return}
+ if(action==='disconnect-gws'){if(!confirm('Disconnect Global Webstores? New sales will stop preparing receipts in Bizlano.'))return;await api('/b/'+state.biz.slug+'/marketplace',{action:'disconnect'});flash('Store disconnected.');await navigate('gws');return}
  if(action==='scan-legacy'){await scanLegacy();return}
  if(action==='download-legacy'){downloadLegacy();return}
  if(action==='import-scanned'){if(!state.backupReady)throw Error('Download a backup before importing');await importLegacy(state.legacyArchive,false);return}
