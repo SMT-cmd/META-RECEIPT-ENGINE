@@ -64,6 +64,92 @@ async function member(env,user,slug,perm='view'){
 }
 const cashier=(t,kind)=>{if(t.role==='cashier'&&!receiptTypes.has(kind))fail(403,'Cashier may only issue receipts')};
 async function audit(env,t,u,action,id){await env.DB.prepare('INSERT INTO audit_events(id,tenant_id,user_id,action,resource_type,resource_id) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),t,u.id,action,'bizlano',id).run()}
+const BRIDGE_PATH='/api/integrations/gws/';
+async function verifyMarketplaceSignature(req,env){
+ if(!env.GWS_BRIDGE_SECRET||String(env.GWS_BRIDGE_SECRET).length<32)fail(503,'Marketplace connector is not configured');
+ const ts=req.headers.get('x-bizlano-timestamp')||'';
+ if(!/^\d{10}$/.test(ts)||Math.abs(Date.now()/1000-Number(ts))>300)fail(401,'Expired marketplace signature');
+ const incoming=req.headers.get('x-bizlano-signature')||'';
+ if(!/^[a-f0-9]{64}$/.test(incoming))fail(401,'Invalid marketplace signature');
+ const body=await req.text();
+ if(body.length>100000)fail(413,'Marketplace event too large');
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.GWS_BRIDGE_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ const actual=hex(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(ts+'.'+body))));
+ let diff=0;for(let i=0;i<64;i++)diff|=incoming.charCodeAt(i)^actual.charCodeAt(i);
+ if(diff!==0)fail(401,'Invalid marketplace signature');
+ let data;try{data=JSON.parse(body)}catch{fail(400,'Invalid marketplace message')}
+ if(!data||typeof data!=='object'||Array.isArray(data))fail(400,'Invalid marketplace message');
+ return data;
+}
+async function marketplaceApi(req,env,url){
+ const suffix=url.pathname.slice(BRIDGE_PATH.length);
+ if(req.method!=='POST')fail(405,'Method not allowed');
+ const data=await verifyMarketplaceSignature(req,env);
+ const vendorId=field(data.vendorId,'vendor identity',160);
+ if(!/^[A-Za-z0-9_-]{6,150}$/.test(vendorId))fail(400,'Invalid marketplace business ID');
+ if(suffix==='status'){
+  const connection=await env.DB.prepare("SELECT t.slug,t.business_name,c.connected_at,c.last_sale_at FROM marketplace_connections c JOIN tenants t ON t.id=c.tenant_id WHERE c.provider='globalwebstores' AND c.vendor_id=? AND c.disconnected_at IS NULL AND t.disabled_at IS NULL").bind(vendorId).first();
+  return json({connected:!!connection, business:connection?{name:connection.business_name,slug:connection.slug,workspace:new URL('/app?biz='+connection.slug,url.origin).toString(),connectedAt:connection.connected_at,lastSaleAt:connection.last_sale_at}:null});
+ }
+ if(suffix==='connect'){
+  const token=field(data.code,'connection code',100);
+  if(!/^[a-f0-9]{64}$/.test(token))fail(400,'Incorrect connection code');
+  const found=await env.DB.prepare("SELECT id,tenant_id FROM marketplace_link_codes WHERE provider='globalwebstores' AND code_hash=? AND redeemed_at IS NULL AND expires_at>datetime('now')").bind(await hash(token)).first();
+  if(!found)fail(409,'Connection code has expired or already been used');
+  const existing=await env.DB.prepare("SELECT tenant_id,vendor_id FROM marketplace_connections WHERE provider='globalwebstores' AND (vendor_id=? OR tenant_id=?)").bind(vendorId,found.tenant_id).all();
+  if(existing.results?.some(x=>x.vendor_id!==vendorId||x.tenant_id!==found.tenant_id))fail(409,'This business is connected to a different store. Disconnect it first.');
+  const change=await env.DB.prepare("UPDATE marketplace_link_codes SET redeemed_at=datetime('now'),redeemed_vendor_id=? WHERE id=? AND redeemed_at IS NULL AND expires_at>datetime('now') RETURNING tenant_id").bind(vendorId,found.id).first();
+  if(!change)fail(409,'Connection code has already been used');
+  await env.DB.prepare("INSERT INTO marketplace_connections(provider,vendor_id,tenant_id) VALUES('globalwebstores',?,?) ON CONFLICT(provider,vendor_id) DO UPDATE SET disconnected_at=NULL,connected_at=datetime('now')").bind(vendorId,found.tenant_id).run();
+  return json({connected:true,business:(await env.DB.prepare('SELECT slug,business_name FROM tenants WHERE id=?').bind(found.tenant_id).first())});
+ }
+ if(suffix==='disconnect'){
+  await env.DB.prepare("UPDATE marketplace_connections SET disconnected_at=datetime('now') WHERE provider='globalwebstores' AND vendor_id=? AND disconnected_at IS NULL").bind(vendorId).run();
+  return json({connected:false});
+ }
+ if(suffix==='event'){
+  if(data.type!=='order.paid')fail(400,'Only verified paid orders may create receipts');
+  const order=data.order;if(!order||typeof order!=='object')fail(400,'Order details missing');
+  const orderId=field(order.id,'order reference',90);
+  if(!/^[A-Za-z0-9_-]{6,80}$/.test(orderId)||order.currency!=='NGN'||!['PAID_ESCROW_HELD','BOOKED_FOR_DELIVERY','IN_TRANSIT','DELIVERED','CONFIRMED','COMPLETED'].includes(order.status)||order.legacyTestRecord===true)fail(400,'The order is not an eligible paid sale');
+  const amount=Number(order.totalMinor),qty=Number(order.quantity),delivery=Number(order.deliveryMinor||0),handling=Number(order.handlingMinor||0),processing=Number(order.processingMinor||0);
+  if(!Number.isSafeInteger(amount)||amount<=0||amount>100000000000||!Number.isInteger(qty)||qty<1||qty>100000||
+   ![delivery,handling,processing].every(x=>Number.isSafeInteger(x)&&x>=0)||delivery+handling+processing>amount)fail(400,'Invalid verified order totals');
+  const existing=await env.DB.prepare("SELECT document_id FROM marketplace_events WHERE provider='globalwebstores' AND provider_event_id=?").bind(orderId).first();
+  if(existing)return json({created:false,alreadyPrepared:true,documentId:existing.document_id});
+  const connection=await env.DB.prepare("SELECT c.tenant_id,t.slug,t.business_name FROM marketplace_connections c JOIN tenants t ON t.id=c.tenant_id WHERE c.provider='globalwebstores' AND c.vendor_id=? AND c.disconnected_at IS NULL AND t.disabled_at IS NULL").bind(vendorId).first();
+  if(!connection)return json({created:false,reason:'not_connected'});
+  const title=field(order.productTitle,'product title',210),docId=crypto.randomUUID(),customer=String(order.customerName||'Customer').trim().slice(0,140)||'Customer';
+  const emailAddress=typeof order.customerEmail==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.customerEmail)?order.customerEmail.trim().toLowerCase().slice(0,200):null;
+  const itemAmount=amount-delivery-handling-processing,unit=Math.floor(itemAmount/qty),remainder=itemAmount-unit*qty;
+  const lines=[{desc:title,qty:qty*1000,unit,amount:unit*qty}];
+  if(remainder>0)lines.push({desc:'Price rounding',qty:1000,unit:remainder,amount:remainder});
+  if(handling>0)lines.push({desc:'Marketplace handling',qty:1000,unit:handling,amount:handling});
+  if(processing>0)lines.push({desc:'Payment processing',qty:1000,unit:processing,amount:processing});
+  const documentNumber='GWS-'+orderId.slice(0,32).toUpperCase();
+  const design=await env.DB.prepare("SELECT template FROM tenant_designs WHERE tenant_id=?").bind(connection.tenant_id).first();
+  const customerExisting=emailAddress?await env.DB.prepare("SELECT id FROM customers WHERE tenant_id=? AND email=? LIMIT 1").bind(connection.tenant_id,emailAddress).first():null;
+  const customerId=customerExisting?.id||crypto.randomUUID(),now=new Date(),issueDate=now.toISOString().slice(0,10);
+  const plans=[
+   env.DB.prepare("INSERT INTO marketplace_events(id,provider,provider_event_id,tenant_id,vendor_id,document_id,event_type,event_hash) VALUES(?,'globalwebstores',?,?,?,?,?,?)").bind(crypto.randomUUID(),orderId,connection.tenant_id,vendorId,docId,'order.paid',await hash(JSON.stringify(order))),
+   ...(!customerExisting?[env.DB.prepare("INSERT INTO customers(id,tenant_id,name,email,phone) VALUES(?,?,?,?,?)").bind(customerId,connection.tenant_id,customer,emailAddress,String(order.customerPhone||'').slice(0,70))]:[]),
+   env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?,'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
+    .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
+  ];
+  for(const line of lines)plans.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(),connection.tenant_id,docId,line.desc,line.qty,line.unit,line.amount));
+  plans.push(env.DB.prepare("INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,reference,recorded_by) SELECT ?,?,?,?,?,?,created_by FROM tenants WHERE id=?")
+    .bind(crypto.randomUUID(),connection.tenant_id,docId,amount,'Global Webstores',String(order.paymentReference||orderId).slice(0,140),connection.tenant_id));
+  plans.push(env.DB.prepare("INSERT INTO receipt_notifications(id,tenant_id,document_id,kind,title,body) VALUES(?,?,?,'receipt_ready',?,?)")
+   .bind(crypto.randomUUID(),connection.tenant_id,docId,'Your Global Webstores receipt is ready','Paid order '+orderId+' · '+title+' · Open, print or share.'));
+  plans.push(env.DB.prepare("UPDATE marketplace_connections SET last_sale_at=datetime('now') WHERE provider='globalwebstores' AND vendor_id=? AND tenant_id=?")
+    .bind(vendorId,connection.tenant_id));
+  try{await env.DB.batch(plans)}
+  catch(e){if(String(e).toLowerCase().includes('unique')){const done=await env.DB.prepare("SELECT document_id FROM marketplace_events WHERE provider='globalwebstores' AND provider_event_id=?").bind(orderId).first();if(done)return json({created:false,alreadyPrepared:true,documentId:done.document_id})}throw e}
+  return json({created:true,documentId:docId,documentNumber,workspace:new URL('/app?biz='+connection.slug,url.origin).toString()},201);
+ }
+ fail(404,'Unknown marketplace action');
+}
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
@@ -87,6 +173,7 @@ async function api(req,env,url) {
   if(token)await env.DB.prepare("UPDATE sessions SET revoked_at=datetime('now') WHERE token_hash=?").bind(await hash(token)).run();
   return json({ok:true},200,{'set-cookie':sessionCookie('',0)});
  }
+ if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
  if(path==='/api/me'&&method==='GET'){
   const businesses=await env.DB.prepare('SELECT t.slug,t.business_name,t.currency,t.logo_url,t.brand_color,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=? AND m.disabled_at IS NULL AND t.disabled_at IS NULL ORDER BY t.created_at DESC').bind(user.id).all();
@@ -195,6 +282,26 @@ async function api(req,env,url) {
  if(resource==='trends'&&method==='GET'){
   const r=await env.DB.prepare("SELECT issued_on AS day,kind,COUNT(*) AS count,SUM(total_minor) AS total_minor FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND issued_on>=date('now','-90 days') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice') GROUP BY issued_on,kind ORDER BY issued_on ASC LIMIT 500").bind(tenant).all();
   return json({rows:r.results||[]});
+ }
+ if(resource==='marketplace'){
+  if(method==='GET'){
+   const c=await env.DB.prepare("SELECT vendor_id,connected_at,last_sale_at FROM marketplace_connections WHERE provider='globalwebstores' AND tenant_id=? AND disconnected_at IS NULL").bind(tenant).first();
+   return json({connected:!!c, vendorId:c?.vendor_id||null, connectedAt:c?.connected_at||null,lastSaleAt:c?.last_sale_at||null});
+  }
+  if(method==='POST'){
+   const b=await input(req),action=String(b.action||'link');
+   if(action==='disconnect'){
+    await env.DB.prepare("UPDATE marketplace_connections SET disconnected_at=datetime('now') WHERE provider='globalwebstores' AND tenant_id=? AND disconnected_at IS NULL").bind(tenant).run();
+    await audit(env,tenant,user,'marketplace.disconnected',tenant);
+    return json({connected:false});
+   }
+   if(action!=='link')fail(400,'Unsupported connection request');
+   const token=rnd();
+   await env.DB.prepare("INSERT INTO marketplace_link_codes(id,tenant_id,code_hash,provider,created_by,expires_at) VALUES(?,?,?,'globalwebstores',?,datetime('now','+30 minutes'))")
+    .bind(crypto.randomUUID(),tenant,await hash(token),user.id).run();
+   await audit(env,tenant,user,'marketplace.link_code_issued',tenant);
+   return json({code:token,expiresInMinutes:30});
+  }
  }
  if(resource==='design'){
   if(method==='GET'){
@@ -395,7 +502,7 @@ export default {async fetch(req,env){
  if(!p.startsWith('/api/'))return new Response('Not found',{status:404});
  if(!['GET','POST'].includes(req.method))return json({error:'Method not allowed'},405);
  if(req.method==='POST'){
-  if(req.headers.get('origin')!==url.origin)return json({error:'Cross-site request denied'},403);
+  if(!p.startsWith(BRIDGE_PATH)&&req.headers.get('origin')!==url.origin)return json({error:'Cross-site request denied'},403);
   if(!p.endsWith('/logo')&&!req.headers.get('content-type')?.includes('application/json'))return json({error:'Expected JSON'},415);
  }
  try{return await api(req,env,url)}catch(e){
