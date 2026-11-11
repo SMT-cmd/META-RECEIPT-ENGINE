@@ -198,6 +198,7 @@ export default function App(){
   const [businesses,setBusinesses]=useState<Business[]>([]),[business,setBusiness]=useState<Business|null>(null),[member,setMember]=useState<Member|null>(null);
   const [workspace,setWorkspace]=useState<WorkspaceData>(emptyWorkspace),[page,setPage]=useState<Page>('overview'),[mobile,setMobile]=useState(false);
   const [document,setDocument]=useState<BusinessDocument>(()=>newDocument(emptyWorkspace()));
+  const [pendingPrintId,setPendingPrintId]=useState<string|null>(null);
   const [profile,setProfile]=useState<BusinessProfile>(emptyWorkspace().profile);
   const [busy,setBusy]=useState(false),[message,setMessage]=useState<{text:string;error:boolean}|null>(null);
   const [search,setSearch]=useState(''),[filter,setFilter]=useState('all');
@@ -213,6 +214,15 @@ export default function App(){
     return ()=>window.removeEventListener('keydown',close);
   },[mobile]);
   useEffect(()=>{if(member?.role==='viewer'&&page==='overview')setPage('documents');},[member?.role,page]);
+  // Print only after React has committed the selected receipt into the preview.
+  useEffect(()=>{
+    if(!pendingPrintId||page!=='create'||document.id!==pendingPrintId)return;
+    const frame=requestAnimationFrame(()=>{
+      if(globalThis.document.getElementById('printable-receipt'))window.print();
+      setPendingPrintId(null);
+    });
+    return ()=>cancelAnimationFrame(frame);
+  },[pendingPrintId,page,document.id]);
   const totals=useMemo(()=>summarize(workspace),[workspace]);
   const alert=(e:unknown)=>setMessage({text:asError(e),error:true});
   const note=(text:string)=>setMessage({text,error:false});
@@ -306,7 +316,7 @@ export default function App(){
       {!compact&&<td><div className="table-actions">
         {canEditDocument(role,d.type,d.draft)&&!d.voided&&<button onClick={()=>edit(d)}>Edit</button>}
         {canCreateType(role,d.type)&&<button onClick={()=>clone(d)}>Copy</button>}
-        <button onClick={()=>{edit(d);setTimeout(()=>window.print(),150);}}>Print</button>
+        <button onClick={()=>{edit(d);setPendingPrintId(d.id);}}>Print</button>
         <button onClick={()=>void share(d)}>Share</button>
         {canEditDocument(role,d.type,d.draft)&&!d.draft&&!d.voided&&BILLABLE_TYPES.has(d.type)&&calculate(d).balance>0&&<button onClick={()=>void payment(d)}>Payment</button>}
         {canAdmin(role)&&!d.voided&&d.paid===0&&<button onClick={()=>void voidDoc(d)}>Void</button>}
