@@ -210,6 +210,7 @@ function customerDocument(row,lines){
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
+ if(path.startsWith('/api/account/'))return nativeAuthApi(req,env,url);
  if(path==='/api/public/contact'&&method==='POST'){
   await limitAnonymousAttempt(env,'public-contact',req.headers.get('cf-connecting-ip')||'unknown');
   const b=await input(req),topic=String(b.topic||'support'),address=email(b.email),message=field(b.message,'message',3000);
