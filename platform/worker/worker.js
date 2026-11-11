@@ -210,6 +210,14 @@ function customerDocument(row,lines){
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
+ if(path==='/api/public/contact'&&method==='POST'){
+  await limitAnonymousAttempt(env,'public-contact',req.headers.get('cf-connecting-ip')||'unknown');
+  const b=await input(req),topic=String(b.topic||'support'),address=email(b.email),message=field(b.message,'message',3000);
+  if(!['support','privacy','security','billing'].includes(topic)||message.length<12)fail(400,'Choose a topic and write at least 12 characters');
+  await env.DB.prepare('INSERT INTO support_requests(id,topic,sender_email,message) VALUES(?,?,?,?)')
+   .bind(crypto.randomUUID(),topic,address,message).run();
+  return json({ok:true},202);
+ }
  if(path==='/api/customer/phone-register'&&method==='POST'){
   await limitAnonymousAttempt(env,'phone-register',req.headers.get('cf-connecting-ip')||'unknown');
   const b=await input(req),contact=phone(b.phone),displayName=field(b.name,'customer name',120),password=b.password;
