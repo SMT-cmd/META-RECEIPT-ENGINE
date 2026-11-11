@@ -333,7 +333,7 @@ function docEditor(){
  return heading('DOCUMENT STUDIO','Create a business document','Live preview, flexible details and professionally branded output.')+
  '<div class="editor"><section class="panel editor-form"><form data-form="document">'+
  '<h2>01 · Document and style</h2><div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+input('Due date','dueDate','date')+select('Template','template',tpl.map(x=>[x.split('-').join('-'),x.split('-').map(y=>y.charAt(0).toUpperCase()+y.slice(1)).join(' ')]),state.design?.template||'signature')+'</div>'+
- '<h2>02 · Customer information</h2>'+input('Customer or recipient','customer','text','Walk-in customer',true)+
+ '<h2>02 · Customer information</h2>'+input('Customer or recipient','customer','text','Walk-in customer',true)+input('Customer email for receipt recovery','customerEmail','email')+'<p class="mini muted">Add the email the customer uses for purchases. They can securely find this receipt later from the Bizlano homepage.</p>'+
  '<h2>03 · Products and services</h2><datalist id="products-data">'+state.products.map(p=>'<option value="'+e(p.name)+'"></option>').join('')+'</datalist><div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div><button class="btn ghost" type="button" data-action="add-line">+ Add item</button>'+
  '<h2 style="margin-top:25px">04 · Charges and payments</h2><div class="form-grid">'+input('Discount (%)','discountPct','number','0',false,'min="0" max="100" step=".01"')+input('VAT / Tax (%)','taxPct','number','0',false,'min="0" max="100" step=".01"')+input('Other charges (₦)','shipping','number','0',false,'min="0" step=".01"')+input('Received (₦)','received','number','0',false,'min="0" step=".01"')+'</div>'+select('Payment method','method',[['Bank transfer','Bank transfer'],['Cash','Cash'],['POS terminal','POS terminal'],['Other','Other']])+
  '<label class="field">Notes<textarea name="notes">Thank you for your business.</textarea></label>'+
@@ -349,7 +349,7 @@ function lineHtml(item,n){
 function currentDoc(){
  const f=document.querySelector('[data-form=document]');if(!f)return null;
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
- return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),customer:val(f,'customer'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
+ return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
 function receipt(doc,number,stored=false){
  const lines=doc.items||[];
@@ -360,10 +360,10 @@ function receipt(doc,number,stored=false){
  const accent=/^#[0-9a-fA-F]{6}$/.test(state.design?.accent||'')?state.design.accent:'#6935df';
  const paper=state.design?.paper||'a4',contact=state.design?.contact||'',headerNote=state.design?.header_note||'',footerNote=state.design?.footer_note||'';
  return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
- '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div></div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
+ '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
  '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
- '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p><div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
+ '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at bizlano.pages.dev/receipts</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
