@@ -113,6 +113,18 @@ async function api(req,env,url) {
   ]);
   return json({ok:true});
  }
+ const detail=path.match(/^\/api\/b\/([a-z0-9-]+)\/doc\/([a-f0-9-]{36})$/);
+ if(detail&&method==='GET'){
+  const tenant=await member(env,user,detail[1]);
+  const d=await env.DB.prepare('SELECT * FROM documents WHERE tenant_id=? AND id=?').bind(tenant.id,detail[2]).first();
+  if(!d)fail(404,'Document not found in this business');
+  const items=await env.DB.prepare('SELECT product_id,description,quantity_milli,unit_price_minor,line_total_minor FROM document_lines WHERE tenant_id=? AND document_id=? ORDER BY rowid').bind(tenant.id,detail[2]).all();
+  return json({document:{...d,customer:d.recipient_name,date:d.issued_on,received:d.paid_minor/100,
+   items:(items.results||[]).map(i=>({description:i.description,qty:i.quantity_milli/1000,price:i.unit_price_minor/100,productId:i.product_id})),
+   discountPct:d.subtotal_minor?d.discount_minor*100/d.subtotal_minor:0,
+   taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
+   shipping:d.shipping_minor/100}});
+ }
  const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
