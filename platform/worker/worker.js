@@ -1,4 +1,4 @@
-import {html,landing,client,icon} from './ui.js';
+import {html,landing,client,icon,customerHtml,customerJs} from './ui.js';
 const project='metaforge-6afdf';
 const issuer='https://securetoken.google.com/'+project;
 const jwks='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
@@ -224,7 +224,8 @@ async function api(req,env,url) {
    .bind(user.id,privateDetail[1],user.email.toLowerCase()).first();
   if(!row)fail(404,'Receipt is not available for this account');
   const lines=await env.DB.prepare('SELECT description,quantity_milli,unit_price_minor,line_total_minor FROM document_lines WHERE tenant_id=? AND document_id=? ORDER BY rowid LIMIT 100').bind(row.tenant_id,row.id).all();
-  return json({receipt:customerDocument(row,lines.results)});
+  const code=await ensureRecoveryCode(env,row.tenant_id,row.id,true);
+  return json({receipt:{...customerDocument(row,lines.results),recoveryCode:code}});
  }
  if(path==='/api/customer/claim'&&method==='POST'){
   await limitRecoveryClaims(env,user.id);
@@ -549,6 +550,8 @@ export default {async fetch(req,env){
   return Response.redirect(new URL('/app?biz='+encodeURIComponent(biz),url.origin),302);
  }
 
+ if(req.method==='GET'&&(p==='/receipts'||p==='/receipts/'))return new Response(customerHtml,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','referrer-policy':'strict-origin-when-cross-origin'}});
+ if(req.method==='GET'&&p==='/customer.js')return new Response(customerJs,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
  if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
