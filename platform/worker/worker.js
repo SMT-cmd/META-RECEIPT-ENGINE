@@ -5,6 +5,7 @@ const jwks='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@syste
 const billable=new Set(['receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice']);
 const receiptTypes=new Set(['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt','rent-receipt','school-fees','medical-receipt']);
 const types=new Set([...billable,'quotation','estimate','proforma','purchase-order','delivery-note','credit-note','debit-note','custom']);
+const TEMPLATES=new Set(["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"]);
 const roles=['owner','admin','manager','accountant','cashier','sales','viewer'];
 const access={view:roles,edit:['owner','admin','manager','accountant','cashier','sales'],stock:['owner','admin','manager'],finance:['owner','admin','manager','accountant'],admin:['owner','admin'],owner:['owner']};
 const reserved=['www','api','auth','app','admin','billing','support','bizlano','metaforge','timi'];
@@ -125,10 +126,10 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
- const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void'].includes(resource)?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
+ const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
@@ -195,6 +196,35 @@ async function api(req,env,url) {
   const r=await env.DB.prepare("SELECT issued_on AS day,kind,COUNT(*) AS count,SUM(total_minor) AS total_minor FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND issued_on>=date('now','-90 days') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice') GROUP BY issued_on,kind ORDER BY issued_on ASC LIMIT 500").bind(tenant).all();
   return json({rows:r.results||[]});
  }
+ if(resource==='design'){
+  if(method==='GET'){
+   const design=await env.DB.prepare("SELECT template,accent,paper,header_note,footer_note,contact,show_logo FROM tenant_designs WHERE tenant_id=?").bind(tenant).first();
+   return json({design:design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1},templates:[...TEMPLATES]});
+  }
+  if(method==='POST'){
+   const b=await input(req),template=field(b.template,'receipt design',40),paper=String(b.paper||'a4'),accent=String(b.accent||'#6935df');
+   if(!TEMPLATES.has(template))fail(400,'Choose a supported document design');
+   if(!/^(a4|letter|80mm|58mm)$/.test(paper))fail(400,'Choose a supported paper size');
+   if(!/^#[0-9a-fA-F]{6}$/.test(accent))fail(400,'Select a six-digit color');
+   const note=String(b.footerNote||'Thank you for your business.').trim().slice(0,300),
+    contact=String(b.contact||'').trim().slice(0,240),header=String(b.headerNote||'').trim().slice(0,150);
+   await env.DB.prepare("INSERT INTO tenant_designs(tenant_id,template,accent,paper,header_note,footer_note,contact,show_logo,updated_by) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET template=excluded.template,accent=excluded.accent,paper=excluded.paper,header_note=excluded.header_note,footer_note=excluded.footer_note,contact=excluded.contact,show_logo=excluded.show_logo,updated_by=excluded.updated_by,updated_at=datetime('now')")
+    .bind(tenant,template,accent.toLowerCase(),paper,header,note,contact,b.showLogo===false?0:1,user.id).run();
+   await audit(env,tenant,user,'design.updated',tenant);
+   return json({ok:true,template,paper,accent});
+  }
+ }
+ if(resource==='notifications'){
+  if(method==='GET'){
+   const r=await env.DB.prepare("SELECT id,document_id,kind,title,body,created_at,read_at FROM receipt_notifications WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100").bind(tenant).all();
+   return json({rows:r.results||[]});
+  }
+  if(method==='POST'){
+   const b=await input(req),id=field(b.id,'notification',60);
+   await env.DB.prepare("UPDATE receipt_notifications SET read_at=datetime('now') WHERE id=? AND tenant_id=? AND read_at IS NULL").bind(id,tenant).run();
+   return json({ok:true});
+  }
+ }
  if(resource==='overview'&&method==='GET'){
   const [docs,customers,products,expenses]=await env.DB.batch([
    env.DB.prepare("SELECT count(*) AS count,coalesce(sum(total_minor),0) AS total,coalesce(sum(paid_minor),0) AS paid FROM documents WHERE tenant_id=? AND status NOT IN ('draft','voided') AND kind IN ('receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice')").bind(tenant),
@@ -226,6 +256,9 @@ async function api(req,env,url) {
   if(method==='POST'){
    await member(env,user,slug,'edit');
    const b=await input(req),kind=field(b.kind,'document type',60),items=b.items;
+   const preferred=await env.DB.prepare('SELECT template FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
+   const selectedTemplate=String(b.template||preferred?.template||'signature');
+   if(!TEMPLATES.has(selectedTemplate))fail(400,'Unsupported document design');
    if(!types.has(kind))fail(400,'Invalid document type');
    cashier(t,kind);
    if(!Array.isArray(items)||items.length<1||items.length>100)fail(400,'Add at least one line item');
@@ -245,7 +278,7 @@ async function api(req,env,url) {
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
    const did=crypto.randomUUID(),number=kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,String(b.template||'signature').slice(0,40),String(b.customer||'Walk-in').slice(0,120),date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));
    try{await env.DB.batch(batch)}catch(e){if(String(e).includes('stock'))fail(409,'Insufficient stock to issue document');throw e}
