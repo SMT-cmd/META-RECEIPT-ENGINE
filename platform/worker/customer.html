@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light;--navy:#1e2546;--purple:#6634dd;--muted:#78859c;--line:#e6e9f1;--background:#fafaff;font-family:'DM Sans',system-ui,-apple-system,sans-serif}
+:root{color-scheme:light;--navy:#1e2546;--purple:#6634dd;--muted:#56647f;--line:#e6e9f1;--background:#fafaff;font-family:'DM Sans',system-ui,-apple-system,sans-serif}
 *,*:before,*:after{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--background);color:var(--navy);-webkit-font-smoothing:antialiased}
 button,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.65;cursor:not-allowed}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #af92f7;outline-offset:3px}
 a{color:inherit;text-decoration:none}h1,h2,h3{font-family:Manrope,system-ui,sans-serif;letter-spacing:-.045em;margin:0}h1{font-size:clamp(30px,5vw,45px);line-height:1.2}h2{font-size:23px}h3{font-size:17px}
@@ -57,6 +57,13 @@ footer{border-top:1px solid var(--line);background:#fff;padding:24px 0;color:#82
 @media(max-width:480px){.container{width:calc(100% - 28px)}header{min-height:66px}.brand{font-size:19px}.brand img{width:34px;height:34px}.top-actions{gap:9px}.top-actions a{font-size:11px}.hero h1{font-size:32px}.claim{grid-template-columns:1fr}.claim .button{width:100%}.stats{gap:7px}.stat{padding:13px}.stat strong{font-size:21px}.panel{padding:17px}.drawer{padding:0}.drawer-inner{border-radius:0;min-height:100dvh}.document{padding:17px}.document-header h2{font-size:16px}.document-header strong{font-size:18px}}
 @media print{@page{margin:12mm}html,body{background:#fff!important}.topbar,.hero,.dashboard,.auth-root,footer,.drawer .modal-actions,#toast{display:none!important}.drawer{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important}.drawer-inner{box-shadow:none!important;border:0!important;width:100%!important;padding:0!important}.document{border:0!important;box-shadow:none!important;margin:0!important;padding:0!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.document-footer{display:block!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media screen{
+.receipt-meta,.receipt-desc,.merchant small{color:#4f5e77}
+p,small,.muted{line-height:1.65}
+.field input::placeholder,.toolbar input::placeholder{color:#60708a;opacity:1}
+}
+@media screen and (max-width:760px){.field input,.toolbar input{font-size:16px}.button{min-height:45px}}
+
 </style>
 </head>
 <body>
