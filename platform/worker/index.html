@@ -6,7 +6,7 @@
 <link rel="icon" href="/assets/bizlano-mark.png" type="image/png"><title>Bizlano Workspace — Your business, beautifully managed</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
-:root{font-family:'DM Sans',system-ui,sans-serif;--ink:#172040;--muted:#7f8ba2;--line:#e6e9f1;--purple:#6933e6;--background:#f7f8fc;background:var(--background);color:var(--ink)}
+:root{font-family:'DM Sans',system-ui,sans-serif;--ink:#172040;--muted:#56647f;--line:#e6e9f1;--purple:#6933e6;--background:#f7f8fc;background:var(--background);color:var(--ink)}
 *{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
 button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #ac87f7;outline-offset:2px}a{color:inherit}
 h1,h2,h3{font-family:Manrope,system-ui,sans-serif;letter-spacing:-.6px}h1{font-size:clamp(23px,3vw,34px);margin:5px 0}h2{font-size:17px;margin:0 0 11px}h3{font-size:14px;margin:10px 0}.muted{color:var(--muted);line-height:1.65}.mini{font-size:11px}.eyebrow{font-size:10px;font-weight:800;color:#7d49d8;letter-spacing:1.6px}
@@ -199,6 +199,26 @@ body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mo
 .receipt table{display:table!important}.receipt tr{break-inside:avoid}.receipt .powered{display:block!important}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media screen{
+.field input::placeholder,.field textarea::placeholder,.field select::placeholder{color:#63718a;opacity:1}
+.field input,.field select,.field textarea{color:#192541}
+.muted{color:#56647f}.eyebrow{color:#6235b6}
+.receipt .r-small{color:#58657c}
+.btn{min-height:44px}
+.recovery-share{border-top:1px solid #e6e9f1;padding-top:12px;margin-top:12px}
+.recovery-share .recovery-link{font-size:13px;color:#26334e;font-weight:650;background:#f7f8fd}
+.recovery-share .row{margin:10px 0;align-items:stretch}
+.recovery-share .row .btn{white-space:normal;text-align:center}
+.recovery-business-link{color:#5633b8;font-weight:750;text-decoration:underline;text-underline-offset:2px}
+.recovery-quick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 14px;background:#f6f3ff;border:1px solid #e8defc;border-radius:11px;margin-bottom:18px}
+.recovery-quick strong{font-size:13px}.recovery-quick span{font-size:12px;color:#58647d;flex:1}
+}
+@media screen and (max-width:760px){
+.field input,.field select,.field textarea{font-size:16px}
+.recovery-quick .btn{flex:1;min-width:125px}
+.recovery-share .row .btn{flex:1;min-width:160px}
+}
+
 </style>
 </head>
 <body><div id="app"><div class="empty">Loading Bizlano securely…</div></div><div id="toast" class="toast hidden" role="status" aria-live="polite"></div><script type="module" src="/client.js"></script></body>
