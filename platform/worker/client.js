@@ -485,7 +485,7 @@ document.addEventListener('click',async ev=>{
  try{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
- if(action==='toggle-auth'){state.authMode=state.authMode==='register'?'login':'register';state.resetToken=null;render();return}
+ if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;render();return}
  if(action==='copy-recovery'){await copyShareText(recoveryHref());return}
  if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}

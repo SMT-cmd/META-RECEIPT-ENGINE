@@ -50,7 +50,7 @@ async function nativeAuthApi(req,env,url){
    env.DB.prepare('INSERT INTO users(id,email,display_name,password_hash,password_salt) VALUES(?,?,?,?,?)').bind(id,address,name,digest,salt),
    env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'verify_email',datetime('now','+20 minutes'))").bind(await hash(token),id)
   ]);
-  await nativeSend(env,address,'verify_email',name,url.origin+'/app?verify='+encodeURIComponent(token),url.origin);
+  await nativeSend(env,address,'verify_email',name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),url.origin);
   return json({ok:true,verificationRequired:true},201);
  }
  if(path==='/api/account/resend'){
@@ -59,7 +59,7 @@ async function nativeAuthApi(req,env,url){
   const address=email(b.email),user=await env.DB.prepare('SELECT id,email,display_name,email_verified_at FROM users WHERE email=? COLLATE NOCASE AND disabled_at IS NULL').bind(address).first();
   if(user&&!user.email_verified_at&&user.password_hash!=='firebase'){
    const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'verify_email',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();
-   await nativeSend(env,address,'verify_email',user.display_name,url.origin+'/app?verify='+encodeURIComponent(token),url.origin);
+   await nativeSend(env,address,'verify_email',user.display_name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),url.origin);
   }
   return json({ok:true});
  }
@@ -89,7 +89,7 @@ async function nativeAuthApi(req,env,url){
   nativeEmailConfig(env);
   await limitAnonymousAttempt(env,'password-reset',remote);
   const address=email(b.email),user=await env.DB.prepare("SELECT id,email,display_name FROM users WHERE email=? COLLATE NOCASE AND password_hash!='firebase' AND disabled_at IS NULL AND email_verified_at IS NOT NULL").bind(address).first();
-  if(user){const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'reset_password',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();await nativeSend(env,address,'reset_password',user.display_name,url.origin+'/app?reset='+encodeURIComponent(token),url.origin)}
+  if(user){const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'reset_password',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();await nativeSend(env,address,'reset_password',user.display_name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?reset='+encodeURIComponent(token),url.origin)}
   return json({ok:true});
  }
  if(path==='/api/account/reset'){

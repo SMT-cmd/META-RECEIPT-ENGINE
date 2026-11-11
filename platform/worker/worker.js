@@ -248,30 +248,17 @@ async function api(req,env,url) {
   await env.DB.prepare("INSERT INTO recovery_attempts(attempt_key,count,period_start) VALUES(?,1,?) ON CONFLICT(attempt_key) DO UPDATE SET count=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN 1 ELSE recovery_attempts.count+1 END,period_start=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN excluded.period_start ELSE recovery_attempts.period_start END,updated_at=datetime('now')").bind(key,now).run();
   const attempts=await env.DB.prepare("SELECT count FROM recovery_attempts WHERE attempt_key=?").bind(key).first();
   if((attempts?.count||0)>8)fail(429,'Too many sign-in attempts. Please wait 15 minutes.');
-  const account=await env.DB.prepare("SELECT id,email,password_hash,password_salt FROM users WHERE contact_phone=? AND disabled_at IS NULL").bind(alias).first();
+  const account=await env.DB.prepare("SELECT id,email,password_hash,password_salt,email_verified_at FROM users WHERE contact_phone=? AND disabled_at IS NULL").bind(alias).first();
   if(!account||!account.email)fail(401,'Phone number or password is incorrect');
-  if(account.email.endsWith('@accounts.bizlano.invalid')){
-   if(account.password_hash==='firebase'||!account.password_salt||!password)fail(401,'Phone number or password is incorrect');
-   const digest=await passwordDigest(password,account.password_salt);
-   let different=0;for(let i=0;i<64;i++)different|=(digest.charCodeAt(i)^account.password_hash.charCodeAt(i));
-   if(different!==0)fail(401,'Phone number or password is incorrect');
-   const session=rnd();
-   await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(session),account.id).run();
-   return json({phoneOnly:true},200,{'set-cookie':sessionCookie(session,604800)});
-  }
-  let result;
-  try{
-   result=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',{
-    method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({email:account.email,password,returnSecureToken:true}),signal:AbortSignal.timeout(8500)
-   });
-  }catch{fail(503,'Sign-in service is temporarily unavailable')}
-  if(!result.ok)fail(401,'Phone number or password is incorrect');
-  const verified=await result.json();
-  if(!verified.idToken)fail(401,'Phone number or password is incorrect');
-  // The password was independently checked by Firebase. The caller still
-  // establishes its own Firebase session before accessing customer data.
-  return json({email:account.email});
+  if(account.password_hash==='firebase'||!account.password_salt)fail(401,'Phone number or password is incorrect');
+  const digest=await passwordDigest(password,account.password_salt);
+  let different=0;for(let i=0;i<64;i++)different|=digest.charCodeAt(i)^account.password_hash.charCodeAt(i);
+  if(different!==0)fail(401,'Phone number or password is incorrect');
+  const phoneOnly=account.email.endsWith('@accounts.bizlano.invalid');
+  if(!phoneOnly&&!account.email_verified_at)fail(403,'Confirm your account email before signing in');
+  const session=rnd();
+  await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(session),account.id).run();
+  return json({ok:true,phoneOnly},200,{'set-cookie':sessionCookie(session,604800)});
  }
  if(path==='/api/auth'&&method==='POST'){
   const claim=await verifyFirebase((await input(req)).token);
