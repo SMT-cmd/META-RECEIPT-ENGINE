@@ -88,7 +88,7 @@ async function api(req,env,url) {
  }
  const user=await identity(req,env);
  if(path==='/api/me'&&method==='GET'){
-  const businesses=await env.DB.prepare('SELECT t.slug,t.business_name,t.currency,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=? AND m.disabled_at IS NULL AND t.disabled_at IS NULL ORDER BY t.created_at DESC').bind(user.id).all();
+  const businesses=await env.DB.prepare('SELECT t.slug,t.business_name,t.currency,t.logo_url,t.brand_color,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=? AND m.disabled_at IS NULL AND t.disabled_at IS NULL ORDER BY t.created_at DESC').bind(user.id).all();
   return json({user:{email:user.email,name:user.display_name},businesses:businesses.results||[]});
  }
  if(path==='/api/businesses'&&method==='POST'){
