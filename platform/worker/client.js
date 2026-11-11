@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null,legacyArchive:null,backupReady:false};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -53,6 +53,10 @@ async function load(){
  const section=state.view;
  let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section;
  if(section==='upgrade'){state.data={};render();return}
+ if(section==='overview'){
+  const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
+  state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
+ }
  if(section==='create') {
   const [p,c]=await Promise.all([api(t+'/products'),api(t+'/customers')]);
   state.products=p.rows;state.customers=c.rows;state.data={};
