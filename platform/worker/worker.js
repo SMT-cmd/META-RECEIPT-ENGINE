@@ -320,10 +320,10 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|issue|void|migrate)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
- const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
+ const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
@@ -412,8 +412,9 @@ async function api(req,env,url) {
  }
  if(resource==='design'){
   if(method==='GET'){
-   const design=await env.DB.prepare("SELECT template,accent,paper,header_note,footer_note,contact,show_logo FROM tenant_designs WHERE tenant_id=?").bind(tenant).first();
-   return json({design:design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1},templates:[...TEMPLATES]});
+   const design=await env.DB.prepare("SELECT template,accent,paper,header_note,footer_note,contact,show_logo,show_signature FROM tenant_designs WHERE tenant_id=?").bind(tenant).first();
+   const signature=await env.DB.prepare('SELECT signature_url FROM tenants WHERE id=?').bind(tenant).first();
+   return json({design:{...(design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1,show_signature:0}),signature_url:signature?.signature_url||null},templates:[...TEMPLATES]});
   }
   if(method==='POST'){
    const b=await input(req),template=field(b.template,'receipt design',40),paper=String(b.paper||'a4'),accent=String(b.accent||'#6935df');
@@ -422,8 +423,8 @@ async function api(req,env,url) {
    if(!/^#[0-9a-fA-F]{6}$/.test(accent))fail(400,'Select a six-digit color');
    const note=String(b.footerNote||'Thank you for your business.').trim().slice(0,300),
     contact=String(b.contact||'').trim().slice(0,240),header=String(b.headerNote||'').trim().slice(0,150);
-   await env.DB.prepare("INSERT INTO tenant_designs(tenant_id,template,accent,paper,header_note,footer_note,contact,show_logo,updated_by) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET template=excluded.template,accent=excluded.accent,paper=excluded.paper,header_note=excluded.header_note,footer_note=excluded.footer_note,contact=excluded.contact,show_logo=excluded.show_logo,updated_by=excluded.updated_by,updated_at=datetime('now')")
-    .bind(tenant,template,accent.toLowerCase(),paper,header,note,contact,b.showLogo===false?0:1,user.id).run();
+   await env.DB.prepare("INSERT INTO tenant_designs(tenant_id,template,accent,paper,header_note,footer_note,contact,show_logo,show_signature,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET template=excluded.template,accent=excluded.accent,paper=excluded.paper,header_note=excluded.header_note,footer_note=excluded.footer_note,contact=excluded.contact,show_logo=excluded.show_logo,show_signature=excluded.show_signature,updated_by=excluded.updated_by,updated_at=datetime('now')")
+    .bind(tenant,template,accent.toLowerCase(),paper,header,note,contact,b.showLogo===false?0:1,b.showSignature===true?1:0,user.id).run();
    await audit(env,tenant,user,'design.updated',tenant);
    return json({ok:true,template,paper,accent});
   }
@@ -557,6 +558,20 @@ async function api(req,env,url) {
   await env.DB.prepare("INSERT INTO invitations(id,tenant_id,email,role,token_hash,created_by,expires_at) VALUES(?,?,?,?,?,?,datetime('now','+7 days'))").bind(crypto.randomUUID(),tenant,to,role,await hash(token),user.id).run();
   return json({url:new URL('/join?token='+token,req.url).toString()},201);
  }
+ if(resource==='signature'&&method==='POST'){
+  const ct=req.headers.get('content-type');
+  if(!['image/png','image/jpeg','image/webp'].includes(ct))fail(400,'Use a transparent PNG, JPEG or WebP signature');
+  const content=await req.arrayBuffer();
+  if(content.byteLength<30||content.byteLength>400000)fail(413,'Signature image must be under 400 KB');
+  const bytes=new Uint8Array(content);
+  const png=bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71;
+  const jpeg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+  const webp=bytes[0]===82&&bytes[1]===73&&bytes[2]===70&&bytes[3]===70&&bytes[8]===87&&bytes[9]===69&&bytes[10]===66&&bytes[11]===80;
+  if((ct==='image/png'&&!png)||(ct==='image/jpeg'&&!jpeg)||(ct==='image/webp'&&!webp))fail(400,'Signature file content does not match its image format');
+  await env.ASSETS.put('tenants/'+tenant+'/signature',content,{httpMetadata:{contentType:ct}});
+  await env.DB.prepare('UPDATE tenants SET signature_url=? WHERE id=?').bind('/media/'+tenant+'/signature',tenant).run();
+  return json({url:'/media/'+tenant+'/signature'});
+ }
  if(resource==='logo'&&method==='POST'){
   const ct=req.headers.get('content-type');
   if(!['image/png','image/jpeg','image/webp'].includes(ct))fail(400,'Use PNG, JPEG or WebP');
@@ -611,15 +626,15 @@ export default {async fetch(req,env){
   if(!asset)return new Response('Brand asset unavailable',{status:404});
   return new Response(asset.body,{headers:{'content-type':contentType,'x-content-type-options':'nosniff','cache-control':'public,max-age=604800','access-control-allow-origin':'*'}});
  }
- if(req.method==='GET'&&/^\/media\/[a-f0-9-]{36}\/logo$/.test(p)){
-  const id=p.split('/')[2],asset=await env.ASSETS.get('tenants/'+id+'/logo');
+ if(req.method==='GET'&&/^\/media\/[a-f0-9-]{36}\/(logo|signature)$/.test(p)){
+  const id=p.split('/')[2],imageType=p.split('/')[3],asset=await env.ASSETS.get('tenants/'+id+'/'+imageType);
   return asset?new Response(asset.body,{headers:{'content-type':asset.httpMetadata?.contentType||'image/png','cache-control':'public,max-age=120'}}):new Response('Not found',{status:404});
  }
  if(!p.startsWith('/api/'))return new Response('Not found',{status:404});
  if(!['GET','POST'].includes(req.method))return json({error:'Method not allowed'},405);
  if(req.method==='POST'){
   if(!p.startsWith(BRIDGE_PATH)&&req.headers.get('origin')!==url.origin)return json({error:'Cross-site request denied'},403);
-  if(!p.endsWith('/logo')&&!req.headers.get('content-type')?.includes('application/json'))return json({error:'Expected JSON'},415);
+  if(!p.endsWith('/logo')&&!p.endsWith('/signature')&&!req.headers.get('content-type')?.includes('application/json'))return json({error:'Expected JSON'},415);
  }
  try{return await api(req,env,url)}catch(e){
   if(e instanceof ErrorWithStatus)return json({error:e.message},e.code);
