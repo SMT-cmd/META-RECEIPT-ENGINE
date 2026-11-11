@@ -7,10 +7,11 @@ const dir=dirname(fileURLToPath(import.meta.url));
 const read=file=>readFileSync(join(dir,file),'utf8');
 const canonical=readFileSync(resolve(dir,'../../business-react/public/bizlano-icon.svg'),'utf8');
 const source=read('worker.js');
-const marker="import {html,client,icon} from './ui.js';";
+const marker="import {html,landing,client,icon} from './ui.js';";
 if(!source.includes(marker))throw Error('Expected UI entrypoint missing; aborting build');
 const embedded=[
   'const html='+JSON.stringify(read('index.html'))+';',
+  'const landing='+JSON.stringify(read('landing.html'))+';',
   'const client='+JSON.stringify(read('client.js'))+';',
   'const icon='+JSON.stringify(canonical)+';'
 ].join('\n');
