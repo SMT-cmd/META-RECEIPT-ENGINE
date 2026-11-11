@@ -91,6 +91,62 @@ async function verifyMarketplaceSignature(req,env){
  if(!data||typeof data!=='object'||Array.isArray(data))fail(400,'Invalid marketplace message');
  return data;
 }
+// A reconciliation-only feed. These records never authorize a payment or change
+// the vendor's local inventory: GWS remains authoritative for marketplace state.
+async function marketplaceSignal(env,data,vendorId){
+ const kind=String(data.type||'');
+ const allowed=['catalog.product.upsert','catalog.product.deleted','order.status.updated','order.refunded','payout.settled'];
+ if(!allowed.includes(kind))fail(400,'Unsupported marketplace event');
+ const eventId=field(data.eventId,'event ID',150);
+ if(!/^[A-Za-z0-9_-]{8,150}$/.test(eventId))fail(400,'Invalid marketplace event ID');
+ const connection=await env.DB.prepare("SELECT c.tenant_id,t.slug FROM marketplace_connections c JOIN tenants t ON t.id=c.tenant_id WHERE c.provider='globalwebstores' AND c.vendor_id=? AND c.disconnected_at IS NULL AND t.disabled_at IS NULL").bind(vendorId).first();
+ if(!connection)return json({recorded:false,reason:'not_connected'});
+ const tenant=connection.tenant_id,contentHash=await hash(JSON.stringify(data));
+ const prior=await env.DB.prepare("SELECT event_hash FROM marketplace_feed_events WHERE vendor_id=? AND event_id=?").bind(vendorId,eventId).first();
+ if(prior){if(prior.event_hash!==contentHash)fail(409,'Event ID reused with different data');return json({recorded:false,alreadyRecorded:true})}
+ const item=data.product,order=data.order,settlement=data.settlement,refund=data.refund;
+ const idVal=(v,name)=>{const out=field(v,name,100);if(!/^[A-Za-z0-9_-]{6,100}$/.test(out))fail(400,'Invalid '+name);return out};
+ const amountVal=(v)=>{const n=Number(v);if(!Number.isSafeInteger(n)||n<0||n>100000000000)fail(400,'Invalid marketplace amount');return n};
+ let orderId=null,op=null;
+ if(kind.startsWith('catalog.product.')){
+  if(!item||typeof item!=='object'||Array.isArray(item))fail(400,'Product details missing');
+  const pid=idVal(item.id,'product reference');const name=kind.endsWith('.deleted')?String(item.name||'Archived product').slice(0,180):field(item.name,'product name',180);
+  const price=kind.endsWith('.deleted')?0:amountVal(item.priceMinor);
+  const stock=item.stockMilli==null?null:amountVal(item.stockMilli);
+  op=kind.endsWith('.deleted')?
+   env.DB.prepare("UPDATE marketplace_catalog_products SET active=0,updated_at=datetime('now') WHERE tenant_id=? AND product_id=?").bind(tenant,pid):
+   env.DB.prepare("INSERT INTO marketplace_catalog_products(tenant_id,product_id,name,sku,price_minor,stock_milli,active) VALUES(?,?,?,?,?,?,1) ON CONFLICT(tenant_id,product_id) DO UPDATE SET name=excluded.name,sku=excluded.sku,price_minor=excluded.price_minor,stock_milli=excluded.stock_milli,active=1,updated_at=datetime('now')")
+    .bind(tenant,pid,name,String(item.sku||'').slice(0,80)||null,price,stock);
+ }else if(kind==='order.status.updated'){
+  if(!order||typeof order!=='object'||Array.isArray(order))fail(400,'Order details missing');
+  orderId=idVal(order.id,'order reference');
+  const state=field(order.status,'order status',55);
+  if(!['PAID_ESCROW_HELD','BOOKED_FOR_DELIVERY','IN_TRANSIT','DELIVERED','CONFIRMED','COMPLETED','CANCELLED','REFUNDED','PARTIALLY_REFUNDED','RETURNED','DISPUTED'].includes(state))fail(400,'Invalid order status');
+  op=env.DB.prepare("INSERT INTO marketplace_order_status(tenant_id,order_id,state,tracking_reference,last_event_id) VALUES(?,?,?,?,?) ON CONFLICT(tenant_id,order_id) DO UPDATE SET state=excluded.state,tracking_reference=excluded.tracking_reference,last_event_id=excluded.last_event_id,updated_at=datetime('now')")
+   .bind(tenant,orderId,state,String(order.trackingReference||'').slice(0,100)||null,eventId);
+ }else if(kind==='order.refunded'){
+  if(!refund||typeof refund!=='object'||Array.isArray(refund)||refund.currency!=='NGN')fail(400,'Refund details missing');
+  orderId=idVal(refund.orderId,'order reference');const refundId=idVal(refund.id,'refund reference'),amount=amountVal(refund.amountMinor);
+  if(amount<=0)fail(400,'Refund must be positive');
+  op=env.DB.prepare('INSERT INTO marketplace_adjustments(tenant_id,refund_id,order_id,amount_minor,reason) VALUES(?,?,?,?,?)')
+   .bind(tenant,refundId,orderId,amount,String(refund.reason||'').slice(0,180)||null);
+ }else if(kind==='payout.settled'){
+  if(!settlement||typeof settlement!=='object'||Array.isArray(settlement)||settlement.currency!=='NGN')fail(400,'Settlement details missing');
+  orderId=idVal(settlement.orderId,'order reference');const payoutId=idVal(settlement.id,'settlement reference');
+  op=env.DB.prepare('INSERT INTO marketplace_settlements(tenant_id,payout_id,order_id,amount_minor,reference) VALUES(?,?,?,?,?)')
+   .bind(tenant,payoutId,orderId,amountVal(settlement.amountMinor),String(settlement.reference||'').slice(0,140)||null);
+ }
+ const event=env.DB.prepare("INSERT INTO marketplace_feed_events(id,tenant_id,vendor_id,event_id,event_type,event_hash,order_id) VALUES(?,?,?,?,?,?,?)")
+  .bind(crypto.randomUUID(),tenant,vendorId,eventId,kind,contentHash,orderId);
+ try{await env.DB.batch([op,event])}catch(error){
+  if(String(error).toLowerCase().includes('unique')){
+   const again=await env.DB.prepare("SELECT event_hash FROM marketplace_feed_events WHERE vendor_id=? AND event_id=?").bind(vendorId,eventId).first();
+   if(again&&again.event_hash===contentHash)return json({recorded:false,alreadyRecorded:true});
+  }
+  throw error;
+ }
+ return json({recorded:true,type:kind},201);
+}
 async function marketplaceApi(req,env,url){
  const suffix=url.pathname.slice(BRIDGE_PATH.length);
  if(req.method!=='POST')fail(405,'Method not allowed');
@@ -99,7 +155,7 @@ async function marketplaceApi(req,env,url){
  if(!/^[A-Za-z0-9_-]{6,150}$/.test(vendorId))fail(400,'Invalid marketplace business ID');
  if(suffix==='status'){
   const connection=await env.DB.prepare("SELECT t.slug,t.business_name,c.connected_at,c.last_sale_at FROM marketplace_connections c JOIN tenants t ON t.id=c.tenant_id WHERE c.provider='globalwebstores' AND c.vendor_id=? AND c.disconnected_at IS NULL AND t.disabled_at IS NULL").bind(vendorId).first();
-  return json({connected:!!connection, business:connection?{name:connection.business_name,slug:connection.slug,workspace:new URL('/app?biz='+connection.slug,url.origin).toString(),connectedAt:connection.connected_at,lastSaleAt:connection.last_sale_at}:null});
+  return json({connected:!!connection,contractVersion:2,supportedEvents:['order.paid','catalog.product.upsert','catalog.product.deleted','order.status.updated','order.refunded','payout.settled'],business:connection?{name:connection.business_name,slug:connection.slug,workspace:new URL('/app?biz='+connection.slug,url.origin).toString(),connectedAt:connection.connected_at,lastSaleAt:connection.last_sale_at}:null});
  }
  if(suffix==='connect'){
   const token=field(data.code,'connection code',100);
@@ -118,7 +174,7 @@ async function marketplaceApi(req,env,url){
   return json({connected:false});
  }
  if(suffix==='event'){
-  if(data.type!=='order.paid')fail(400,'Only verified paid orders may create receipts');
+  if(data.type!=='order.paid')return marketplaceSignal(env,data,vendorId);
   const order=data.order;if(!order||typeof order!=='object')fail(400,'Order details missing');
   const orderId=field(order.id,'order reference',90);
   if(!/^[A-Za-z0-9_-]{6,80}$/.test(orderId)||order.currency!=='NGN'||!['PAID_ESCROW_HELD','BOOKED_FOR_DELIVERY','IN_TRANSIT','DELIVERED','CONFIRMED','COMPLETED'].includes(order.status)||order.legacyTestRecord===true)fail(400,'The order is not an eligible paid sale');
