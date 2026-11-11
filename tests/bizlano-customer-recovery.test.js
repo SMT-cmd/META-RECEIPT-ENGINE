@@ -52,7 +52,7 @@ test('receipt issue stores buyer email and shows recovery code in print',()=>{
  const worker=read('platform/worker/worker.js'),vendor=read('platform/worker/client.js');
  assert.match(worker,/recipient_email,recipient_phone,issued_on/);
  assert.match(worker,/b\.customerEmail\?email\(b\.customerEmail\):null/);
- assert.match(worker,/emailAddress,issueDate/);
+ assert.match(worker,/emailAddress,recipientPhone,issueDate/);
  assert.match(vendor,/Customer email for receipt recovery/);
  assert.match(vendor,/doc\.recoveryCode/);
  assert.match(vendor,/Powered by <strong/);
