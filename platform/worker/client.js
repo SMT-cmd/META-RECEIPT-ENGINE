@@ -57,7 +57,7 @@ async function load(){
  }else state.data=await api(t+'/'+resource);
  render();
 }
-function brand(){return '<span class="brand-icon" aria-hidden="true">B</span><span>Bizlano</span>'}
+function brand(){return '<img class="brand-icon" src="/favicon.svg" width="43" height="43" alt=""><span>Bizlano</span>'}
 function input(label,name,type='text',value='',required=false,extra=''){
  return '<label class="field">'+e(label)+'<input name="'+e(name)+'" type="'+type+'" value="'+e(value)+'" '+(required?'required':'')+' '+extra+'></label>';
 }
