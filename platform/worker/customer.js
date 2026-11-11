@@ -56,7 +56,7 @@ function customerView(){
  const filtered=all.filter(x=>(!state.business||x.slug===state.business)&&(!needle||[x.business_name,x.items_summary,x.document_number,x.kind].some(y=>String(y||'').toLowerCase().includes(needle))));
  const stores=new Set(all.map(x=>x.slug));
  const heading=state.business?'Receipts from '+(all.find(x=>x.slug===state.business)?.business_name||state.business):'Every receipt, in one place.';
- root.innerHTML='<section class="hero"><div class="eyebrow">MY RECEIPTS</div><div class="spread"><div><h1>'+escape(heading)+'</h1><p>Signed in as <strong>'+escape(state.account.email)+'</strong>. Receipts from participating businesses appear automatically when they use this email.</p></div><button class="button" data-action="sign-out">Sign out</button></div></section>'+
+ root.innerHTML='<section class="hero"><div class="eyebrow">MY RECEIPTS</div><div class="spread"><div><h1>'+escape(heading)+'</h1><p>Signed in as <strong>'+escape(state.account.email||state.account.phone||state.account.name)+'</strong>. '+(state.account.phoneOnly?'Your purchases appear here when you enter private receipt codes.':'Receipts appear automatically when businesses use your verified email address.')+'</p></div><button class="button" data-action="sign-out">Sign out</button></div></section>'+
  '<section class="dashboard"><div class="stats">'+
  '<div class="stat"><strong>'+all.length+'</strong><span>Receipts available</span></div>'+
  '<div class="stat"><strong>'+stores.size+'</strong><span>Businesses in your history</span></div>'+
@@ -75,7 +75,7 @@ function customerView(){
  '<section class="panel" style="margin-top:30px"><div class="eyebrow">ANOTHER WAY TO RECOVER</div><h2>Have a receipt recovery code?</h2><p class="muted" style="font-size:13px">Some older purchases or cash sales may not have an email attached. If a business gave you a Bizlano receipt code, enter it to securely add the receipt to this account.</p>'+
  '<form id="claim-code" class="claim"><label class="field">Receipt code<input name="code" spellcheck="false" autocomplete="off" required maxlength="30" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label><button class="button primary" type="submit">Add receipt</button></form></section>'+
  '<div class="notice">Your purchase history is private. A name or phone number alone cannot open another customer’s receipts. Ask the issuing business for a private recovery code if it only recorded your phone number.</div>'+ 
- '<section class="panel" style="margin-top:25px"><div class="eyebrow">MY ACCOUNT</div><h2>Contact details</h2><p class="muted" style="font-size:12px">An optional phone number helps you sign in with your password. It does not automatically unlock receipts tied to that number.</p><form id="customer-profile" class="stack"><label class="field">Your name<input name="name" maxlength="120" value="'+escape(state.account.name||'')+'" required autocomplete="name"></label><label class="field">Phone number (optional)<input type="tel" name="phone" autocomplete="tel" inputmode="tel" value="'+escape(state.account.phone||'')+'" placeholder="080… or +234…"></label><button class="button" type="submit">Save my details</button></form></section></section>';
+ '<section class="panel" style="margin-top:25px"><div class="eyebrow">MY ACCOUNT</div><h2>Contact details</h2><p class="muted" style="font-size:12px">'+(state.account.phoneOnly?'Your phone number is your sign-in identifier. Changing it needs fresh receipt verification.':'An optional phone number helps you sign in with your password. It does not automatically unlock purchases tied to that number.')+'</p><form id="customer-profile" class="stack"><label class="field">Your name<input name="name" maxlength="120" value="'+escape(state.account.name||'')+'" required autocomplete="name"></label><label class="field">Phone number (optional)<input type="tel" name="phone" autocomplete="tel" inputmode="tel" value="'+escape(state.account.phone||'')+'" '+(state.account.phoneOnly?'readonly':'')+' placeholder="080… or +234…"></label><button class="button" type="submit">Save my details</button></form></section></section>';
 }
 function receiptDocument(r){
  const total=Number(r.totalMinor||0),paid=Number(r.paidMinor||0);
@@ -102,6 +102,9 @@ function showReceipt(r){
 function closeReceipt(){
  modal.hidden=true;modal.innerHTML='';state.current=null;document.body.style.overflow='';
 }
+async function loadCustomerReceipts(){
+ const result=await request('/customer/receipts');state.receipts=result.rows||[];state.nextCursor=result.nextCursor||null;state.error='';customerView();
+}
 async function connect(){
  if(!state.user?.emailVerified)return;
  const token=await state.user.getIdToken();
@@ -109,11 +112,7 @@ async function connect(){
  const pending=sessionStorage.getItem('bizlano_customer_contact');
  if(pending){try{const saved=JSON.parse(pending);if(saved.uid===state.user.uid&&Date.now()-saved.at<604800000){await request('/customer/profile',{name:saved.name,phone:saved.phone});sessionStorage.removeItem('bizlano_customer_contact')}}catch{sessionStorage.removeItem('bizlano_customer_contact');notice('You can save your phone number from the account section.',true)}}
  state.account=await request('/customer/me');
- const result=await request('/customer/receipts');
- state.receipts=result.rows||[];
- state.nextCursor=result.nextCursor||null;
- state.error='';
- customerView();
+ await loadCustomerReceipts();
 }
 document.addEventListener('click',async event=>{
  const target=event.target.closest('button');
@@ -130,7 +129,8 @@ document.addEventListener('click',async event=>{
   if(action==='print-receipt'){window.print();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
   if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
-  if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.error='';loginView();return}
+  if(action==='toggle-auth'){state.mode=state.mode==='phone-register'?'register':state.mode==='login'?'register':'login';state.error='';loginView();return}
+  if(action==='phone-registration'){state.mode='phone-register';state.error='';loginView();return}
   if(action==='check-verification'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified){notice('Please confirm your email before continuing.',true);return}await connect();return}
   if(action==='resend-verification'){await sendEmailVerification(auth.currentUser);notice('Verification email requested. Check your inbox.');return}
   if(action==='reset-password'){
@@ -138,8 +138,8 @@ document.addEventListener('click',async event=>{
    if(email){await sendPasswordResetEmail(auth,email);notice('If this account exists, a password-reset email will arrive shortly.')}
    return;
   }
-  if(action==='sign-out'){closeReceipt();await request('/logout',{});await signOut(auth);state.account=null;state.receipts=[];state.error='';return}
-  if(action==='retry'){await connect();return}
+  if(action==='sign-out'){closeReceipt();await request('/logout',{});await signOut(auth);state.account=null;state.receipts=[];state.error='';state.mode='login';loginView();return}
+  if(action==='retry'){if(state.user?.emailVerified)await connect();else{state.account=await request('/customer/me');await loadCustomerReceipts()}return}
  }catch(error){state.error=error.message||'Something went wrong';notice(state.error,true);if(!state.account)loginView()}
 });
 document.addEventListener('input',event=>{
@@ -162,8 +162,17 @@ document.addEventListener('submit',async event=>{
  const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
  try{
   if(form.id==='customer-auth'){
-   const identifier=form.elements.namedItem('identifier').value.trim(),password=form.elements.namedItem('password').value;
-   if(state.mode==='register'){
+   const password=form.elements.namedItem('password').value;
+   if(state.mode==='phone-register'){
+    const phone=form.elements.namedItem('phone').value.trim(),name=form.elements.namedItem('name').value.trim(),code=form.elements.namedItem('code').value.trim();
+    if(!phone||!name||!code||password.length<10)throw Error('Enter your name, phone, receipt code and a password of at least 10 characters.');
+    await signOut(auth);
+    await request('/customer/phone-register',{name,phone,code,password});
+    state.user=null;state.account=await request('/customer/me');
+    notice('Your free customer account is ready.');await loadCustomerReceipts();
+   }else{
+    const identifier=form.elements.namedItem('identifier').value.trim();
+    if(state.mode==='register'){
     if(!identifier.includes('@'))throw Error('An email address is needed for free account verification. You can add a phone number too.');
     const name=form.elements.namedItem('name').value.trim(),phone=form.elements.namedItem('phone').value.trim();
     if(!name)throw Error('Enter your full name');
@@ -173,8 +182,13 @@ document.addEventListener('submit',async event=>{
     await sendEmailVerification(result.user);
     notice('Account created. Verify your email to view your receipts.');
    }else{
-    const email=identifier.includes('@')?identifier:(await request('/customer/phone-login',{phone:identifier,password})).email;
-    await signInWithEmailAndPassword(auth,email,password);
+    if(identifier.includes('@'))await signInWithEmailAndPassword(auth,identifier,password);
+    else{
+     const result=await request('/customer/phone-login',{phone:identifier,password});
+     if(result.phoneOnly){await signOut(auth);state.user=null;state.account=await request('/customer/me');await loadCustomerReceipts()}
+     else await signInWithEmailAndPassword(auth,result.email,password);
+    }
+   }
    }
   }else if(form.id==='customer-profile'){
    const result=await request('/customer/profile',{name:form.elements.namedItem('name').value.trim(),phone:form.elements.namedItem('phone').value.trim()});
@@ -193,7 +207,13 @@ document.addEventListener('submit',async event=>{
 });
 onAuthStateChanged(auth,async user=>{
  state.user=user;
- if(!user){state.account=null;loginView();return}
+ if(!user){
+  try{
+   const profile=await request('/customer/me');
+   if(profile.phoneOnly){state.account=profile;await loadCustomerReceipts();return}
+  }catch{}
+  state.account=null;loginView();return;
+ }
  if(!user.emailVerified){state.account=null;loginView();return}
  try{await connect()}catch(error){state.error=error.message||'Unable to load receipts';state.account=null;loginView()}
 });
