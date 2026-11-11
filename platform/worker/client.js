@@ -104,7 +104,7 @@ const BUSINESS_TYPES=[
  {id:'retail',name:'Retail, grocery & supermarkets',templates:['retail','grocery','thermal','modern'],item:'Household supplies'},
  {id:'fashion',name:'Fashion, beauty & salons',templates:['boutique','salon','luxury','editorial'],item:'Customer order'},
  {id:'services',name:'Professional services',templates:['service','formal','corporate','minimal'],item:'Professional service'},
- {id:'trades',name:'Electrical, repairs & construction',templates:['service','ledger','corporate','wholesale'],item:'Equipment installation'},
+ {id:'trades',name:'Electrical, repairs & construction',templates:['service','ledger','premium-dark','logistics'],item:'Equipment installation'},
  {id:'health',name:'Health & education',templates:['medical','education','formal','classic'],item:'Service charges'},
  {id:'hospitality',name:'Hotels, events & hospitality',templates:['hospitality','event','festival','premium-dark'],item:'Booking service'},
  {id:'logistics',name:'Logistics & wholesale',templates:['logistics','wholesale','ledger','executive'],item:'Delivery service'}
@@ -128,9 +128,11 @@ function sampleDocument(template){
  const sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
  return {kind:'receipt',template,date:today(),customer:'Sample customer',items:[{description:sector.item,qty:2,price:5500}],discountPct:0,taxPct:0,shipping:0,received:11000,notes:'Thank you for your business.'};
 }
-function sampleHtml(template){
- const design={...activeDesign(),paper:'a4',show_signature:0};
- return receipt(sampleDocument(template),'BZ-00021',false,design);
+function sampleHtml(template,asCard=false){
+ const theme=templateArt(template);
+ const design={...activeDesign(),accent:asCard?theme.accent:(state.designDraft?.accent||(
+   template===(state.design?.template||'signature')?activeDesign().accent:theme.accent)),paper:'a4',show_signature:0,show_logo:activeDesign().show_logo};
+ return receipt(sampleDocument(template),'BZ-00021',false,design).replace(' id="printable"','');
 }
 function groupedTemplateOptions(selected){
  return TEMPLATE_FAMILIES.map(([label,ids])=>'<optgroup label="'+e(label)+'">'+ids.map(id=>'<option value="'+e(id)+'" '+(selected===id?'selected':'')+'>'+e(templateTitle(id))+'</option>').join('')+'</optgroup>').join('');
@@ -139,7 +141,72 @@ function guidedSteps(labels,step){
  return '<div class="wizard-steps" role="list" aria-label="Your progress">'+labels.map((label,i)=>'<div role="listitem" class="wizard-step '+(i+1===step?'current':i+1<step?'done':'')+'"><span class="wizard-number">'+(i+1)+'</span><span>'+e(label)+'</span></div>').join('')+'</div>';
 }
 
-const DESIGN_PALETTE=["#6935df","#212d52","#b18748","#168c78","#383c4b","#bc577b","#f08c42","#2b87ab","#6a9842","#a63f53"];
+const RECEIPT_ART={
+ signature:{accent:'#6a35cf',layout:'ribbon',story:'Personal signature',note:'A confident branded ribbon'},
+ classic:{accent:'#354764',layout:'letterhead',story:'Classic trust',note:'Traditional serif letterhead'},
+ executive:{accent:'#173d70',layout:'statement',story:'Boardroom blue',note:'A structured executive statement'},
+ retail:{accent:'#13826e',layout:'ticket',story:'Retail energy',note:'Easy-to-scan point-of-sale'},
+ thermal:{accent:'#333b49',layout:'thermal',story:'Till paper',note:'Simple narrow receipt'},
+ minimal:{accent:'#596171',layout:'bare',story:'Quiet clarity',note:'Airy and almost borderless'},
+ editorial:{accent:'#954a78',layout:'editorial',story:'Editorial plum',note:'Expressive magazine typography'},
+ bold:{accent:'#c54a2e',layout:'poster',story:'Bold coral',note:'Oversized headline and blocks'},
+ artisan:{accent:'#9e5838',layout:'craft',story:'Handmade terracotta',note:'Warm crafted paper'},
+ medical:{accent:'#147f93',layout:'clinical',story:'Care teal',note:'Clean medical records'},
+ education:{accent:'#5749ab',layout:'academic',story:'Academic violet',note:'Formal learning documents'},
+ hospitality:{accent:'#987039',layout:'hotel',story:'Hotel brass',note:'Guest-services letterhead'},
+ luxury:{accent:'#926b35',layout:'luxury',story:'Gold reserve',note:'Fine-line premium statement'},
+ corporate:{accent:'#21437f',layout:'band',story:'Corporate navy',note:'Solid full-width business header'},
+ ledger:{accent:'#515b68',layout:'ledger',story:'Workshop ledger',note:'Monospaced job record'},
+ modern:{accent:'#385fe0',layout:'modern',story:'Digital cobalt',note:'Bright contemporary lines'},
+ boutique:{accent:'#a74d78',layout:'boutique',story:'Boutique rose',note:'Elegant centered identity'},
+ monochrome:{accent:'#292e36',layout:'mono',story:'True monochrome',note:'Black-ink typographic design'},
+ festival:{accent:'#d98329',layout:'festival',story:'Celebration amber',note:'Playful event bands'},
+ restaurant:{accent:'#923e31',layout:'menu',story:'Bistro burgundy',note:'Restaurant-menu format'},
+ grocery:{accent:'#288851',layout:'grocery',story:'Fresh market',note:'Friendly green sales slip'},
+ service:{accent:'#107c9d',layout:'blueprint',story:'Service blueprint',note:'Technical service details'},
+ legal:{accent:'#293648',layout:'legal',story:'Legal authority',note:'Formal ruled statement'},
+ 'real-estate':{accent:'#6653a0',layout:'estate',story:'Estate lavender',note:'Property-style summary'},
+ logistics:{accent:'#c67c20',layout:'logistics',story:'Dispatch amber',note:'Bold shipment-style header'},
+ salon:{accent:'#ae688c',layout:'salon',story:'Beauty studio',note:'Soft elegant symmetry'},
+ 'artisan-paper':{accent:'#a87846',layout:'paper',story:'Bakery kraft',note:'Soft cream card stock'},
+ gradient:{accent:'#634bba',layout:'gradient',story:'Colour movement',note:'Vivid diagonal colour band'},
+ formal:{accent:'#3a4660',layout:'formal',story:'Formal seal',note:'Official centered document'},
+ event:{accent:'#b44c89',layout:'event',story:'Event ribbon',note:'Lively celebration framing'},
+ digital:{accent:'#2a64c2',layout:'digital',story:'Digital platform',note:'Modern screen-friendly panel'},
+ wholesale:{accent:'#316ba2',layout:'wholesale',story:'Stock & parts',note:'Dense inventory-style grid'},
+ startup:{accent:'#576cc3',layout:'startup',story:'New venture',note:'Fresh compact information'},
+ 'premium-dark':{accent:'#172545',layout:'dark',story:'Midnight premium',note:'High-contrast dark header'},
+ emerald:{accent:'#198564',layout:'emerald',story:'Emerald growth',note:'Green business report'},
+ sapphire:{accent:'#255bb5',layout:'sapphire',story:'Sapphire precision',note:'Clear blue invoice'}
+};
+const templateArt=id=>RECEIPT_ART[id]||RECEIPT_ART.signature;
+const COLOR_STORIES=[
+ {name:'Midnight',hex:'#1d2b52',meaning:'Trust & precision'},
+ {name:'Electric blue',hex:'#2668c5',meaning:'Modern technology'},
+ {name:'Forest',hex:'#147b5c',meaning:'Growth & reliability'},
+ {name:'Terracotta',hex:'#ad6040',meaning:'Warmth & craft'},
+ {name:'Rose',hex:'#ac5680',meaning:'Style & elegance'},
+ {name:'Gold',hex:'#a27835',meaning:'Premium & tradition'},
+ {name:'Slate',hex:'#434f62',meaning:'Calm & professional'},
+ {name:'Violet',hex:'#633ac2',meaning:'Creative confidence'}
+];
+const DESIGN_PALETTE=COLOR_STORIES.map(x=>x.hex);
+function setDesignColour(value){
+ if(!/^#[a-fA-F0-9]{6}$/.test(String(value)))return;
+ state.designDraft={...activeDesign(),accent:value};
+}
+function templateDisplayArt(id){
+ const a=templateArt(id);
+ return '<span class="design-card-story"><span class="design-card-color" style="background:'+e(a.accent)+'"></span><span>'+e(a.note)+'</span></span>';
+}
+function colourStoryChooser(selected){
+ return '<div class="colour-story-title"><strong>Choose the feeling of your brand</strong><small>Your choice changes the actual document, not just its preview.</small></div>'+
+ '<div class="colour-story-grid">'+COLOR_STORIES.map(c=>
+ '<button type="button" class="colour-story '+(selected.toLowerCase()===c.hex.toLowerCase()?'active':'')+'" data-design-color="'+e(c.hex)+'" aria-pressed="'+(selected.toLowerCase()===c.hex.toLowerCase())+'" title="'+e(c.meaning)+'">'+
+ '<span class="colour-story-dot" style="background:'+e(c.hex)+'"></span><span class="colour-story-name">'+e(c.name)+'</span><span class="colour-story-meaning">'+e(c.meaning)+'</span></button>'
+ ).join('')+'</div>'+
+ '<label class="custom-colour-label">Or pick your own colour <input type="color" data-design-custom-color aria-label="Custom receipt colour" value="'+e(selected)+'"></label>';
+}
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
@@ -449,12 +516,14 @@ function designStudio(){
   const cards=selected.map(id=>{
    const active=current===id;
    return '<button type="button" class="design-card real-template '+(active?'selected':'')+'" data-template="'+e(id)+'" aria-pressed="'+active+'" aria-label="'+e(templateTitle(id))+' receipt design">'+
-    '<span class="template-thumbnail" aria-hidden="true"><span class="template-thumbnail-inner">'+sampleHtml(id)+'</span></span>'+
-    '<strong>'+e(templateTitle(id))+'</strong><small>'+(active?'✓ Selected':'Select design')+'</small></button>';
+    '<span class="template-thumbnail" aria-hidden="true"><span class="template-thumbnail-inner">'+sampleHtml(id,true)+'</span></span>'+
+    '<strong>'+e(templateTitle(id))+'</strong>'+templateDisplayArt(id)+'<small>'+(active?'✓ Selected':'Select design')+'</small></button>';
   }).join('');
   return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 2 OF 3</div><h2>Recommended for '+e(sector.name)+'</h2>'+
   '<p class="muted">Choose a style. These are miniature versions of the actual receipt, not generic placeholders.</p>'+
-  '<div class="studio-choice-layout"><div><div class="design-grid">'+cards+'</div><label class="field" style="margin-top:20px">Looking for a different style?<select data-design-browse aria-label="Browse all 36 receipt designs"><option value="">Browse all 36 designs…</option>'+groupedTemplateOptions(current)+'</select></label></div>'+
+  '<div class="studio-choice-layout"><div><div class="design-grid">'+cards+'</div><label class="field" style="margin-top:20px">Looking for a different style?<select data-design-browse aria-label="Browse all 36 receipt designs"><option value="">Browse all 36 designs…</option>'+groupedTemplateOptions(current)+'</select></label>'+
+  '<div class="studio-colour-panel">'+colourStoryChooser(state.designDraft?.accent||(
+    current===(state.design?.template||'signature')?activeDesign().accent:templateArt(current).accent))+'</div></div>'+
   '<details class="studio-receipt-preview" '+(window.innerWidth>1100?'open':'')+'><summary>See the full-size receipt preview</summary><div class="full-receipt-sample">'+sampleHtml(current)+'</div><p class="mini muted">This is the real printable layout with sample details.</p></details></div>'+
   '<div class="wizard-actions">'+back+'<button type="button" class="btn primary" data-action="design-next">Personalise this design →</button></div></section>';
  }
@@ -562,17 +631,35 @@ function currentDoc(){
 }
 function receipt(doc,number,stored=false,style=state.design){
  const lines=doc.items||[];
- let subtotal=0;const rows=lines.filter(i=>i.description).map(i=>{const total=Number(i.price)*Number(i.qty);subtotal+=total;return '<tr><td>'+e(i.description)+'</td><td>'+e(i.qty)+'</td><td>'+oldMoney(total)+'</td></tr>'}).join('');
- const discount=Math.round(subtotal*(Number(doc.discountPct)||0))/100,vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
+ let subtotal=0;
+ const rows=lines.filter(i=>i.description).map(i=>{
+  const lineTotal=Number(i.price)*Number(i.qty);subtotal+=lineTotal;
+  return '<tr><td>'+e(i.description)+'</td><td>'+e(i.qty)+'</td><td>'+oldMoney(lineTotal)+'</td></tr>';
+ }).join('');
+ const discount=Math.round(subtotal*(Number(doc.discountPct)||0))/100;
+ const vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
  const total=stored?doc.total_minor/100:subtotal-discount+vat+Number(doc.shipping||0);
- const template=String(doc.template||style?.template||'signature');const logo=style?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
- const accent=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:'#6935df';
+ const template=String(doc.template||style?.template||'signature'),art=templateArt(template);
+ const logo=style?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
+ const accent=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:art.accent;
  const paper=style?.paper||'a4',contact=style?.contact||'',headerNote=style?.header_note||'',footerNote=style?.footer_note||'';
- return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
- '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+(doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
- '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+ const company=String(state.biz?.business_name||'Business'),initials=company.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+ const documentType=String(doc.kind||'Invoice').replaceAll('-',' ').toUpperCase(),documentNumber=number||'UNSAVED DRAFT';
+ const head='<div class="r-head"><div class="r-brand"><div class="r-brand-identity">'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'<span class="r-initials" aria-hidden="true">'+e(initials)+'</span>')+
+  '<div class="r-brand-name"><span class="r-overline">BUSINESS DOCUMENT</span><h2>'+e(company)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div></div></div>'+
+  '<div class="r-document-identity"><span class="r-doc-kicker">DOCUMENT</span><h3>'+e(documentType)+'</h3><div class="r-small r-document-number">'+e(documentNumber)+'</div></div></div>';
+ return '<article class="receipt style-'+e(template)+' receipt-layout-'+e(art.layout)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+';--receipt-ink:#26324c">'+
+ '<div class="r-design-strip" aria-hidden="true"><i></i><i></i><i></i></div>'+head+
+ '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+
+ (doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+
+ (doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+
+ '</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
+ '<div class="r-table-wrap"><table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
- '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(style?.show_signature&&style?.signature_url?'<div class="r-signature"><img src="'+e(style.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
+ '<p class="r-small r-notes">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+
+ (style?.show_signature&&style?.signature_url?'<div class="r-signature"><img src="'+e(style.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+
+ (doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+
+ '<div class="powered">Powered by <strong>Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
@@ -621,7 +708,8 @@ document.addEventListener('click',async ev=>{
  if(action==='design-back'){if(state.designStep>1){captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
  if(action==='doc-next'){setDocStep(state.docStep+1);return}
  if(action==='doc-back'){setDocStep(state.docStep-1);return}
- if(el.dataset.template){captureDesignForm();state.templateChoice=el.dataset.template;render();return}
+ if(el.dataset.template){captureDesignForm();state.templateChoice=el.dataset.template;setDesignColour(templateArt(state.templateChoice).accent);render();return}
+ if(el.dataset.designColor){setDesignColour(el.dataset.designColor);render();return}
  if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field){field.value=el.dataset.accent;captureDesignForm();refreshStudioPreview();}return}
  if(el.dataset.expandLine!==undefined||el.hasAttribute('data-edit-notes')){
   const dialog=document.getElementById('editor-dialog');
@@ -668,12 +756,19 @@ document.addEventListener('click',async ev=>{
  }catch(err){flash(err.message,true)}
 });
 document.addEventListener('input',ev=>{
+ if(ev.target.matches('[data-design-custom-color]')){
+  setDesignColour(ev.target.value);
+  const panel=document.querySelector('.studio-receipt-preview .full-receipt-sample');
+  if(panel)panel.innerHTML=sampleHtml(state.templateChoice||state.design?.template||'signature');
+  return;
+ }
  if(ev.target.closest('[data-form=document]'))drawPreview();
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
 });
 document.addEventListener('change',ev=>{
- if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.templateChoice=businessCategory(ev.target.value).templates[0];return}
- if(ev.target.matches('[data-design-browse]')){if(ev.target.value){state.templateChoice=ev.target.value;render()}return}
+ if(ev.target.matches('[data-design-custom-color]')){setDesignColour(ev.target.value);render();return}
+ if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.templateChoice=businessCategory(ev.target.value).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
+ if(ev.target.matches('[data-design-browse]')){if(ev.target.value){state.templateChoice=ev.target.value;setDesignColour(templateArt(state.templateChoice).accent);render()}return}
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
  const artwork=ev.target.closest('[data-form=logo], [data-form=signature]');
  if(artwork&&(ev.target.type==='file'||ev.target.name==='removeWhite')){
