@@ -39,7 +39,7 @@ async function attach(){
  const invite=new URL(location.href).searchParams.get('token');
  if(invite&&/^[a-f0-9]{64}$/.test(invite)){
   await api('/join',{token:invite});
-  history.replaceState(null,'','/');
+  history.replaceState(null,'','/app');
   state.me=await api('/me');state.biz=state.me.businesses[0]||null;
   flash('You have joined the business workspace.');
  }
@@ -63,7 +63,7 @@ async function load(){
  }else state.data=await api(t+'/'+resource);
  render();
 }
-function brand(){return '<img class="brand-icon" src="/favicon.svg" width="43" height="43" alt=""><span>Bizlano</span>'}
+function brand(){return '<img class="brand-icon" src="/assets/bizlano-mark.png" width="43" height="43" alt=""><span>Bizlano</span>'}
 function input(label,name,type='text',value='',required=false,extra=''){
  return '<label class="field">'+e(label)+'<input name="'+e(name)+'" type="'+type+'" value="'+e(value)+'" '+(required?'required':'')+' '+extra+'></label>';
 }
@@ -84,9 +84,14 @@ function loginScreen(){
  '<div class="banner">Existing MetaForge receipts and links will not be deleted or moved automatically. Your new Bizlano data is stored separately in Cloudflare D1.</div><p class="mini muted">Powered by Bizlano · Secure account access via Firebase</p></div></div></section>';
 }
 function businessPicker(){
- app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR WORKSPACE</p><h1>Give your business a home online.</h1><p>Start issuing receipts and invoices, invite staff and grow from one secure dashboard.</p></div><small>Business links use the short address you choose.</small></div>'+
- '<div class="auth-form-shell"><div><div class="eyebrow">BUSINESS ONBOARDING</div><h2>Set up your business</h2><p class="muted">Choose a business name and a short unique address. Your business records stay isolated from other businesses.</p>'+
- '<form data-form="business">'+input('Business name','name','text','',true)+input('Short business address','slug','text','',true,'pattern="[a-z0-9-]{4,40}" placeholder="e.g. timi-store"')+'<p class="mini muted">No custom domain is required to begin. This address is reserved in Bizlano.</p><button type="submit" class="btn primary">Create business space</button></form><p style="margin-top:23px"><button class="btn ghost" data-action="logout">Sign out</button></p></div></div></section>';
+ const businesses=state.me?.businesses||[];
+ const owned=businesses.length?'<section style="margin:22px 0 27px"><div class="eyebrow">YOUR BUSINESSES</div><div class="stack" style="margin-top:12px">'+businesses.map(b=>'<button type="button" class="business-choice" data-business="'+e(b.slug)+'"><span class="choice-mark">'+e(b.business_name?.slice(0,1)||'B')+'</span><span style="flex:1;text-align:left"><strong>'+e(b.business_name)+'</strong><small>'+e(b.slug)+' · '+e(b.role)+'</small></span><span style="font-size:21px;color:#7a60cc">→</span></button>').join('')+'</div></section><div style="height:1px;background:#e9eaf1;margin-bottom:21px"></div>':'';
+ app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR WORKSPACE</p><h1>Your business deserves a better way to work.</h1><p>Professional receipts, simple invoicing, reliable sales records and a workspace your team can share.</p></div><small>Bizlano · Your business, beautifully managed.</small></div>'+
+ '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO YOUR WORKSPACE</div><h2>'+(businesses.length?'Choose a business':'Set up your business')+'</h2><p class="muted">Each business has its own protected records, documents and staff permissions.</p>'+owned+
+ '<div class="eyebrow">'+(businesses.length?'CREATE ANOTHER BUSINESS':'GET STARTED')+'</div>'+
+ '<form data-form="business">'+input('Business name','name','text','',true)+input('Short business address','slug','text','',true,'pattern="[a-z0-9-]{4,40}" placeholder="e.g. timi-store"')+
+ '<p class="mini muted">Reserve a short, unique business address. The dedicated subdomain will be available when our brand domain is connected.</p><button type="submit" class="btn primary">Create business workspace →</button></form>'+
+ '<p style="margin-top:23px" class="row"><a class="btn" href="/">Visit website</a><button class="btn ghost" data-action="logout">Sign out</button></p></div></div></section>';
 }
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
@@ -346,6 +351,7 @@ document.addEventListener('click',async ev=>{
  const view=el.dataset.nav,action=el.dataset.action;
  try{
  if(view){await navigate(view);return}
+ if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='login'?'register':'login';render();return}
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
