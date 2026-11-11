@@ -75,13 +75,13 @@ function simpleRows(rows,fn){return rows?.length?rows.map(fn).join(''):'<div cla
 function loginScreen(){
  const verify=Boolean(state.user&&!state.user.emailVerified);
  const logged=Boolean(state.user&&state.user.emailVerified);
- app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and collaborate with your team from anywhere.</p></div><small>One platform. Every business. No subscription gate.</small></div>'+
- '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+(verify?'Verify your email':logged?(state.connectError?'Connection needs attention':'Connecting securely…'):state.authMode==='register'?'Create your account':'Welcome back')+'</h2>'+
+ app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and collaborate with your team from anywhere.</p></div><small>Your business, your team, your next chapter. Register for free today.</small></div>'+
+ '<div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+(verify?'Verify your email':logged?(state.connectError?'Connection needs attention':'Connecting securely…'):state.authMode==='register'?'Register for free':'Welcome back')+'</h2>'+
  (verify?'<p class="muted">Your existing MetaForge login is preserved. Verify the email for this account to access a secure cloud workspace.</p><div class="stack"><button class="btn primary" data-action="resend">Send verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>':logged?'<p class="muted">'+e(state.connectError||'Please wait while we connect your secure business session.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>':
- '<p class="muted">'+(state.authMode==='register'?'Start with your regular email address. No company email needed.':'Sign in with your existing MetaForge email or create a Bizlano account.')+'</p>'+
+ '<p class="muted">'+(state.authMode==='register'?'Create your free Bizlano account with your everyday email address.':'New to Bizlano? Register for free, or sign in with your existing MetaForge account.')+'</p>'+
  '<form data-form="auth" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+input('Password','password','password','',true,'minlength="'+(state.authMode==='register'?'8':'6')+'" autocomplete="'+(state.authMode==='register'?'new-password':'current-password')+'"')+
- '<button class="btn primary" type="submit">'+(state.authMode==='register'?'Create account':'Sign in')+'</button></form><div class="row" style="margin-top:15px"><button class="btn" data-action="toggle-auth">'+(state.authMode==='register'?'Already have an account? Sign in':'Create an account')+'</button><button class="btn" data-action="reset">Reset password</button></div>')+
- '<div class="banner">Existing MetaForge receipts and links will not be deleted or moved automatically. Your new Bizlano data is stored separately in Cloudflare D1.</div><p class="mini muted">Powered by Bizlano · Secure account access via Firebase</p><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
+ '<button class="btn primary" type="submit">'+(state.authMode==='register'?'Register for free':'Sign in')+'</button></form><div class="row" style="margin-top:15px"><button class="btn" data-action="toggle-auth">'+(state.authMode==='register'?'Already registered? Sign in':'Register for free')+'</button><button class="btn" data-action="reset">Reset password</button></div>')+
+ '<div class="banner">Previously used MetaForge? Sign in with your existing account. Your earlier receipts stay in your original workspace until you choose to bring them into Bizlano.</div><p class="mini muted">Bizlano · Helping you stay on top of your business, every day.</p><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
 }
 function businessPicker(){
  const businesses=state.me?.businesses||[];
@@ -135,7 +135,7 @@ function salesChart(){
  let out='<div class="row" style="justify-content:space-between;margin:9px 0 17px"><div><div class="eyebrow">ISSUED SALES · '+days+' DAYS</div><strong style="font:800 25px Manrope">'+curr(total)+'</strong></div>'+
  '<div class="row" style="gap:5px">'+['bar','line','pie'].map(m=>'<button class="btn '+(mode===m?'ghost':'')+'" data-chart="'+m+'">'+m.charAt(0).toUpperCase()+m.slice(1)+'</button>').join('')+'</div></div>'+
  '<div class="row" style="margin-bottom:13px"><span class="mini muted">Period:</span>'+[7,30,90].map(n=>'<button class="btn '+(n===days?'ghost':'')+'" data-days="'+n+'">'+n+' days</button>').join('')+'</div>';
- if(total<=0)out+='<div class="empty" style="min-height:180px">No issued sales in this period. Your real D1 sales history will appear here.</div>';
+ if(total<=0)out+='<div class="empty" style="min-height:180px">No issued sales in this period. Your sales activity will appear here as you create documents.</div>';
  else if(mode==='pie'){
   const tally=new Map(),earliest=entries[0].day;
   for(const row of raw)if(row.day>=earliest)tally.set(row.kind,(tally.get(row.kind)||0)+Number(row.total_minor||0));
@@ -166,7 +166,7 @@ function overview(){
  return heading('BUSINESS INTELLIGENCE','Every sale, clearly accounted for.','Your real cloud data, accessible to your authorized team.',edit()?'<button data-nav="create" class="btn primary">+ Create document</button>':'')+
  '<div class="metrics">'+metrics.map(m=>'<div class="metric"><span>'+m[0]+'</span><strong>'+m[1]+'</strong><small>'+m[2]+'</small></div>').join('')+'</div>'+
  '<section class="panel"><h2>Sales analytics</h2>'+salesChart()+'</section>'+
- '<div class="cols"><section class="panel"><h2>Get started with Bizlano</h2><p class="muted">Your secure workspace is connected to Cloudflare D1. Add customers, manage stock and issue invoices that can be printed or saved as PDF.</p><div class="row"><button class="btn primary" data-nav="create">Create your first receipt</button><button class="btn" data-nav="documents">View history</button></div></section>'+
+ '<div class="cols"><section class="panel"><h2>Get started with Bizlano</h2><p class="muted">Build your business one step at a time. Add customers, organise your products, and create receipts or invoices ready to print or save.</p><div class="row"><button class="btn primary" data-nav="create">Create your first receipt</button><button class="btn" data-nav="documents">View history</button></div></section>'+
  '<section class="panel"><h2>Your business address</h2><p class="muted">Bizlano business key</p><h3>'+e(state.biz.slug)+'</h3><p class="mini muted">A custom branded subdomain will be enabled when the Bizlano domain is connected. This address is already unique within the database.</p></section></div>';
 }
 function gridRows(rows,headers,fn){return '<div class="table-scroll"><table><thead><tr>'+headers.map(h=>'<th>'+e(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(fn).join('')+'</tbody></table></div>'}
@@ -220,15 +220,15 @@ function team(){
 function upgrade(){
  const a=state.legacyArchive;
  const total=(a?.engines||[]).reduce((v,x)=>v+x.receipts.length,0);
- return heading('SAFE ACCOUNT MIGRATION','Bring your old receipts forward','Your original MetaForge receipts stay untouched. Imported copies are review-only drafts in Bizlano.')+
- '<div class="cols"><section class="panel"><h2>Scan your original account</h2><p class="muted">Read your own Firebase receipt engines using your currently signed-in account. This does not change any old document.</p>'+
+ return heading('YOUR BUSINESS HISTORY','Bring your previous receipts along','Your original MetaForge receipts stay untouched. Imported copies are review-only drafts in Bizlano.')+
+ '<div class="cols"><section class="panel"><h2>Scan your original account</h2><p class="muted">Find receipts linked to your previous account. Your original documents will not be changed.</p>'+
  '<div class="row"><button class="btn primary" data-action="scan-legacy">Scan old receipts</button>'+
  (a?'<button class="btn" data-action="download-legacy">Download original archive</button>':'')+'</div>'+
  (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Only accessible sources are included.'+
  (state.backupReady?'<br>Backup prepared; you may stage copies as drafts.':'<br>Download a backup before importing.')+'</div>'+
  '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
  '<p class="mini muted">Scans are capped to avoid excessive legacy database reads. If history is missing, use your original MetaForge export and review warnings.</p></section>'+
- '<section class="panel"><h2>Already have a legacy backup?</h2><p class="muted">Upload a JSON backup downloaded from your old MetaForge account. The uploader verifies its owner UID matches your current Firebase login.</p>'+
+ '<section class="panel"><h2>Already have a legacy backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
  '<form data-form="legacy-file"><label class="field">Backup archive (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
  '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include histories saved only on my old browser (may be unverified)</label>'+
  '<button type="submit" class="btn primary">Review and import backup</button></form>'+
@@ -391,7 +391,7 @@ document.addEventListener('submit',async ev=>{
  const kind=form.dataset.form;
  if(kind==='auth'){
   const address=val(form,'email'),password=val(form,'password');
-  if(state.authMode==='register'){const result=await createUserWithEmailAndPassword(auth,address,password);await sendEmailVerification(result.user);flash('Account created. Check your email to verify your address.')}
+  if(state.authMode==='register'){const result=await createUserWithEmailAndPassword(auth,address,password);await sendEmailVerification(result.user);flash('Welcome to Bizlano! Check your email to confirm your free registration.')}
   else await signInWithEmailAndPassword(auth,address,password);
  }else if(kind==='business'){
   const name=val(form,'name');const slugValue=slug(val(form,'slug'));
