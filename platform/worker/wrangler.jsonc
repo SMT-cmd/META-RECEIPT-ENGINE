@@ -1,0 +1,22 @@
+{
+  "name": "bizlano",
+  "main": "dist/worker.js",
+  "compatibility_date": "2026-11-11",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bizlano-db",
+      "database_id": "822b1685-31f6-4226-8fac-b6a1eb4e3dec"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS",
+      "bucket_name": "bizlano-assets"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
