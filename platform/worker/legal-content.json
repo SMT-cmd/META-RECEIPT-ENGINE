@@ -1,0 +1,222 @@
+{
+  "/about": {
+    "title": "About Bizlano",
+    "eyebrow": "OUR PURPOSE",
+    "lead": "Good business decisions begin with clear records.",
+    "sections": [
+      [
+        "Built around everyday business",
+        "Bizlano helps businesses create professional receipts and invoices, organize customers and products, and understand money coming in and going out.",
+        "Each business has its own workspace, brand identity and team permissions."
+      ],
+      [
+        "How we work",
+        "Your business owns the decisions. Bizlano provides tools to record them accurately, keep documents organized and share receipts when needed."
+      ]
+    ]
+  },
+  "/help": {
+    "title": "Help & support",
+    "eyebrow": "WE ARE HERE TO HELP",
+    "lead": "Find the right answer and get back to business.",
+    "sections": [
+      [
+        "Getting started",
+        "Register your Bizlano account, confirm your email, then create your business workspace. Add your products, customers and business identity before issuing your first document."
+      ],
+      [
+        "Receipts and invoices",
+        "Use the Documents section to create a draft, check amounts and issue a receipt or invoice. Only record a payment once it has actually been received."
+      ],
+      [
+        "Customer receipt recovery",
+        "Customers can open My Receipts to find purchases associated with their verified email, or claim an eligible older receipt using its private recovery code."
+      ],
+      [
+        "Team access",
+        "Business owners can invite staff and assign roles. Staff access is limited to the permissions of their role."
+      ],
+      [
+        "Contact support",
+        "Use the contact form below to explain a problem. Never include passwords, payment card details or private receipt recovery codes."
+      ]
+    ]
+  },
+  "/contact": {
+    "title": "Contact Bizlano",
+    "eyebrow": "CONTACT & SUPPORT",
+    "lead": "Tell us what you need help with.",
+    "sections": [
+      [
+        "Questions about your business workspace",
+        "Describe the issue and include the page or action where it occurred. We will review the request using the contact information you provide."
+      ],
+      [
+        "Questions about a purchase",
+        "For an order, refund or product dispute, contact the business that sold the item. Bizlano provides business-record tools, not the merchant’s refund decision."
+      ],
+      [
+        "Privacy request",
+        "Use the same form and select Privacy request if you want information about access, correction or deletion of personal information."
+      ]
+    ]
+  },
+  "/legal/terms": {
+    "title": "Terms of service",
+    "eyebrow": "LEGAL",
+    "lead": "The terms for using Bizlano's business and receipt services.",
+    "sections": [
+      [
+        "Using Bizlano",
+        "You must provide accurate account information, protect your sign-in details and use Bizlano for lawful business purposes. Business owners are responsible for the activity of staff invited into their workspace."
+      ],
+      [
+        "Business records",
+        "You are responsible for the accuracy of product descriptions, prices, taxes, customer details, invoices, receipts and manually recorded payments. A document in Bizlano does not by itself prove that a payment has settled."
+      ],
+      [
+        "Customer and team data",
+        "Businesses must have an appropriate lawful basis to record and use customer and employee information and should grant staff only the access they need."
+      ],
+      [
+        "Connections with other services",
+        "If you authorize a connection such as Global Webstores, related business records may be transmitted under that connection. Disconnecting stops new synchronization where supported but does not automatically erase financial records already created."
+      ],
+      [
+        "Service changes and availability",
+        "We may correct errors, improve features or restrict activity that threatens the service or other users. Access may be interrupted by maintenance or network outages."
+      ],
+      [
+        "Liability and disputes",
+        "Bizlano provides record-management tools and does not replace qualified tax, legal or accounting advice. Merchants remain responsible for their own sales, fulfilment, refunds and customer commitments."
+      ],
+      [
+        "Questions about these terms",
+        "Use the Contact page to ask a question or report a concern."
+      ]
+    ]
+  },
+  "/legal/privacy": {
+    "title": "Privacy notice",
+    "eyebrow": "YOUR DATA",
+    "lead": "How Bizlano handles business, account and receipt information.",
+    "sections": [
+      [
+        "Information we process",
+        "Depending on how you use Bizlano, we process account details, business profile information, staff invitations, customer contacts, products, invoices, receipts, payment records, uploaded logos and support messages."
+      ],
+      [
+        "Why we process it",
+        "We use this information to operate accounts, authenticate sessions, deliver business tools, generate documents, recover eligible receipts, respond to support requests, prevent abuse and maintain reliable records."
+      ],
+      [
+        "Business and customer responsibilities",
+        "A merchant generally decides which customer information to collect in its workspace. Bizlano processes that information to provide the service. Customers should contact the issuing merchant about the accuracy of a particular transaction."
+      ],
+      [
+        "Where information is handled",
+        "The current application uses Cloudflare Workers, D1 and R2. Transactional emails may be delivered through Resend after the sender account is configured. A verified marketplace connection may transmit limited sales information between authorized services."
+      ],
+      [
+        "Sharing and protection",
+        "We do not publish private receipts or business data. Access is limited by account, membership and protected receipt recovery checks. Authorized service providers process information to deliver the features described here."
+      ],
+      [
+        "Retention and requests",
+        "Records are retained as needed to operate the service, honour documented transactions, meet legal obligations and handle disputes. You can request access, correction or deletion where applicable through Contact. Some financial records may need to be retained for legitimate or legal reasons."
+      ],
+      [
+        "Your privacy choices",
+        "You can manage the details in your account or business workspace. Essential sign-in cookies are needed for secure access. We do not use the account session cookie as an advertising tracker."
+      ],
+      [
+        "Nigeria data protection",
+        "We aim to handle applicable personal data in line with the Nigeria Data Protection Act, 2023. Use Contact to report a data concern."
+      ]
+    ]
+  },
+  "/legal/cookies": {
+    "title": "Cookies & sessions",
+    "eyebrow": "YOUR PREFERENCES",
+    "lead": "A simple explanation of the cookies Bizlano needs.",
+    "sections": [
+      [
+        "Essential session cookie",
+        "Bizlano uses a secure, HTTP-only session cookie to remember that you have signed in. The cookie is required to access protected business and customer receipt information."
+      ],
+      [
+        "Local browser settings",
+        "The application may remember non-sensitive interface settings in your browser to improve your experience. These are separate from the server-side financial records."
+      ],
+      [
+        "Advertising cookies",
+        "Bizlano's core workspace does not require advertising cookies. If optional analytics or marketing tools are introduced, this notice and the available choices will be updated."
+      ],
+      [
+        "Managing cookies",
+        "You may clear cookies using your browser settings. Doing so can sign you out and remove preferences, but it will not delete business records stored in your account."
+      ]
+    ]
+  },
+  "/legal/security": {
+    "title": "Security at Bizlano",
+    "eyebrow": "TRUST & SAFETY",
+    "lead": "Protecting access to business records is built into how the workspace operates.",
+    "sections": [
+      [
+        "Account protection",
+        "Business and receipt access is tied to authenticated accounts and server-managed sessions. Users should use strong unique passwords and sign out on shared devices."
+      ],
+      [
+        "Business separation",
+        "A team member may access a workspace only through an active business membership and the permissions assigned to their role."
+      ],
+      [
+        "Documents and payments",
+        "The service checks document and payment state to reduce accidental changes to issued records, and keeps audit information for relevant activities."
+      ],
+      [
+        "Customer receipt privacy",
+        "Receipt lookup requires an authorized account or a private recovery code. Matching a name or phone number alone is not proof of ownership."
+      ],
+      [
+        "Report a concern",
+        "Use Contact to report suspicious access or a security concern. Do not send passwords, recovery codes or other sensitive secrets through the contact form."
+      ]
+    ]
+  },
+  "/legal/accessibility": {
+    "title": "Accessibility",
+    "eyebrow": "INCLUSIVE DESIGN",
+    "lead": "Bizlano should be useful on phones, tablets and computers.",
+    "sections": [
+      [
+        "Our approach",
+        "We aim for readable text, clear forms, keyboard-operable controls, visible focus indicators and responsive layouts."
+      ],
+      [
+        "Help us improve",
+        "If a page, control or document is difficult to use, use Contact to describe the issue and the device or assistive technology involved. We use reports to prioritize improvements."
+      ]
+    ]
+  },
+  "/legal/data-requests": {
+    "title": "Data requests",
+    "eyebrow": "PRIVACY RIGHTS",
+    "lead": "Request access, correction or deletion of your personal information.",
+    "sections": [
+      [
+        "Start a request",
+        "Open Contact and choose Privacy request. Tell us which account and information the request concerns without sending passwords or receipt recovery codes."
+      ],
+      [
+        "Verifying requests",
+        "To protect other people's records, we may need to verify your ownership or authority before providing or changing private data."
+      ],
+      [
+        "Business records",
+        "A business owner may be responsible for correcting customer information in their own workspace. Some issued financial documents must remain intact for legal, audit or reconciliation purposes."
+      ]
+    ]
+  }
+}

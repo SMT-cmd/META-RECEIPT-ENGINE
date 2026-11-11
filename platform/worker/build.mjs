@@ -15,7 +15,8 @@ const embedded=[
   'const client='+JSON.stringify(read('client.js'))+';',
   'const customerHtml='+JSON.stringify(read('customer.html'))+';',
   'const customerJs='+JSON.stringify(read('customer.js'))+';',
-  'const icon='+JSON.stringify(canonical)+';'
+  'const icon='+JSON.stringify(canonical)+';',
+  'const legalPages='+JSON.stringify(JSON.parse(read('legal-content.json')))+';'
 ].join('\n');
 const bundle=source.replace(marker,embedded);
 mkdirSync(join(dir,'dist'),{recursive:true});
