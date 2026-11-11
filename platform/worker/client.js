@@ -317,6 +317,53 @@ function globalWebstores(){
  '<div class="rowcard"><span><strong>4. Send it to your customer</strong><small>Share a PDF or send it through your preferred messaging app.</small></span><span class="mini muted">Your choice</span></div></div>'+
  '<p class="mini muted" style="margin-top:14px">Customer email automation and advanced delivery settings will be introduced separately, once tested and approved.</p></section></div>';
 }
+
+async function removeWhiteBackground(file){
+ // Fast local image editing: remove only near-white areas connected to the edge.
+ // No remote service, private image upload or AI charge is involved.
+ let image;
+ try{
+  const url=URL.createObjectURL(file);
+  try{image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('Cannot open this image'));im.src=url})}
+  finally{URL.revokeObjectURL(url)}
+ }catch{throw Error('This image could not be opened. Use a PNG, JPG or WebP image.')}
+ const width=image.naturalWidth||image.width,height=image.naturalHeight||image.height;
+ if(!width||!height)throw Error('Invalid image size');
+ for(const maxSide of [750,520,380]){
+  const factor=Math.min(1,maxSide/Math.max(width,height)),w=Math.max(1,Math.round(width*factor)),h=Math.max(1,Math.round(height*factor));
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw Error('Your device cannot process this image. Upload a transparent PNG instead.');
+  ctx.drawImage(image,0,0,w,h);
+  const pixels=ctx.getImageData(0,0,w,h),v=pixels.data,seen=new Uint8Array(w*h),queue=new Uint32Array(w*h);
+  let tail=0,head=0;
+  const nearWhite=i=>{const p=i*4,r=v[p],g=v[p+1],b=v[p+2],max=Math.max(r,g,b),min=Math.min(r,g,b);return v[p+3]>0&&min>=231&&max-min<24};
+  const push=i=>{if(!seen[i]&&nearWhite(i)){seen[i]=1;queue[tail++]=i}};
+  for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}
+  for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
+  while(head<tail){
+   const idx=queue[head++],p=idx*4;v[p+3]=0;
+   const x=idx%w;
+   if(x>0)push(idx-1);if(x<w-1)push(idx+1);if(idx>=w)push(idx-w);if(idx<w*(h-1))push(idx+w);
+  }
+  if(tail===0)throw Error('The image does not have a removable plain-white outer background. Upload a transparent PNG or turn off cleanup.');
+  ctx.putImageData(pixels,0,0);
+  const png=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  if(png&&png.size>50&&png.size<=400000)return png;
+ }
+ throw Error('The cleaned image is too large. Please use a smaller or transparent PNG.');
+}
+async function uploadBusinessArtwork(form,kind,slugValue){
+ const file=form.elements.namedItem(kind)?.files?.[0];
+ if(!file||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Choose a PNG, JPEG or WebP image');
+ if(file.size>5000000)throw Error('Choose an image under 5 MB for cleanup or 400 KB without cleanup');
+ const remove=form.elements.namedItem('removeWhite')?.checked===true;
+ const uploaded=remove?await removeWhiteBackground(file):file;
+ if(uploaded.size>400000)throw Error('Image is over 400 KB. Turn on white-background cleanup or choose a smaller image.');
+ const response=await fetch('/api/b/'+slugValue+'/'+kind,{method:'POST',headers:{'content-type':remove?'image/png':file.type},body:uploaded});
+ const payload=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(payload.error||'Image upload failed');
+ return payload;
+}
 function designStudio(){
  const design=state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1};
  const current=state.templateChoice||design.template;
@@ -475,6 +522,14 @@ document.addEventListener('click',async ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.closest('[data-form=document]'))drawPreview()});
 document.addEventListener('change',ev=>{
+ const artwork=ev.target.closest('[data-form=logo], [data-form=signature]');
+ if(artwork&&(ev.target.type==='file'||ev.target.name==='removeWhite')){
+  const file=artwork.querySelector('input[type=file]')?.files?.[0],preview=artwork.querySelector('[data-artwork-preview]');
+  if(preview){preview.textContent='';preview.classList.toggle('hidden',!file);
+    if(file){const image=document.createElement('img');const url=URL.createObjectURL(file);image.src=url;image.alt='Selected image preview';image.onload=()=>URL.revokeObjectURL(url);image.onerror=()=>URL.revokeObjectURL(url);preview.append(image);
+     const hint=document.createElement('small');hint.textContent=artwork.querySelector('[name=removeWhite]')?.checked?'Plain-white background will be removed when you save.':'Original image preview — your file will be used unchanged.';preview.append(hint);}
+  }return;
+ }
  if(!ev.target.matches('.li-catalog'))return;
  const row=ev.target.closest('.line-item'),index=Number(row?.dataset.line);
  const matched=state.products.find(p=>p.name.toLowerCase()===ev.target.value.trim().toLowerCase());
@@ -514,12 +569,10 @@ document.addEventListener('submit',async ev=>{
     await api(t+'/design',{template,accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
     state.templateChoice=null;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
   }
-  if(kind==='logo'){
-    const file=form.elements.namedItem('logo')?.files?.[0];
-    if(!file||file.size>400000||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Select PNG, JPEG or WebP under 400 KB');
-    const response=await fetch(t.replace(/^/,'/api')+'/logo',{method:'POST',headers:{'content-type':file.type},body:file});
-    const payload=await response.json();if(!response.ok)throw Error(payload.error||'Logo upload failed');
-    flash('Business logo uploaded.');await navigate('branding');state.busy=false;return;
+  if(kind==='logo'||kind==='signature'){
+    await uploadBusinessArtwork(form,kind,state.biz.slug);
+    flash(kind==='logo'?'Your business logo is ready.':'Your signature was uploaded. Enable it in the Document studio if you want it visible on receipts.');
+    await navigate('branding');state.busy=false;return;
   }
   if(kind==='invite'){const r=await api(t+'/invite',{email:val(form,'email'),role:val(form,'role')});const box=document.getElementById('invite-result');box.textContent='Invite link (share privately): '+r.url;box.classList.remove('hidden');flash('Invitation generated. Copy the private link.');state.busy=false;return}
   if(kind==='document'){
