@@ -13,7 +13,7 @@ test('document studio begins with business type and recommends a short category 
  assert.doesNotMatch(ui,/TEMPLATE_LIST\.map\(\(id,i\)=>/);
 });
 test('template cards and full-sized preview use the actual receipt rendering pipeline',()=>{
- assert.match(ui,/function sampleHtml\(template\)/);
+ assert.match(ui,/function sampleHtml\(template,asCard=false\)/);
  assert.match(ui,/return receipt\(sampleDocument\(template\)/);
  assert.match(ui,/template-thumbnail-inner/);
  assert.match(ui,/studio-receipt-preview/);
@@ -60,3 +60,33 @@ test('receipt creation requires contact information and actual paid amount befor
  assert.match(ui,/For unpaid sales, choose Invoice instead/);
 });
 
+test('all 36 document themes have a separate visual structure and recommended hue',()=>{
+ const art=ui.match(/const RECEIPT_ART=\{([\s\S]*?)\n\};/);
+ assert.ok(art,'Design identities must exist');
+ const layouts=[...art[1].matchAll(/layout:'([a-z-]+)'/g)].map(m=>m[1]);
+ assert.equal(layouts.length,36);
+ assert.equal(new Set(layouts).size,36,'No two template IDs should share a layout archetype');
+ for(const layout of layouts){assert.ok(html.includes('.receipt-layout-'+layout),'Missing actual receipt CSS for '+layout)}
+ const accents=[...art[1].matchAll(/accent:'(#[0-9a-f]{6})'/g)].map(m=>m[1]);
+ assert.equal(accents.length,36);
+ assert.ok(new Set(accents).size>=30,'Designs must not all use the same palette');
+});
+test('business colours can be chosen during design selection and reach the real print renderer',()=>{
+ assert.match(ui,/const COLOR_STORIES=\[/);
+ assert.match(ui,/data-design-color/);
+ assert.match(ui,/data-design-custom-color/);
+ assert.match(ui,/setDesignColour\(el\.dataset\.designColor\)/);
+ assert.match(ui,/setDesignColour\(ev\.target\.value\)/);
+ assert.match(ui,/style="--receipt-accent:/);
+ assert.match(html,/Selected brand colour is printed on EVERY template/);
+ assert.match(html,/\.receipt \.r-total \.grand\{box-shadow:inset 5px 0 var\(--receipt-accent\)/);
+});
+test('electrical and repair businesses receive four clearly different receipt categories',()=>{
+ assert.match(ui,/id:'trades',[^\n]*templates:\['service','ledger','premium-dark','logistics'\]/);
+ for(const variant of ['blueprint','ledger','dark','logistics'])assert.match(html,new RegExp('\\.receipt-layout-'+variant+' \\.r-head'));
+});
+test('sample thumbnails use real document rendering without duplicate printable IDs',()=>{
+ assert.match(ui,/return receipt\(sampleDocument\(template\),'BZ-00021',false,design\)\.replace/);
+ assert.match(ui,/id="printable"/);
+ assert.match(html,/\.template-thumbnail-inner \.receipt/);
+});
