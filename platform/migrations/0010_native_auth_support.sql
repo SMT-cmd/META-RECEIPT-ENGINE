@@ -1,6 +1,6 @@
 -- Bizlano-owned authentication and support records. Additive migration for dedicated D1 only.
 -- Existing MetaForge Firebase identities and historic records remain unchanged.
-ALTER TABLE users ADD COLUMN email_verified_at TEXT;
+-- email_verified_at is added by the existing 0009_cloudflare_native_accounts.sql.
 CREATE TABLE IF NOT EXISTS auth_action_tokens (
   token_hash TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
