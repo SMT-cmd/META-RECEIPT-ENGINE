@@ -317,6 +317,7 @@ function designStudio(){
  input('Receipt footer message','footerNote','text',design.footer_note)+
  '</div><div class="row" style="margin:10px 0 17px"><span class="mini muted">Quick colors</span>'+DESIGN_PALETTE.map(c=>'<button type="button" class="color-swatch" data-accent="'+c+'" aria-label="Choose color '+c+'" style="background:'+c+'"></button>').join('')+'</div>'+
  '<label class="field"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+' style="display:inline;width:auto;margin-right:7px">Display my business logo on receipts</label>'+
+ '<label class="field"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+' style="display:inline;width:auto;margin-right:7px">Show my uploaded signature at the signatory area (optional)</label><p class="mini muted">A signature is visible to everyone receiving the document. Use only a business signature intended for public use. You can manage it in Business identity.</p>'+
  '<div class="row"><button type="submit" class="btn primary">Save as business default</button><button type="button" data-action="preview-design" class="btn">See sample document</button></div></form></section>'+
  '<p class="mini muted">Your design is saved for your business. Previously issued documents keep the template selected when they were created.</p>';
 }
@@ -366,7 +367,7 @@ function receipt(doc,number,stored=false){
  const accent=/^#[0-9a-fA-F]{6}$/.test(state.design?.accent||'')?state.design.accent:'#6935df';
  const paper=state.design?.paper||'a4',contact=state.design?.contact||'',headerNote=state.design?.header_note||'',footerNote=state.design?.footer_note||'';
  return '<article class="receipt style-'+e(template)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+'"><div class="r-head"><div>'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'')+'<h2>'+e(state.biz.business_name)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div><div style="text-align:right"><h3>'+e(doc.kind||'Invoice').toUpperCase()+'</h3><div class="r-small">'+e(number||'UNSAVED DRAFT')+'</div></div></div>'+
- '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+(doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
+ '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+(doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+(doc.customerPhone||doc.recipient_phone?'<div class="r-small">'+e(doc.customerPhone||doc.recipient_phone)+'</div>':'')+'</div><div><strong>Issued on</strong><div class="r-small">'+e(doc.date||doc.issued_on||today())+'</div></div></div>'+
  '<table><thead><tr><th>Description</th><th>Qty</th><th>Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
  '<div class="r-total"><div><span>Subtotal</span><strong>'+oldMoney(subtotal)+'</strong></div><div><span>Discount</span><strong>'+oldMoney(discount)+'</strong></div><div><span>Tax</span><strong>'+oldMoney(vat)+'</strong></div><div class="grand"><span>Total</span><span>'+oldMoney(total)+'</span></div><div><span>Received</span><strong>'+oldMoney(doc.received??(stored?doc.paid_minor/100:0))+'</strong></div></div>'+
  '<p class="r-small" style="margin-top:23px">'+e(doc.notes||footerNote||'Thank you for your business.')+'</p>'+(state.design?.show_signature&&state.design?.signature_url?'<div class="r-signature"><img src="'+e(state.design.signature_url)+'" alt="Authorized signature"><small>Authorized signatory</small></div>':'')+(doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at bizlano.pages.dev/receipts</small></div>':'')+'<div class="powered">Powered by <strong style="color:#6635db">Bizlano</strong> · Your business, beautifully managed.</div></article>';
@@ -414,6 +415,26 @@ document.addEventListener('click',async ev=>{
  if(action==='reset'){const address=prompt('Email for password reset');if(address){await sendPasswordResetEmail(auth,address);flash('Password reset email requested.')}return}
  if(el.dataset.template){state.templateChoice=el.dataset.template;render();return}
  if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field)field.value=el.dataset.accent;return}
+ if(el.dataset.expandLine!==undefined||el.hasAttribute('data-edit-notes')){
+  const dialog=document.getElementById('editor-dialog');
+  if(!dialog)return;
+  const line=el.hasAttribute('data-edit-notes')?null:Number(el.dataset.expandLine);
+  const target=line===null?document.querySelector('[data-form=document] [name=notes]'):document.querySelector('[data-line="'+line+'"] .li-description');
+  if(!target)return;
+  dialog.dataset.editTarget=line===null?'notes':String(line);
+  dialog.querySelector('#editor-dialog-title').textContent=line===null?'Notes & instructions':'Item '+(line+1)+' description';
+  const editor=dialog.querySelector('#editor-dialog-text');
+  editor.maxLength=line===null?1800:240;editor.value=target.value;
+  dialog.showModal();editor.focus();editor.setSelectionRange(editor.value.length,editor.value.length);return;
+ }
+ if(action==='cancel-expanded'){document.getElementById('editor-dialog')?.close();return}
+ if(action==='save-expanded'){
+  const dialog=document.getElementById('editor-dialog'),value=dialog.querySelector('#editor-dialog-text').value;
+  const key=dialog.dataset.editTarget;
+  const field=key==='notes'?document.querySelector('[data-form=document] [name=notes]'):document.querySelector('[data-line="'+key+'"] .li-description');
+  if(field){field.value=value;field.dispatchEvent(new Event('input',{bubbles:true}));field.focus()}
+  dialog.close();return;
+ }
  if(action==='preview-design'){const sample={kind:'receipt',template:state.templateChoice||state.design?.template||'signature',customer:'Sample customer',date:today(),items:[{description:'Sample product',qty:2,price:7500}],discountPct:0,taxPct:0,shipping:0,received:15000,notes:state.design?.footer_note};printPage(sample);return}
  if(el.dataset.readAlert){await api('/b/'+state.biz.slug+'/notifications',{id:el.dataset.readAlert});flash('Marked as read');await navigate('alerts');return}
  if(action==='gws-code'){
@@ -440,11 +461,11 @@ document.addEventListener('click',async ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.closest('[data-form=document]'))drawPreview()});
 document.addEventListener('change',ev=>{
- if(!ev.target.matches('.li-description'))return;
+ if(!ev.target.matches('.li-catalog'))return;
  const row=ev.target.closest('.line-item'),index=Number(row?.dataset.line);
  const matched=state.products.find(p=>p.name.toLowerCase()===ev.target.value.trim().toLowerCase());
  if(state.items[index])state.items[index].productId=matched?.id||null;
- if(matched)row.querySelector('.li-price').value=String(matched.price_minor/100);
+ if(matched){row.querySelector('.li-description').value=matched.name;row.querySelector('.li-price').value=String(matched.price_minor/100)}
  drawPreview();
 });
 let documentMode='issue';
@@ -476,7 +497,7 @@ document.addEventListener('submit',async ev=>{
   }
   if(kind==='design'){
     const template=state.templateChoice||state.design?.template||'signature';
-    await api(t+'/design',{template,accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked});
+    await api(t+'/design',{template,accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
     state.templateChoice=null;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
   }
   if(kind==='logo'){
@@ -489,6 +510,7 @@ document.addEventListener('submit',async ev=>{
   if(kind==='invite'){const r=await api(t+'/invite',{email:val(form,'email'),role:val(form,'role')});const box=document.getElementById('invite-result');box.textContent='Invite link (share privately): '+r.url;box.classList.remove('hidden');flash('Invitation generated. Copy the private link.');state.busy=false;return}
   if(kind==='document'){
    const b=currentDoc();b.draft=documentMode==='draft';
+   if(!b.draft&&!b.customerEmail&&!b.customerPhone){document.querySelector('[data-form=document] [name=customerEmail]')?.focus();throw Error('Add a customer email or phone number before issuing this document')}
    const result=await api(t+'/documents',b);
    flash('Saved '+result.number);await navigate('documents');
   }else{flash('Saved successfully');await navigate(state.view)}
