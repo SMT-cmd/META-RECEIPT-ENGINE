@@ -636,7 +636,9 @@ async function brandPage(slug,env,origin){
  if(!slugValid(slug))return new Response('Business not found',{status:404});
  const biz=await env.DB.prepare("SELECT slug,business_name,logo_url,brand_color FROM tenants WHERE slug=? AND disabled_at IS NULL").bind(slug).first();
  if(!biz)return new Response('Business not found',{status:404});
- const base=typeof env.BIZLANO_PUBLIC_ORIGIN==='string'&&/^https:\/\/[a-z0-9.-]+$/.test(env.BIZLANO_PUBLIC_ORIGIN)?env.BIZLANO_PUBLIC_ORIGIN:'https://bizlano.pages.dev';
+ const requestHost=new URL(origin).hostname;
+ const tenantHost=requestHost.startsWith(slug+'.')?requestHost.slice(slug.length+1):null;
+ const base=typeof env.BIZLANO_PUBLIC_ORIGIN==='string'&&/^https:\/\/[a-z0-9.-]+$/.test(env.BIZLANO_PUBLIC_ORIGIN)?env.BIZLANO_PUBLIC_ORIGIN:(tenantHost?'https://'+tenantHost:'');
  const name=escapeHtml(biz.business_name),logo=biz.logo_url?'<img src="'+escapeHtml(biz.logo_url)+'" alt="'+name+' logo" style="max-height:75px;max-width:135px;object-fit:contain;margin-bottom:20px">':'';
  const recovery=base+'/receipts?business='+encodeURIComponent(biz.slug),staff=base+'/app?biz='+encodeURIComponent(biz.slug);
  const page='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+name+' · Receipt recovery | Bizlano</title><link rel="icon" type="image/png" href="/assets/bizlano-mark.png"><style>'+
@@ -649,7 +651,9 @@ export default {async fetch(req,env){
  // Future wildcard domain works only after DNS and Cloudflare routes are configured.
  // The usable fallback today is /s/<business-slug> on the existing Cloudflare hostname.
  const host=url.hostname.toLowerCase();
- const sub=host.endsWith('.bizlano.com')?host.slice(0,-'.bizlano.com'.length):null;
+ const businessDomain=String(env.BIZLANO_BUSINESS_DOMAIN||'').trim().toLowerCase();
+ const suffix=businessDomain&&/^[a-z0-9.-]+\.[a-z]{2,}$/.test(businessDomain)?'.'+businessDomain:null;
+ const sub=suffix&&host.endsWith(suffix)?host.slice(0,-suffix.length):null;
  if(sub&&slugValid(sub)&&p==='/')return brandPage(sub,env,url.origin);
  if(req.method==='GET'&&/^\/s\/[a-z0-9-]+\/?$/.test(p))return brandPage(p.split('/')[2],env,url.origin);
  if(req.method==='GET'&&/^\/go\/[a-z0-9-]+\/?$/.test(p)){
