@@ -2,6 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const WebURL=require('node:url').URL;
 const src=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 
 test('marketing footer is concise and business-facing',()=>{
@@ -18,9 +19,9 @@ test('recovery share links follow the currently visited hostname',()=>{
  const business=vendor.match(/function businessHref\(\)\{[^]*?\n\}/)?.[0];
  assert.ok(fn&&business);
  for(const origin of ['https://bizlano.pages.dev','https://bizlano.com']){
-  const result=new Function('state','location',fn+';return recoveryHref();')({biz:{slug:'corner-store'}},{origin});
+  const result=new Function('state','location','URL',fn+';return recoveryHref();')({biz:{slug:'corner-store'}},{origin},WebURL);
   assert.equal(result,origin+'/receipts?business=corner-store');
-  const page=new Function('state','location',business+';return businessHref();')({biz:{slug:'corner-store'}},{origin});
+  const page=new Function('state','location','URL',business+';return businessHref();')({biz:{slug:'corner-store'}},{origin},WebURL);
   assert.equal(page,origin+'/s/corner-store');
  }
  assert.match(vendor,/data-action="copy-recovery-message"/);
