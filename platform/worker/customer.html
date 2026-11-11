@@ -53,6 +53,14 @@ header{background:#fff;border-bottom:1px solid var(--line);min-height:78px;displ
 .total-line{display:flex;justify-content:space-between;align-items:center;font:800 17px Manrope;margin:17px 0}.document-footer{text-align:center;border-top:1px solid #eceef4;margin-top:32px;padding-top:18px;color:#828ba0;font-size:10px}.document-footer strong{color:#6634df}
 #modal[hidden],#toast[hidden]{display:none}.toast{position:fixed;bottom:20px;right:20px;background:#202347;color:#fff;padding:14px 18px;border-radius:11px;font-size:12px;box-shadow:0 10px 35px #24213a35;z-index:150;max-width:min(380px,90vw)}
 footer{border-top:1px solid var(--line);background:#fff;padding:24px 0;color:#828ca3;font-size:11px}
+.footer-parent{display:flex;align-items:center;gap:11px;text-decoration:none;color:#263150}
+.footer-parent-mark{width:46px;height:46px;flex:none;display:grid;place-items:center;background:#fff;border:1px solid #e2e4ef;border-radius:9px;padding:4px}
+.footer-parent-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.footer-parent span{line-height:1.5}
+.footer-parent strong{display:block;color:#272f52;font-size:12px}
+.footer-parent small{display:block;color:#6535d7;font-size:11px}
+.footer-parent:hover small{text-decoration:underline}
+.footer-brand-line{font-size:11px;color:#65718b}
 @media(max-width:760px){.auth-root{grid-template-columns:1fr;padding:18px 0 50px}.auth-story{min-height:230px;padding:30px}.auth-story h1{font-size:35px}.auth-story p{font-size:12px}.auth-card{padding:28px 22px}.receipt-grid{grid-template-columns:1fr}.hero{padding:32px 0 25px}.stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.container{width:calc(100% - 28px)}header{min-height:66px}.brand{font-size:19px}.brand img{width:34px;height:34px}.top-actions{gap:9px}.top-actions a{font-size:11px}.hero h1{font-size:32px}.claim{grid-template-columns:1fr}.claim .button{width:100%}.stats{gap:7px}.stat{padding:13px}.stat strong{font-size:21px}.panel{padding:17px}.drawer{padding:0}.drawer-inner{border-radius:0;min-height:100dvh}.document{padding:17px}.document-header h2{font-size:16px}.document-header strong{font-size:18px}}
 @media print{@page{margin:12mm}html,body{background:#fff!important}.topbar,.hero,.dashboard,.auth-root,footer,.drawer .modal-actions,#toast{display:none!important}.drawer{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important}.drawer-inner{box-shadow:none!important;border:0!important;width:100%!important;padding:0!important}.document{border:0!important;box-shadow:none!important;margin:0!important;padding:0!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.document-footer{display:block!important}}
@@ -73,6 +81,6 @@ p,small,.muted{line-height:1.65}
 </div></header>
 <main class="container" id="customer-app" aria-live="polite"><section class="hero"><div class="eyebrow">My receipts</div><h1>One place for every purchase.</h1><p>Loading your secure receipt dashboard…</p></section></main>
 <div id="modal" hidden></div><div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-<footer><div class="container spread"><span>© 2026 Bizlano</span><span>Powered by Bizlano</span></div></footer>
+<footer><div class="container spread"><span class="footer-brand-line">© 2026 Bizlano · Powered by Global Webstores</span><a class="footer-parent" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer" aria-label="Explore Global Webstores"><span class="footer-parent-mark"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" width="37" height="37" alt="Global Webstores official logo" loading="lazy"></span><span><strong>A Global Webstores brand</strong><small>Explore Global Webstores ↗</small></span></a></div></footer>
 <script type="module" src="/customer.js"></script>
 </body></html>
