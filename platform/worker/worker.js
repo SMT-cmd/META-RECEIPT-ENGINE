@@ -132,14 +132,16 @@ async function marketplaceApi(req,env,url){
   const customerId=customerExisting?.id||crypto.randomUUID(),now=new Date(),issueDate=now.toISOString().slice(0,10);
   const plans=[
    ...(!customerExisting?[env.DB.prepare("INSERT INTO customers(id,tenant_id,name,email,phone) VALUES(?,?,?,?,?)").bind(customerId,connection.tenant_id,customer,emailAddress,String(order.customerPhone||'').slice(0,70))]:[]),
-   env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?,'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
-    .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
+   env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,recipient_email,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?, 'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
+    .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,emailAddress,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
   ];
   for(const line of lines)plans.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(),connection.tenant_id,docId,line.desc,line.qty,line.unit,line.amount));
   plans.push(env.DB.prepare("INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,reference,recorded_by) SELECT ?,?,?,?,?,?,created_by FROM tenants WHERE id=?")
     .bind(crypto.randomUUID(),connection.tenant_id,docId,amount,'Global Webstores',String(order.paymentReference||orderId).slice(0,140),connection.tenant_id));
   plans.push(env.DB.prepare("INSERT INTO marketplace_events(id,provider,provider_event_id,tenant_id,vendor_id,document_id,event_type,event_hash) VALUES(?,'globalwebstores',?,?,?,?,?,?)").bind(crypto.randomUUID(),orderId,connection.tenant_id,vendorId,docId,'order.paid',await hash(JSON.stringify(order))));
+  const retrieveCode=await recoveryCode(env,connection.tenant_id,docId);
+  plans.push(env.DB.prepare('INSERT INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)').bind(connection.tenant_id,docId,await hash(retrieveCode)));
   plans.push(env.DB.prepare("INSERT INTO receipt_notifications(id,tenant_id,document_id,kind,title,body) VALUES(?,?,?,'receipt_ready',?,?)")
    .bind(crypto.randomUUID(),connection.tenant_id,docId,'Your Global Webstores receipt is ready','Paid order '+orderId+' · '+title+' · Open, print or share.'));
   plans.push(env.DB.prepare("UPDATE marketplace_connections SET last_sale_at=datetime('now') WHERE provider='globalwebstores' AND vendor_id=? AND tenant_id=?")
@@ -149,6 +151,38 @@ async function marketplaceApi(req,env,url){
   return json({created:true,documentId:docId,documentNumber,workspace:new URL('/app?biz='+connection.slug,url.origin).toString()},201);
  }
  fail(404,'Unknown marketplace action');
+}
+
+async function recoveryCode(env,tenantId,documentId){
+ if(typeof env.RECEIPT_RECOVERY_KEY!=='string'||env.RECEIPT_RECOVERY_KEY.length<32)fail(503,'Receipt recovery is unavailable');
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.RECEIPT_RECOVERY_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ const bits=new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode('receipt:v1:'+tenantId+':'+documentId)));
+ const chunks=hex(bits.slice(0,12)).toUpperCase().match(/.{6}/g);
+ return 'BZ-'+chunks.join('-');
+}
+async function ensureRecoveryCode(env,tenantId,documentId,eligible=true){
+ if(!eligible)return null;
+ const code=await recoveryCode(env,tenantId,documentId);
+ await env.DB.prepare("INSERT OR IGNORE INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)")
+  .bind(tenantId,documentId,await hash(code)).run();
+ const active=await env.DB.prepare("SELECT 1 AS ok FROM receipt_recovery_codes WHERE tenant_id=? AND document_id=? AND code_hash=? AND revoked_at IS NULL")
+  .bind(tenantId,documentId,await hash(code)).first();
+ return active?code:null;
+}
+async function limitRecoveryClaims(env,userId){
+ const key=await hash('bizlano:customer-claim:'+userId),now=Math.floor(Date.now()/1000);
+ await env.DB.prepare("INSERT INTO recovery_attempts(attempt_key,count,period_start) VALUES(?,1,?) ON CONFLICT(attempt_key) DO UPDATE SET count=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN 1 ELSE recovery_attempts.count+1 END,period_start=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN excluded.period_start ELSE recovery_attempts.period_start END,updated_at=datetime('now')")
+  .bind(key,now).run();
+ const usage=await env.DB.prepare('SELECT count FROM recovery_attempts WHERE attempt_key=?').bind(key).first();
+ if((usage?.count||0)>8)fail(429,'Too many attempts. Please try again in 15 minutes.');
+}
+function customerDocument(row,lines){
+ return {id:row.id,tenantId:row.tenant_id,documentNumber:row.document_number,kind:row.kind,template:row.template,
+ customer:row.recipient_name,email:row.recipient_email,date:row.issued_on,dueDate:row.due_on,
+ status:row.status,currency:row.currency,subtotalMinor:row.subtotal_minor,discountMinor:row.discount_minor,taxMinor:row.tax_minor,
+ shippingMinor:row.shipping_minor,totalMinor:row.total_minor,paidMinor:row.paid_minor,notes:row.notes,store:row.business_name,
+ storeSlug:row.slug,storeLogo:row.logo_url,storeColor:row.brand_color,
+ items:(lines||[]).map(x=>({description:x.description,qty:x.quantity_milli/1000,price:x.unit_price_minor/100,lineTotalMinor:x.line_total_minor}))};
 }
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
@@ -164,6 +198,8 @@ async function api(req,env,url) {
    ]);
    known={user_id:uid};
   }
+  // Keep the verified current identity email in sync; it is the receipt inbox proof.
+  await env.DB.prepare("UPDATE users SET email=?,display_name=? WHERE id=? AND disabled_at IS NULL").bind(claim.email,claim.name,known.user_id).run();
   const token=rnd();
   await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(token),known.user_id).run();
   return json({ok:true},200,{'set-cookie':sessionCookie(token,604800)});
@@ -175,6 +211,33 @@ async function api(req,env,url) {
  }
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
+ if(path==='/api/customer/me'&&method==='GET')return json({email:user.email,name:user.display_name,verified:true});
+ if(path==='/api/customer/receipts'&&method==='GET'){
+  // A verified Firebase session is required: never list customer documents by name or product.
+  const data=await env.DB.prepare("SELECT DISTINCT d.tenant_id,d.id,d.document_number,d.kind,d.issued_on,d.total_minor,d.paid_minor,d.status,d.currency,t.business_name,t.slug,t.logo_url,COALESCE((SELECT group_concat(description,' · ') FROM (SELECT description FROM document_lines l WHERE l.tenant_id=d.tenant_id AND l.document_id=d.id LIMIT 3)),'') AS items_summary FROM documents d JOIN tenants t ON t.id=d.tenant_id LEFT JOIN customer_receipt_claims rc ON rc.tenant_id=d.tenant_id AND rc.document_id=d.id AND rc.user_id=? WHERE t.disabled_at IS NULL AND (d.recipient_email=? COLLATE NOCASE OR rc.user_id IS NOT NULL) AND d.paid_minor>0 AND d.status IN ('paid','part_paid','issued') ORDER BY d.issued_on DESC LIMIT 250")
+   .bind(user.id,user.email.toLowerCase()).all();
+  return json({email:user.email,rows:data.results||[],limit:250});
+ }
+ const privateDetail=path.match(/^\/api\/customer\/receipts\/([a-f0-9-]{36})$/);
+ if(privateDetail&&method==='GET'){
+  const row=await env.DB.prepare("SELECT d.*,t.slug,t.business_name,t.logo_url,t.brand_color FROM documents d JOIN tenants t ON t.id=d.tenant_id LEFT JOIN customer_receipt_claims rc ON rc.tenant_id=d.tenant_id AND rc.document_id=d.id AND rc.user_id=? WHERE d.id=? AND t.disabled_at IS NULL AND (d.recipient_email=? COLLATE NOCASE OR rc.user_id IS NOT NULL) AND d.paid_minor>0 AND d.status IN ('paid','part_paid','issued') LIMIT 1")
+   .bind(user.id,privateDetail[1],user.email.toLowerCase()).first();
+  if(!row)fail(404,'Receipt is not available for this account');
+  const lines=await env.DB.prepare('SELECT description,quantity_milli,unit_price_minor,line_total_minor FROM document_lines WHERE tenant_id=? AND document_id=? ORDER BY rowid LIMIT 100').bind(row.tenant_id,row.id).all();
+  return json({receipt:customerDocument(row,lines.results)});
+ }
+ if(path==='/api/customer/claim'&&method==='POST'){
+  await limitRecoveryClaims(env,user.id);
+  const body=await input(req),code=String(body?.code||'').trim().toUpperCase().replace(/\s/g,'');
+  if(!/^BZ-(?:[A-F0-9]{6}-){3}[A-F0-9]{6}$/.test(code))fail(400,'Enter the complete receipt recovery code');
+  const recovery=await env.DB.prepare("SELECT r.tenant_id,r.document_id FROM receipt_recovery_codes r JOIN documents d ON d.tenant_id=r.tenant_id AND d.id=r.document_id JOIN tenants t ON t.id=r.tenant_id WHERE r.code_hash=? AND r.revoked_at IS NULL AND d.status IN ('issued','part_paid','paid') AND d.paid_minor>0 AND t.disabled_at IS NULL").bind(await hash(code)).first();
+  if(!recovery)fail(404,'That code could not be verified. Ask the business for a new receipt code.');
+  await env.DB.batch([
+   env.DB.prepare("INSERT OR IGNORE INTO customer_receipt_claims(user_id,tenant_id,document_id,proof) VALUES(?,?,?,'receipt_code')").bind(user.id,recovery.tenant_id,recovery.document_id),
+   env.DB.prepare("UPDATE receipt_recovery_codes SET last_used_at=datetime('now') WHERE tenant_id=? AND document_id=?").bind(recovery.tenant_id,recovery.document_id)
+  ]);
+  return json({ok:true,documentId:recovery.document_id});
+ }
  if(path==='/api/me'&&method==='GET'){
   const businesses=await env.DB.prepare('SELECT t.slug,t.business_name,t.currency,t.logo_url,t.brand_color,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=? AND m.disabled_at IS NULL AND t.disabled_at IS NULL ORDER BY t.created_at DESC').bind(user.id).all();
   return json({user:{email:user.email,name:user.display_name},businesses:businesses.results||[]});
@@ -207,7 +270,8 @@ async function api(req,env,url) {
   const d=await env.DB.prepare('SELECT * FROM documents WHERE tenant_id=? AND id=?').bind(tenant.id,detail[2]).first();
   if(!d)fail(404,'Document not found in this business');
   const items=await env.DB.prepare('SELECT product_id,description,quantity_milli,unit_price_minor,line_total_minor FROM document_lines WHERE tenant_id=? AND document_id=? ORDER BY rowid').bind(tenant.id,detail[2]).all();
-  return json({document:{...d,customer:d.recipient_name,date:d.issued_on,received:d.paid_minor/100,
+  const code=await ensureRecoveryCode(env,tenant.id,d.id,d.paid_minor>0&&billable.has(d.kind)&&d.status!=='voided');
+  return json({document:{...d,recoveryCode:code,customer:d.recipient_name,date:d.issued_on,received:d.paid_minor/100,
    items:(items.results||[]).map(i=>({description:i.description,qty:i.quantity_milli/1000,price:i.unit_price_minor/100,productId:i.product_id})),
    discountPct:d.subtotal_minor?d.discount_minor*100/d.subtotal_minor:0,
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
@@ -385,9 +449,10 @@ async function api(req,env,url) {
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
    const did=crypto.randomUUID(),number=kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),b.customerEmail?email(b.customerEmail):null,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));
+   if(received>0&&billable.has(kind)){const code=await recoveryCode(env,tenant,did);batch.push(env.DB.prepare('INSERT INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)').bind(tenant,did,await hash(code)));}
    try{await env.DB.batch(batch)}catch(e){if(String(e).includes('stock'))fail(409,'Insufficient stock to issue document');throw e}
    await audit(env,tenant,user,'document.created',did);
    return json({id:did,number,total_minor:total},201);
