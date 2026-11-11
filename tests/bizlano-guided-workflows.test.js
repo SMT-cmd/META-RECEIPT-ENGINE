@@ -90,3 +90,8 @@ test('sample thumbnails use real document rendering without duplicate printable 
  assert.match(ui,/id="printable"/);
  assert.match(html,/\.template-thumbnail-inner \.receipt/);
 });
+
+test('fresh receipt designs are not trapped by an old cached dashboard script',()=>{
+ assert.match(html,/client\.js\?v=20261111-receipt-studio-36/);
+ assert.match(worker,/p==='\/client\.js'[^\n]*'cache-control':'no-store'/);
+});
