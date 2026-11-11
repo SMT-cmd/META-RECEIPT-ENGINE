@@ -50,7 +50,7 @@ async function load(){
  state.data=null;render();
  const t='/b/'+state.biz.slug;
  const section=state.view;
- let resource=section==='overview'?'overview':section==='create'?'products':section==='team'?'team':section;
+ let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section;
  if(section==='create') {
   const [p,c]=await Promise.all([api(t+'/products'),api(t+'/customers')]);
   state.products=p.rows;state.customers=c.rows;state.data={};
@@ -85,12 +85,12 @@ function businessPicker(){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
-  if(v==='team')return admin();
+  if(v==='team'||v==='branding')return admin();
   if(v==='products'||v==='customers'||v==='payments')return edit();
   if(v==='create')return edit();return true;
  });
@@ -151,6 +151,13 @@ function targets(){
  '<div class="cols"><section class="panel"><h2>Set sales target</h2><form data-form="target">'+input('Month','month','month',today().slice(0,7),true)+input('Monthly target (₦)','amount','number','',true,'min=".01" step=".01"')+'<button class="btn primary">Save target</button></form></section>'+
  '<section class="panel"><h2>Saved goals</h2>'+simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.label)+'</strong><small>'+e(x.period_start)+' to '+e(x.period_end)+'</small></div><strong>'+curr(x.target_minor)+'</strong></div>')+'</section></div>';
 }
+function branding(){const b=state.data?.business||state.biz;
+ return heading('BUSINESS IDENTITY','Your brand, your documents','Upload your business logo and keep your workspace recognizable.')+
+ '<div class="cols"><section class="panel"><h2>Business logo</h2><p class="muted">PNG, JPEG or WebP, maximum 400 KB. Uploaded logos stay in your dedicated Cloudflare R2 bucket.</p>'+
+ (b.logo_url?'<img style="max-width:160px;max-height:100px;object-fit:contain" src="'+e(b.logo_url)+'" alt="Business logo">':'<div class="banner">No logo uploaded yet</div>')+
+ '<form data-form="logo"><label class="field">Upload a logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn primary">Save logo</button></form></section>'+ 
+ '<section class="panel"><h2>Business information</h2><p><strong>'+e(b.business_name)+'</strong></p><p class="muted">Unique business address: '+e(b.slug)+'</p><p class="mini muted">Until your brand domain is connected, Bizlano uses the Cloudflare worker address for your secure workspace.</p></section></div>';
+}
 function team(){
  const rows=state.data?.rows||[];
  return heading('TEAM & ACCESS','Build your team','Invite staff through a private one-time link. They must have a verified email account.')+
@@ -165,7 +172,7 @@ function docEditor(){
  '<div class="editor"><section class="panel editor-form"><form data-form="document">'+
  '<h2>01 · Document and style</h2><div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+input('Due date','dueDate','date')+select('Template','template',tpl.map(x=>[x,x.charAt(0).toUpperCase()+x.slice(1)]))+'</div>'+
  '<h2>02 · Customer information</h2>'+input('Customer or recipient','customer','text','Walk-in customer',true)+
- '<h2>03 · Products and services</h2><div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div><button class="btn ghost" type="button" data-action="add-line">+ Add item</button>'+
+ '<h2>03 · Products and services</h2><datalist id="products-data">'+state.products.map(p=>'<option value="'+e(p.name)+'"></option>').join('')+'</datalist><div id="lines">'+state.items.map((i,n)=>lineHtml(i,n)).join('')+'</div><button class="btn ghost" type="button" data-action="add-line">+ Add item</button>'+
  '<h2 style="margin-top:25px">04 · Charges and payments</h2><div class="form-grid">'+input('Discount (%)','discountPct','number','0',false,'min="0" max="100" step=".01"')+input('VAT / Tax (%)','taxPct','number','0',false,'min="0" max="100" step=".01"')+input('Other charges (₦)','shipping','number','0',false,'min="0" step=".01"')+input('Received (₦)','received','number','0',false,'min="0" step=".01"')+'</div>'+select('Payment method','method',[['Bank transfer','Bank transfer'],['Cash','Cash'],['POS terminal','POS terminal'],['Other','Other']])+
  '<label class="field">Notes<textarea name="notes">Thank you for your business.</textarea></label>'+
  '<div class="row"><button type="submit" class="btn primary" data-document-action="issue">Save and issue</button><button type="submit" class="btn" data-document-action="draft">Save draft</button></div><p class="mini muted">Issue only after confirming payment. Unpaid sales should be invoices, not receipts.</p></form></section>'+
@@ -205,16 +212,17 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
 }
 async function navigate(view){
- state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];
+ closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];
  try{await load()}catch(err){flash(err.message,true);render()}
  window.scrollTo(0,0);
 }
+function closeMenu(){document.querySelector('.mobile-scrim')?.remove();document.getElementById('sidebar')?.classList.remove('open')}
 function toggleMenu(){
  const bar=document.getElementById('sidebar');
  if(bar){const open=bar.classList.toggle('open');document.querySelector('.mobile-scrim')?.remove();if(open){const scrim=document.createElement('button');scrim.className='mobile-scrim';scrim.setAttribute('aria-label','Close navigation');scrim.onclick=toggleMenu;document.body.append(scrim)}}
@@ -240,6 +248,14 @@ document.addEventListener('click',async ev=>{
  }catch(err){flash(err.message,true)}
 });
 document.addEventListener('input',ev=>{if(ev.target.closest('[data-form=document]'))drawPreview()});
+document.addEventListener('change',ev=>{
+ if(!ev.target.matches('.li-description'))return;
+ const row=ev.target.closest('.line-item'),index=Number(row?.dataset.line);
+ const matched=state.products.find(p=>p.name.toLowerCase()===ev.target.value.trim().toLowerCase());
+ if(state.items[index])state.items[index].productId=matched?.id||null;
+ if(matched)row.querySelector('.li-price').value=String(matched.price_minor/100);
+ drawPreview();
+});
 let documentMode='issue';
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-document-action]');if(b)documentMode=b.dataset.documentAction;});
 document.addEventListener('submit',async ev=>{
@@ -260,6 +276,13 @@ document.addEventListener('submit',async ev=>{
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
   if(kind==='expense')await api(t+'/expenses',{description:val(form,'description'),category:val(form,'category'),amount:Number(val(form,'amount')),date:val(form,'date')});
   if(kind==='target')await api(t+'/targets',{month:val(form,'month'),amount:Number(val(form,'amount'))});
+  if(kind==='logo'){
+    const file=form.elements.namedItem('logo')?.files?.[0];
+    if(!file||file.size>400000||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Select PNG, JPEG or WebP under 400 KB');
+    const response=await fetch(t.replace(/^/,'/api')+'/logo',{method:'POST',headers:{'content-type':file.type},body:file});
+    const payload=await response.json();if(!response.ok)throw Error(payload.error||'Logo upload failed');
+    flash('Business logo uploaded.');await navigate('branding');state.busy=false;return;
+  }
   if(kind==='invite'){const r=await api(t+'/invite',{email:val(form,'email'),role:val(form,'role')});const box=document.getElementById('invite-result');box.textContent='Invite link (share privately): '+r.url;box.classList.remove('hidden');flash('Invitation generated. Copy the private link.');state.busy=false;return}
   if(kind==='document'){
    const b=currentDoc();b.draft=documentMode==='draft';
