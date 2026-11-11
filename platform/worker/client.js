@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -843,11 +843,56 @@ function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
  const d=currentDoc();if(d){state.items=d.items;div.innerHTML=receipt(d,'PREVIEW');}
 }
+const PAPER_CHOICES=[
+ ['a4','A4 · office printer'],
+ ['letter','Letter · office printer'],
+ ['80mm','80 mm · receipt printer'],
+ ['58mm','58 mm · compact receipt printer']
+];
+function applyPrintPaper(paper){
+ const chosen=PAPER_CHOICES.some(x=>x[0]===paper)?paper:'a4';
+ state.printPaper=chosen;
+ document.body.classList.remove('print-roll-80mm','print-roll-58mm','print-sheet-a4','print-sheet-letter');
+ document.body.classList.add(chosen==='80mm'?'print-roll-80mm':chosen==='58mm'?'print-roll-58mm':chosen==='letter'?'print-sheet-letter':'print-sheet-a4');
+ const rules={
+  a4:'@page { size: A4; margin: 12mm; }',
+  letter:'@page { size: letter; margin: 12mm; }',
+  '80mm':'@page { size: 80mm 297mm; margin: 3mm; }',
+  '58mm':'@page { size: 58mm 297mm; margin: 2.5mm; }'
+ };
+ let node=document.getElementById('bizlano-print-page-size');
+ if(!node){node=document.createElement('style');node.id='bizlano-print-page-size';document.head.appendChild(node)}
+ node.textContent=rules[chosen];
+ return chosen;
+}
+function printDocument(){
+ if(state.view==='create'&&state.docStep!==4){flash('Review your document before printing.',true);return}
+ if(!document.querySelector('#preview .receipt, #preview .legacy-receipt')){flash('Open a document to print.',true);return}
+ applyPrintPaper(state.printPaper||state.design?.paper||'a4');
+ document.body.classList.toggle('print-unsaved',state.view==='create');
+ window.print();
+}
+document.addEventListener('afterprint',()=>document.body.classList.remove('print-unsaved'));
+function printOptions(){
+ const selected=state.printPaper||state.design?.paper||'a4';
+ return '<section class="print-options panel"><div class="print-options-main"><div><strong>Print your document</strong><p class="mini muted">Choose the paper size, then select your printer or Save as PDF.</p></div>'+
+ '<label class="field print-paper-field">Paper size<select data-print-paper aria-label="Printer paper size">'+PAPER_CHOICES.map(([value,label])=>'<option value="'+value+'" '+(selected===value?'selected':'')+'>'+e(label)+'</option>').join('')+'</select></label>'+
+ '<button type="button" class="btn primary" data-action="print-preview">Print / Save PDF</button></div>'+
+ '<details class="print-help"><summary>Using a Bluetooth, USB, Wi-Fi or POS printer?</summary>'+
+ '<p>First add or pair the printer in your phone or computer settings. Choose <strong>Print / Save PDF</strong>, then select that printer from the print window. For receipt-roll printers, choose the matching 80 mm or 58 mm paper size in Bizlano and your printer settings.</p>'+
+ '<p class="mini muted">Some Bluetooth POS printers only work with their manufacturer’s app or driver. If yours does not appear in the print window, save the receipt as a PDF and print it using the printer’s app. Bizlano cannot automatically pair every printer.</p></details></section>';
+}
+
 function printPage(doc){
- state.view='print';const body=heading('DOCUMENT PREVIEW','Print or download','Use your browser Print / Save as PDF option.','<button class="btn" data-nav="documents">Back to history</button>')+
- '<div class="receipt-stage" style="max-width:850px;margin:auto"><div id="preview">'+receipt(doc,doc.document_number,true)+'</div><button data-action="print-preview" class="btn primary" style="margin-top:16px">Print / Save PDF</button></div>';
+ state.view='print';
+ applyPrintPaper(state.printPaper||state.design?.paper||'a4');
+ const isSaved=Boolean(doc.document_number);
+ const displayDoc=isSaved?doc:{...doc,unsavedPreview:true,document_number:'UNSAVED PREVIEW'};
+ const body=heading('DOCUMENT PREVIEW','Your printable document','Review it, choose the paper size and print or save as PDF.','<button class="btn" data-nav="documents">Back to documents</button>')+
+ printOptions()+'<div class="receipt-stage printable-document" style="max-width:850px;margin:auto"><div id="preview">'+receipt(displayDoc,displayDoc.document_number,isSaved)+'</div></div>';
  shell(body);
 }
+
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
@@ -943,7 +988,7 @@ document.addEventListener('click',async ev=>{
  if(el.dataset.days){state.chartDays=Number(el.dataset.days);render();return}
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
- if(action==='print-preview'){if(state.view==='create'&&state.docStep!==4){flash('Review the document details before printing.',true);return}window.print();return}
+ if(action==='print-preview'){printDocument();return}
  if(el.dataset.doc){const [d,settings]=await Promise.all([api('/b/'+state.biz.slug+'/doc/'+el.dataset.doc),api('/b/'+state.biz.slug+'/design')]);state.design=settings.design;printPage(d.document);return}
  if(el.dataset.payment){const value=prompt('Amount actually received in ₦');if(value===null)return;await api('/b/'+state.biz.slug+'/payments',{documentId:el.dataset.payment,amount:Number(value),method:'Manual'});flash('Payment recorded.');await navigate('documents');return}
  if(el.dataset.issue){if(!confirm('Issue this draft? Issued documents cannot be edited.'))return;await api('/b/'+state.biz.slug+'/issue',{documentId:el.dataset.issue});flash('Draft issued.');await navigate('documents');return}
@@ -960,6 +1005,7 @@ document.addEventListener('input',ev=>{
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
 });
 document.addEventListener('change',ev=>{
+ if(ev.target.matches('[data-print-paper]')){applyPrintPaper(ev.target.value);return}
  if(ev.target.matches('[data-design-custom-color]')){setDesignColour(ev.target.value);render();return}
  if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;state.templateChoice=departmentById(departmentForIndustry(ev.target.value)).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}

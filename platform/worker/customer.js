@@ -1,6 +1,6 @@
 const root=document.getElementById('customer-app'),modal=document.getElementById('modal'),toast=document.getElementById('toast');
 const params=new URL(location.href).searchParams;
-const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,busy:false,error:'',current:null,nextCursor:null};
+const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,busy:false,error:'',current:null,nextCursor:null,printPaper:'a4'};
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cash=(value,currency='NGN')=>new Intl.NumberFormat('en-NG',{style:'currency',currency,currencyDisplay:'narrowSymbol',maximumFractionDigits:2,minimumFractionDigits:2}).format(Number(value||0)/100);
 const date=s=>{const value=new Date(String(s).slice(0,10)+'T12:00:00Z');return Number.isFinite(value.getTime())?value.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}):String(s||'')};
@@ -69,10 +69,25 @@ function receiptDocument(r){
  (r.recoveryCode?'<div style="margin:20px 0;padding:12px;border:1px dashed #d2c7f3;border-radius:8px;font-size:11px"><strong>Receipt recovery code</strong><div style="font-family:monospace;font-weight:800;letter-spacing:.7px;margin-top:6px">'+escape(r.recoveryCode)+'</div><small>Keep this code private.</small></div>':'')+
  '<div class="document-footer"><div>Thank you for your purchase.</div><strong>Powered by Bizlano</strong><div style="margin-top:5px">'+escape(new URL('/receipts',location.origin).href)+'</div></div></article>';
 }
+const CUSTOMER_PAPER=[['a4','A4'],['letter','Letter'],['80mm','80 mm roll'],['58mm','58 mm roll']];
+function setCustomerPaper(value){
+ const paper=CUSTOMER_PAPER.some(x=>x[0]===value)?value:'a4';
+ state.printPaper=paper;
+ document.body.classList.remove('customer-print-roll-80mm','customer-print-roll-58mm');
+ if(paper==='80mm'||paper==='58mm')document.body.classList.add('customer-print-roll-'+paper);
+ const sheets={a4:'@page{size:A4;margin:12mm}',letter:'@page{size:letter;margin:12mm}',
+  '80mm':'@page{size:80mm 297mm;margin:3mm}', '58mm':'@page{size:58mm 297mm;margin:2.5mm}'};
+ let node=document.getElementById('customer-print-paper-size');
+ if(!node){node=document.createElement('style');node.id='customer-print-paper-size';document.head.appendChild(node)}
+ node.textContent=sheets[paper];
+}
+
 function showReceipt(r){
  state.current=r;
  modal.hidden=false;
- modal.innerHTML='<div class="drawer"><div class="drawer-inner" role="dialog" aria-modal="true" aria-label="Receipt preview"><div class="spread modal-actions"><div><h3>Receipt preview</h3><small>Free to save or print</small></div><div class="row"><button class="button primary" data-action="print-receipt">Print / Save PDF</button><button class="button" data-action="close-receipt">Close</button></div></div>'+receiptDocument(r)+'</div></div>';
+ modal.innerHTML='<div class="drawer"><div class="drawer-inner" role="dialog" aria-modal="true" aria-label="Receipt preview"><div class="spread modal-actions"><div><h3>Receipt preview</h3><small>Print on paper or save as PDF</small></div><div class="row"><label class="customer-print-choice">Paper<select data-receipt-paper aria-label="Receipt paper size">'+CUSTOMER_PAPER.map(([id,title])=>'<option value="'+id+'" '+(state.printPaper===id?'selected':'')+'>'+title+'</option>').join('')+'</select></label><button class="button primary" data-action="print-receipt">Print / Save PDF</button><button class="button" data-action="close-receipt">Close</button></div></div>'+
+ '<details class="customer-printer-help"><summary>Using a Bluetooth or POS printer?</summary><p>Pair or install it in your device settings, then select it in the Print window. Choose the matching paper roll size above. Some POS printers need their own app or driver.</p></details>'+
+ receiptDocument(r)+'</div></div>';
  document.body.style.overflow='hidden';
  modal.querySelector('[data-action="close-receipt"]')?.focus();
 }
@@ -101,7 +116,7 @@ document.addEventListener('click',async event=>{
    return;
   }
   if(action==='close-receipt'){closeReceipt();return}
-  if(action==='print-receipt'){window.print();return}
+  if(action==='print-receipt'){setCustomerPaper(state.printPaper);window.print();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
   if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
   if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.pendingEmail=null;state.resetToken=null;state.error='';loginView();return}
@@ -113,6 +128,7 @@ document.addEventListener('click',async event=>{
   if(action==='retry'){await connect();return}
  }catch(error){state.error=error.message||'Something went wrong';notice(state.error,true);if(!state.account)loginView()}
 });
+document.addEventListener('change',event=>{if(event.target.matches('[data-receipt-paper]'))setCustomerPaper(event.target.value)});
 document.addEventListener('input',event=>{
  if(event.target.id==='search-receipts'){
   const focused=event.target,at=focused.selectionStart;
