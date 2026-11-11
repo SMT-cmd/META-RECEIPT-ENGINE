@@ -104,17 +104,13 @@ document.addEventListener('click',async event=>{
   if(action==='print-receipt'){window.print();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
   if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
-  if(action==='toggle-auth'){state.mode=state.mode==='phone-register'?'register':state.mode==='login'?'register':'login';state.error='';loginView();return}
+  if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.pendingEmail=null;state.resetToken=null;state.error='';loginView();return}
   if(action==='phone-registration'){state.mode='phone-register';state.error='';loginView();return}
-  if(action==='check-verification'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified){notice('Please confirm your email before continuing.',true);return}await connect();return}
-  if(action==='resend-verification'){await sendEmailVerification(auth.currentUser);notice('Verification email requested. Check your inbox.');return}
-  if(action==='reset-password'){
-   const email=prompt('Enter the email address used on your receipts');
-   if(email){await sendPasswordResetEmail(auth,email);notice('If this account exists, a password-reset email will arrive shortly.')}
-   return;
-  }
-  if(action==='sign-out'){closeReceipt();await request('/logout',{});await signOut(auth);state.account=null;state.receipts=[];state.error='';state.mode='login';loginView();return}
-  if(action==='retry'){if(state.user?.emailVerified)await connect();else{state.account=await request('/customer/me');await loadCustomerReceipts()}return}
+  if(action==='check-verification'){await connect();state.pendingEmail=null;return}
+  if(action==='resend-verification'){await request('/account/resend',{email:state.pendingEmail,audience:'customer'});notice('If verification is still needed, a new link will arrive.');return}
+  if(action==='reset-password'){state.mode='forgot';state.error='';loginView();return}
+  if(action==='sign-out'){closeReceipt();await request('/logout',{});state.user=null;state.pendingEmail=null;state.account=null;state.receipts=[];state.error='';state.mode='login';loginView();return}
+  if(action==='retry'){await connect();return}
  }catch(error){state.error=error.message||'Something went wrong';notice(state.error,true);if(!state.account)loginView()}
 });
 document.addEventListener('input',event=>{
@@ -137,33 +133,29 @@ document.addEventListener('submit',async event=>{
  const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
  try{
   if(form.id==='customer-auth'){
-   const password=form.elements.namedItem('password').value;
-   if(state.mode==='phone-register'){
+   const password=form.elements.namedItem('password')?.value||'';
+   if(state.resetToken){
+    await request('/account/reset',{token:state.resetToken,password});
+    state.resetToken=null;history.replaceState(null,'','/receipts');await connect();notice('Password updated.');
+   }else if(state.mode==='forgot'){
+    await request('/account/reset-request',{email:form.elements.namedItem('identifier').value.trim(),audience:'customer'});
+    state.mode='login';loginView();notice('If this account exists, a reset email will arrive.');
+   }else if(state.mode==='phone-register'){
     const phone=form.elements.namedItem('phone').value.trim(),name=form.elements.namedItem('name').value.trim(),code=form.elements.namedItem('code').value.trim();
-    if(!phone||!name||!code||password.length<10)throw Error('Enter your name, phone, receipt code and a password of at least 10 characters.');
-    await signOut(auth);
     await request('/customer/phone-register',{name,phone,code,password});
-    state.user=null;state.account=await request('/customer/me');
-    notice('Your free customer account is ready.');await loadCustomerReceipts();
+    await connect();notice('Your customer account is ready.');
    }else{
     const identifier=form.elements.namedItem('identifier').value.trim();
     if(state.mode==='register'){
-    if(!identifier.includes('@'))throw Error('An email address is needed for free account verification. You can add a phone number too.');
-    const name=form.elements.namedItem('name').value.trim(),phone=form.elements.namedItem('phone').value.trim();
-    if(!name)throw Error('Enter your full name');
-    const result=await createUserWithEmailAndPassword(auth,identifier,password);
-    await updateProfile(result.user,{displayName:name});
-    if(phone)sessionStorage.setItem('bizlano_customer_contact',JSON.stringify({uid:result.user.uid,name,phone,at:Date.now()}));
-    await sendEmailVerification(result.user);
-    notice('Account created. Verify your email to view your receipts.');
-   }else{
-    if(identifier.includes('@'))await signInWithEmailAndPassword(auth,identifier,password);
-    else{
-     const result=await request('/customer/phone-login',{phone:identifier,password});
-     if(result.phoneOnly){await signOut(auth);state.user=null;state.account=await request('/customer/me');await loadCustomerReceipts()}
-     else await signInWithEmailAndPassword(auth,result.email,password);
+     const name=form.elements.namedItem('name').value.trim();
+     if(!identifier.includes('@'))throw Error('Enter an email address you can verify.');
+     await request('/account/register',{email:identifier,name,password,audience:'customer'});
+     state.pendingEmail=identifier;loginView();notice('Check your email for the verification link.');
+    }else{
+     if(identifier.includes('@'))await request('/account/login',{email:identifier,password});
+     else await request('/customer/phone-login',{phone:identifier,password});
+     state.pendingEmail=null;await connect();
     }
-   }
    }
   }else if(form.id==='customer-profile'){
    const result=await request('/customer/profile',{name:form.elements.namedItem('name').value.trim(),phone:form.elements.namedItem('phone').value.trim()});
@@ -180,15 +172,14 @@ document.addEventListener('submit',async event=>{
  }catch(error){state.error=error.message||'Please try again';notice(state.error,true);if(form.id==='customer-auth')loginView()}
  finally{state.busy=false;if(submit?.isConnected)submit.disabled=false}
 });
-onAuthStateChanged(auth,async user=>{
- state.user=user;
- if(!user){
-  try{
-   const profile=await request('/customer/me');
-   if(profile.phoneOnly){state.account=profile;await loadCustomerReceipts();return}
-  }catch{}
-  state.account=null;loginView();return;
- }
- if(!user.emailVerified){state.account=null;loginView();return}
- try{await connect()}catch(error){state.error=error.message||'Unable to load receipts';state.account=null;loginView()}
-});
+async function nativeCustomerBoot(){
+ try{
+  const verify=params.get('verify');
+  if(verify){await request('/account/verify',{token:verify});history.replaceState(null,'','/receipts');}
+  else if(params.get('reset')){state.resetToken=params.get('reset');loginView();return;}
+  const active=await request('/account/session');
+  if(active.user){await connect();return}
+  loginView();
+ }catch(err){state.error=err.message||'Unable to open your receipts';loginView();}
+}
+nativeCustomerBoot();
