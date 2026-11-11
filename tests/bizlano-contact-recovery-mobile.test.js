@@ -56,7 +56,7 @@ test('signature is opt-in, uploaded to R2 and displayed on business prints',()=>
  assert.match(worker,/show_signature/);
  assert.match(ui,/name="showSignature"/);
  assert.match(ui,/data-form="signature"/);
- assert.match(ui,/state\.design\?\.show_signature/);
+ assert.match(ui,/style\?\.show_signature/);
  assert.match(ui,/Authorized signatory/);
 });
 
