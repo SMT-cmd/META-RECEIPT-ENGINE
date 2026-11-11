@@ -21,9 +21,10 @@ test('customer auth is verified-email based and never requires a business member
  assert.match(worker,/const user=await identity\(req,env\);/);
  assert.match(worker,/d\.recipient_email=\? COLLATE NOCASE/);
  assert.match(worker,/d\.paid_minor>0/);
- assert.doesNotMatch(worker,/path==='\/api\/customer\/receipts'[^]*?await member\(env,user,/);
+ const customerRoutes=worker.slice(worker.indexOf("if(path==='/api/customer/me'"),worker.indexOf("if(path==='/api/me'"));
+ assert.doesNotMatch(customerRoutes,/await member\(env,user,/);
  assert.match(client,/const auth=getAuth\(app\)/);
- assert.match(client,/state\.user\.emailVerified/);
+ assert.match(client,/state\.user\?\.emailVerified/);
 });
 
 test('customer cannot enumerate receipts by someone else name or product',()=>{
