@@ -156,6 +156,17 @@ async function marketplaceApi(req,env,url){
  fail(404,'Unknown marketplace action');
 }
 
+async function passwordDigest(password,saltHex){
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);
+ const salt=Uint8Array.from(saltHex.match(/../g),x=>parseInt(x,16));
+ return hex(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:180000,hash:'SHA-256'},key,256)));
+}
+async function limitAnonymousAttempt(env,kind,remoteIp){
+ const key=await hash('bizlano:'+kind+':'+remoteIp),now=Math.floor(Date.now()/1000);
+ await env.DB.prepare("INSERT INTO recovery_attempts(attempt_key,count,period_start) VALUES(?,1,?) ON CONFLICT(attempt_key) DO UPDATE SET count=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN 1 ELSE recovery_attempts.count+1 END,period_start=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN excluded.period_start ELSE recovery_attempts.period_start END,updated_at=datetime('now')").bind(key,now).run();
+ const recent=await env.DB.prepare('SELECT count FROM recovery_attempts WHERE attempt_key=?').bind(key).first();
+ if((recent?.count||0)>8)fail(429,'Too many attempts. Please try again in 15 minutes.');
+}
 async function recoveryCode(env,tenantId,documentId){
  if(typeof env.RECEIPT_RECOVERY_KEY!=='string'||env.RECEIPT_RECOVERY_KEY.length<32)fail(503,'Receipt recovery is unavailable');
  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(env.RECEIPT_RECOVERY_KEY),{name:'HMAC',hash:'SHA-256'},false,['sign']);
@@ -190,6 +201,28 @@ function customerDocument(row,lines){
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
+ if(path==='/api/customer/phone-register'&&method==='POST'){
+  await limitAnonymousAttempt(env,'phone-register',req.headers.get('cf-connecting-ip')||'unknown');
+  const b=await input(req),contact=phone(b.phone),displayName=field(b.name,'customer name',120),password=b.password;
+  const claim=String(b.code||'').trim().toUpperCase().replace(/\s/g,'');
+  if(!contact||typeof password!=='string'||password.length<10||password.length>256)
+   fail(400,'A phone number and password of at least 10 characters are required');
+  if(!/^BZ-(?:[A-F0-9]{6}-){3}[A-F0-9]{6}$/.test(claim))fail(400,'Enter the private recovery code from your receipt');
+  const owned=await env.DB.prepare("SELECT r.tenant_id,r.document_id FROM receipt_recovery_codes r JOIN documents d ON d.tenant_id=r.tenant_id AND d.id=r.document_id JOIN tenants t ON t.id=r.tenant_id WHERE r.code_hash=? AND r.revoked_at IS NULL AND d.recipient_phone=? AND d.paid_minor>0 AND d.status IN ('issued','paid','part_paid') AND t.disabled_at IS NULL LIMIT 1")
+   .bind(await hash(claim),contact).first();
+  if(!owned)fail(403,'The receipt code and phone number could not be matched. Ask the business for help.');
+  const salt=hex(crypto.getRandomValues(new Uint8Array(16))),digest=await passwordDigest(password,salt),uid=crypto.randomUUID(),session=rnd();
+  if(!env.RECEIPT_RECOVERY_KEY||env.RECEIPT_RECOVERY_KEY.length<32)fail(503,'Receipt recovery is unavailable');
+  const synthetic='ph-'+(await hash(contact+':'+env.RECEIPT_RECOVERY_KEY)).slice(0,32)+'@accounts.bizlano.invalid';
+  try{
+   await env.DB.batch([
+    env.DB.prepare('INSERT INTO users(id,email,display_name,contact_phone,password_hash,password_salt) VALUES(?,?,?,?,?,?)').bind(uid,synthetic,displayName,contact,digest,salt),
+    env.DB.prepare("INSERT INTO customer_receipt_claims(user_id,tenant_id,document_id,proof) VALUES(?,?,?,'receipt_code')").bind(uid,owned.tenant_id,owned.document_id),
+    env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(session),uid)
+   ]);
+  }catch(error){if(String(error).includes('UNIQUE'))fail(409,'This phone number already has a Bizlano account. Sign in instead.');throw error}
+  return json({ok:true,phoneOnly:true},201,{'set-cookie':sessionCookie(session,604800)});
+ }
  if(path==='/api/customer/phone-login'&&method==='POST'){
   const b=await input(req),alias=phone(b.phone),password=b.password;
   if(!alias||typeof password!=='string'||password.length<6||password.length>256)fail(400,'Enter your phone number and password');
@@ -197,8 +230,17 @@ async function api(req,env,url) {
   await env.DB.prepare("INSERT INTO recovery_attempts(attempt_key,count,period_start) VALUES(?,1,?) ON CONFLICT(attempt_key) DO UPDATE SET count=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN 1 ELSE recovery_attempts.count+1 END,period_start=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN excluded.period_start ELSE recovery_attempts.period_start END,updated_at=datetime('now')").bind(key,now).run();
   const attempts=await env.DB.prepare("SELECT count FROM recovery_attempts WHERE attempt_key=?").bind(key).first();
   if((attempts?.count||0)>8)fail(429,'Too many sign-in attempts. Please wait 15 minutes.');
-  const account=await env.DB.prepare("SELECT email FROM users WHERE contact_phone=? AND disabled_at IS NULL").bind(alias).first();
-  if(!account||!account.email||account.email.endsWith('.invalid'))fail(401,'Phone number or password is incorrect');
+  const account=await env.DB.prepare("SELECT id,email,password_hash,password_salt FROM users WHERE contact_phone=? AND disabled_at IS NULL").bind(alias).first();
+  if(!account||!account.email)fail(401,'Phone number or password is incorrect');
+  if(account.email.endsWith('@accounts.bizlano.invalid')){
+   if(account.password_hash==='firebase'||!account.password_salt||!password)fail(401,'Phone number or password is incorrect');
+   const digest=await passwordDigest(password,account.password_salt);
+   let different=0;for(let i=0;i<64;i++)different|=(digest.charCodeAt(i)^account.password_hash.charCodeAt(i));
+   if(different!==0)fail(401,'Phone number or password is incorrect');
+   const session=rnd();
+   await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(session),account.id).run();
+   return json({phoneOnly:true},200,{'set-cookie':sessionCookie(session,604800)});
+  }
   let result;
   try{
    result=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',{
@@ -237,9 +279,10 @@ async function api(req,env,url) {
  }
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
- if(path==='/api/customer/me'&&method==='GET')return json({email:user.email,name:user.display_name,phone:user.contact_phone||null,verified:true});
+ if(path==='/api/customer/me'&&method==='GET'){const phoneOnly=user.email.endsWith('@accounts.bizlano.invalid');return json({email:phoneOnly?null:user.email,name:user.display_name,phone:user.contact_phone||null,verified:!phoneOnly,phoneOnly});}
  if(path==='/api/customer/profile'&&method==='POST'){
   const b=await input(req),contact=phone(b.phone),name=b.name?field(b.name,'display name',120):user.display_name;
+  if(user.email.endsWith('@accounts.bizlano.invalid')&&contact!==user.contact_phone)fail(403,'Phone-only accounts cannot change their phone number without a new receipt verification');
   try{
    await env.DB.prepare('UPDATE users SET contact_phone=?,display_name=? WHERE id=? AND disabled_at IS NULL').bind(contact,name,user.id).run();
   }catch(err){
@@ -258,7 +301,7 @@ async function api(req,env,url) {
    .bind(user.id,user.email.toLowerCase(),beforeDate,beforeDate,beforeId).all();
   const all=data.results||[],rows=all.slice(0,50);
   const last=rows[rows.length-1];
-  return json({email:user.email,rows,nextCursor:all.length>50&&last?last.issued_on+'|'+last.id:null});
+  return json({email:user.email.endsWith('@accounts.bizlano.invalid')?null:user.email,rows,nextCursor:all.length>50&&last?last.issued_on+'|'+last.id:null});
  }
  const privateDetail=path.match(/^\/api\/customer\/receipts\/([a-f0-9-]{36})$/);
  if(privateDetail&&method==='GET'){
