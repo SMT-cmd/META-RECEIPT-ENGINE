@@ -92,6 +92,6 @@ test('sample thumbnails use real document rendering without duplicate printable 
 });
 
 test('fresh receipt designs are not trapped by an old cached dashboard script',()=>{
- assert.match(html,/client\.js\?v=20261111-receipt-studio-36/);
+ assert.match(html,/client\.js\?v=20261111-heritage-71/);
  assert.match(worker,/p==='\/client\.js'[^\n]*'cache-control':'no-store'/);
 });
