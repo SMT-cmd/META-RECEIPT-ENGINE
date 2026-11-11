@@ -355,8 +355,28 @@ async function api(req,env,url) {
  }
  fail(405,'Unsupported endpoint');
 }
+function escapeHtml(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function brandPage(slug,env,origin){
+ if(!slugValid(slug))return new Response('Business not found',{status:404});
+ const b=await env.DB.prepare("SELECT slug,business_name,logo_url,brand_color FROM tenants WHERE slug=? AND disabled_at IS NULL").bind(slug).first();
+ if(!b)return new Response('Business not found',{status:404});
+ const company=escapeHtml(b.business_name),name=escapeHtml(b.slug);
+ const logo=b.logo_url?'<img src="'+escapeHtml(b.logo_url)+'" alt="'+company+' logo" style="max-width:120px;max-height:76px;object-fit:contain">':'';
+ return new Response('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>'+company+' | Bizlano</title><meta name="robots" content="noindex,nofollow"><link rel="icon" href="/assets/bizlano-mark.png"><style>*{box-sizing:border-box}body{margin:0;font:16px/1.6 system-ui,-apple-system,sans-serif;background:#f8f8fd;color:#252744;min-height:100vh;display:flex;flex-direction:column}header,footer{padding:21px max(22px,calc((100% - 900px)/2))}header{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#fff;border-bottom:1px solid #e8e8f0}header img{height:32px}main{flex:1;display:grid;place-items:center;padding:45px 20px}.card{background:#fff;max-width:600px;width:100%;border:1px solid #e6e7ee;border-radius:18px;box-shadow:0 22px 65px #2527440c;text-align:center;padding:55px 28px}h1{font:800 clamp(26px,5vw,43px)/1.3 system-ui;margin:13px 0 9px;letter-spacing:-1.3px}p{color:#69758b;font-size:14px}.button{display:inline-block;margin-top:21px;background:#6634df;color:#fff;text-decoration:none;padding:12px 22px;border-radius:9px;font-weight:750;font-size:13px}a{color:#6a3de3}footer{font-size:12px;color:#7e88a1;text-align:center}</style></head><body><header><a href="/" aria-label="Return to Bizlano"><img src="/assets/bizlano-logo.png" alt="Bizlano"></a><a href="/">← Back to Bizlano</a></header><main><section class="card">'+logo+'<p style="font-size:11px;letter-spacing:.15em;color:#673dde;font-weight:800;text-transform:uppercase">Business workspace</p><h1>'+company+'</h1><p>Your secure business workspace, managed with Bizlano.</p><a class="button" href="/app?biz='+encodeURIComponent(b.slug)+'">Open '+company+' workspace →</a><p style="font-size:11px;margin-top:19px">Authorized team members can sign in using their own accounts.</p></section></main><footer>Powered by <strong>Bizlano</strong> · <a href="/">Visit Bizlano</a></footer></body></html>',{headers:{'content-type':'text/html; charset=utf-8','cache-control':'private,no-store','x-content-type-options':'nosniff','x-frame-options':'DENY'}});
+}
 export default {async fetch(req,env){
  const url=new URL(req.url),p=url.pathname;
+ // Future wildcard domain works only after DNS and Cloudflare routes are configured.
+ // The usable fallback today is /s/<business-slug> on the existing Cloudflare hostname.
+ const host=url.hostname.toLowerCase();
+ const sub=host.endsWith('.bizlano.com')?host.slice(0,-'.bizlano.com'.length):null;
+ if(sub&&slugValid(sub)&&p==='/')return brandPage(sub,env,url.origin);
+ if(req.method==='GET'&&/^\/s\/[a-z0-9-]+\/?$/.test(p))return brandPage(p.split('/')[2],env,url.origin);
+ if(req.method==='GET'&&/^\/go\/[a-z0-9-]+\/?$/.test(p)){
+  const biz=p.split('/')[2];if(!slugValid(biz))return new Response('Unknown business',{status:404});
+  return Response.redirect(new URL('/app?biz='+encodeURIComponent(biz),url.origin),302);
+ }
+
  if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
