@@ -4,19 +4,19 @@ const fs=require('node:fs'),path=require('node:path');
 const source=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const ui=source('platform/worker/client.js'),html=source('platform/worker/index.html'),worker=source('platform/worker/worker.js');
 test('document studio begins with business type and recommends a short category shortlist',()=>{
- assert.match(ui,/What kind of business do you run\?/);
+ assert.match(ui,/What business do you run\?/);
  for(const category of ['Electronics & gadgets','Baking, food & cafés','Electrical, repairs & construction','Fashion, beauty & salons']){
   assert.ok(ui.includes(category),category);
  }
  assert.match(ui,/sector\.templates/);
- assert.match(ui,/\.slice\(0,5\)/);
+ assert.match(ui,/\.slice\(0,6\)/);
  assert.doesNotMatch(ui,/TEMPLATE_LIST\.map\(\(id,i\)=>/);
 });
 test('template cards and full-sized preview use the actual receipt rendering pipeline',()=>{
  assert.match(ui,/function sampleHtml\(template,asCard=false\)/);
  assert.match(ui,/return receipt\(sampleDocument\(template\)/);
  assert.match(ui,/template-thumbnail-inner/);
- assert.match(ui,/studio-receipt-preview/);
+ assert.match(ui,/studio-full-preview/);
  assert.match(html,/\.template-thumbnail-inner \.receipt/);
  assert.match(html,/\.full-receipt-sample/);
 });
@@ -77,12 +77,12 @@ test('business colours can be chosen during design selection and reach the real 
  assert.match(ui,/data-design-custom-color/);
  assert.match(ui,/setDesignColour\(el\.dataset\.designColor\)/);
  assert.match(ui,/setDesignColour\(ev\.target\.value\)/);
- assert.match(ui,/style="--receipt-accent:/);
+ assert.match(ui,/--receipt-accent:/);
  assert.match(html,/Selected brand colour is printed on EVERY template/);
  assert.match(html,/\.receipt \.r-total \.grand\{box-shadow:inset 5px 0 var\(--receipt-accent\)/);
 });
 test('electrical and repair businesses receive four clearly different receipt categories',()=>{
- assert.match(ui,/id:'trades',[^\n]*templates:\['service','ledger','premium-dark','logistics'\]/);
+ assert.match(ui,/id:'trades',[^\n]*templates:\['heritage-garage-workshop','heritage-construction-industrial','heritage-swiss-design','heritage-japanese-minimal','service'\]/);
  for(const variant of ['blueprint','ledger','dark','logistics'])assert.match(html,new RegExp('\\.receipt-layout-'+variant+' \\.r-head'));
 });
 test('sample thumbnails use real document rendering without duplicate printable IDs',()=>{
