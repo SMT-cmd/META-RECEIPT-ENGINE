@@ -49,7 +49,7 @@ test('the workspace stays tenant-scoped and receipts visibly credit Bizlano',()=
  const client=read('platform/worker/client.js');
  assert.match(worker,/JOIN memberships m ON m\.tenant_id=t\.id/);
  assert.match(worker,/\['customers','products','payments'\]\.includes\(resource\)\?'edit'/);
- assert.match(client,/Powered by <strong style=\\?"color:#6635db\\?">Bizlano/);
+ assert.match(client,/Powered by <strong>Bizlano/);
  assert.match(client,/function businessPicker\(\)/);
  assert.match(client,/data-business/);
  assert.match(client,/function salesChart\(\)/);
