@@ -39,6 +39,7 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 .hero h1 em{font-style:normal;color:#6234d8}
 .hero-lead{max-width:475px;color:#65728d;font-size:15px;line-height:1.9;margin:0 0 29px}
 .hero-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.hero-actions .button:not(.primary){border-color:#d5cced;background:#fff;color:#5531bc}
 .hero-points{display:flex;flex-wrap:wrap;gap:19px;margin-top:27px;font-size:11px;color:#67728b;font-weight:650}
 .hero-points span{display:flex;align-items:center;gap:6px}.hero-points svg{color:#12a77c;width:15px;height:15px}
 .hero-visual{min-width:0;position:relative;padding:10px 5px 24px 25px}
@@ -103,7 +104,7 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 <header class="site-header">
 <div class="container header-inner">
 <a class="brand" href="/" aria-label="Bizlano home"><img src="/assets/bizlano-logo.png" alt="Bizlano" width="176" height="59"></a>
-<nav class="site-nav" id="site-nav" aria-label="Main navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#for-teams">For teams</a><a href="#faq">FAQs</a></nav>
+<nav class="site-nav" id="site-nav" aria-label="Main navigation"><a href="/receipts">Recover a receipt</a><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#for-teams">For teams</a><a href="#faq">FAQs</a></nav>
 <div class="header-actions"><a class="button ghost signin" href="/app">Sign in</a><a class="button primary" href="/app?mode=register">Register for free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><button class="menu-toggle" id="menu-toggle" aria-label="Open navigation" aria-controls="site-nav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
 </div>
 </header>
@@ -114,7 +115,7 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 <div class="eyebrow">Your business. One beautiful workspace.</div>
 <h1 id="hero-heading">More than receipts. <em>A better way to run your business.</em></h1>
 <p class="hero-lead">Create professional invoices, record sales, keep track of stock, and work with your team—all without switching between a dozen tools.</p>
-<div class="hero-actions"><a class="button primary" href="/app?mode=register">Register for free now <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="button" href="#how-it-works">See how it works</a></div>
+<div class="hero-actions"><a class="button primary" href="/app?mode=register">Register for free now <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a><a class="button" href="/receipts">Recover your receipt</a></div><p style="font-size:11px;color:#7b85a0;margin:15px 0 0">Already bought something? Find receipts from participating businesses in one secure account.</p>
 <div class="hero-points"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 5 5L20 7"/></svg> Mobile-first</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 5 5L20 7"/></svg> Free to register</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 5 5L20 7"/></svg> Your brand, your records</span></div>
 </div>
 <div class="hero-visual" aria-label="Illustrative preview of the Bizlano business workspace">
@@ -166,7 +167,7 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 </div></section>
 </main>
 <footer class="footer"><div class="container"><div class="footer-grid"><div><a class="brand" href="/"><img src="/assets/bizlano-mark.png" alt="" width="38" height="38">Bizlano</a><p>Your business, beautifully managed.<br>The simple, connected workspace for receipts, invoicing, inventory, customers and teams.</p></div>
-<div class="footer-links"><div><h3>EXPLORE</h3><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#documents">Receipts</a><a href="#faq">Questions</a></div><div><h3>WORKSPACE</h3><a href="/app">Sign in</a><a href="/app?mode=register">Register for free</a><a href="/app">Business dashboard</a></div></div></div>
+<div class="footer-links"><div><h3>EXPLORE</h3><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#documents">Receipts</a><a href="#faq">Questions</a></div><div><h3>WORKSPACE</h3><a href="/app">Sign in</a><a href="/app?mode=register">Register for free</a><a href="/receipts">Recover a receipt</a><a href="/app">Business dashboard</a></div></div></div>
 <div class="footer-bottom"><span>© 2026 Bizlano. Made for modern business.</span><span>All business figures shown on this page are examples, not customer data.</span></div></div></footer>
 <script>
 (function(){const btn=document.getElementById('menu-toggle'),nav=document.getElementById('site-nav');if(!btn||!nav)return;function close(){nav.classList.remove('open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Open navigation')}btn.addEventListener('click',function(){const open=nav.classList.toggle('open');btn.setAttribute('aria-expanded',String(open));btn.setAttribute('aria-label',open?'Close navigation':'Open navigation')});nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',close));document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});})();
