@@ -25,22 +25,29 @@ async function request(path,data){
  return json;
 }
 function loginView(){
- const verified=state.user&&!state.user.emailVerified;
- const registered=Boolean(state.user?.emailVerified);
+ const needsEmailVerification=state.user&&!state.user.emailVerified;
+ const connecting=Boolean(state.user?.emailVerified),register=state.mode==='register',phoneRegister=state.mode==='phone-register';
+ const signUpFields=(register||phoneRegister?'<label class="field">Full name<input type="text" name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>':'');
+ const phoneFields=phoneRegister?
+  '<label class="field">Phone number<input type="tel" name="phone" required inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>'+
+  '<label class="field">Private receipt code<input name="code" required maxlength="30" autocomplete="off" spellcheck="false" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label>':
+  '<label class="field">'+(register?'Email address (for free verification)':'Email address or phone number')+
+  '<input type="text" name="identifier" required autocomplete="username" inputmode="email" placeholder="you@example.com or +234…"></label>'+
+  (register?'<label class="field">Phone number (optional)<input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>':'');
+ const form='<form id="customer-auth" class="stack">'+signUpFields+phoneFields+
+  '<label class="field">Password<input type="password" name="password" required minlength="'+(phoneRegister?'10':register?'8':'6')+'" autocomplete="'+(register||phoneRegister?'new-password':'current-password')+'" placeholder="Your account password"></label>'+
+  '<button class="button primary" type="submit">'+(phoneRegister?'Register with phone and receipt code':register?'Register for free':'Sign in and find receipts')+'</button></form>';
  root.innerHTML='<div class="auth-root">'+
- '<section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>One account.<br>Every business.</h1><p>No need to contact every store or remember where you bought something. Receipts linked to your verified email stay together. You can also sign in with a phone number linked to your account.</p></div><p>From your favorite stores to the next one you discover, keep track of your purchases in Bizlano.</p></section>'+
- '<section class="panel auth-card"><div class="eyebrow">CUSTOMER RECEIPT ACCESS</div><h2>'+(verified?'Confirm your email':registered?'Connecting your receipts…':state.mode==='register'?'Create your free account':'Find your receipts')+'</h2>'+
- (verified?'<p>We sent a verification link to <strong>'+escape(state.user.email)+'</strong>. Open that link and return here to continue.</p><div class="stack"><button class="button primary" data-action="check-verification">I have verified my email</button><button class="button" data-action="resend-verification">Send the email again</button><button class="button" data-action="sign-out">Use another email</button></div>':
- registered?'<p>We are securely connecting the purchases associated with your verified email address.</p><button class="button primary" data-action="retry">Try again</button>':
- '<p>'+(state.mode==='register'?'Use an email address you can verify. Add your name and an optional phone number for easier sign-in. Registration is free.':'Sign in with your verified email or a phone number saved to your account, plus your password. Your receipt history stays private.')+'</p>'+
- '<form id="customer-auth" class="stack">'+
- (state.mode==='register'?'<label class="field">Your full name<input type="text" name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>':'')+
- '<label class="field">'+(state.mode==='register'?'Email address (for free verification)':'Email address or phone number')+'<input type="text" name="identifier" required autocomplete="username" inputmode="email" placeholder="you@example.com or +234…"></label>'+
- (state.mode==='register'?'<label class="field">Phone number (optional)<input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>':'')+
- '<label class="field">Password<input type="password" name="password" required minlength="'+(state.mode==='register'?'8':'6')+'" autocomplete="'+(state.mode==='register'?'new-password':'current-password')+'" placeholder="Your account password"></label>'+
- '<button class="button primary" type="submit">'+(state.mode==='register'?'Register for free':'Sign in and find receipts')+'</button></form>'+
- '<div class="row" style="margin-top:15px"><button class="button soft" data-action="toggle-auth">'+(state.mode==='register'?'Already registered? Sign in':'New here? Register for free')+'</button><button class="button" data-action="reset-password">Forgot password?</button></div>')+
- '<div class="notice">Your verified email automatically finds matching receipts across businesses. If a business recorded only your phone number, you can privately add that receipt using its recovery code. Your password alone cannot prove ownership of a phone number. No business account is required.</div>'+
+ '<section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>One account.<br>Every business.</h1><p>Never lose track of your purchases again. Save receipts from participating stores in one private, convenient place.</p></div><p>Find a receipt, print it, or save it as a PDF. Access is free.</p></section>'+
+ '<section class="panel auth-card"><div class="eyebrow">CUSTOMER RECEIPT ACCESS</div><h2>'+
+ (needsEmailVerification?'Confirm your email':connecting?'Connecting your receipts…':phoneRegister?'Register with your phone':register?'Create your free account':'Find your receipts')+'</h2>'+
+ (needsEmailVerification?'<p>Check your email inbox for the verification link sent to <strong>'+escape(state.user.email)+'</strong>. Return here after you confirm it.</p><div class="stack"><button class="button primary" data-action="check-verification">I have verified my email</button><button class="button" data-action="resend-verification">Send the email again</button><button class="button" data-action="sign-out">Use another account</button></div>':
+ connecting?'<p>Connecting your verified account to your private purchase history.</p><button class="button primary" data-action="retry">Try again</button>':
+ '<p>'+(phoneRegister?'No email address? Use the phone number on your receipt and its private recovery code to create a password-protected account. No SMS verification or charges.':register?'Create an account with your name, email, optional phone number and password. Verify your email for automatic receipt recovery.':'Sign in with your email or a phone number linked to your account, together with your password.')+'</p>'+form+
+ '<div class="row" style="margin-top:16px"><button class="button soft" data-action="toggle-auth">'+(phoneRegister?'I have an email address':register?'Already registered? Sign in':'Register for free')+'</button>'+
+ (!phoneRegister?'<button class="button" data-action="phone-registration">'+(register?'No email? Use phone + receipt code':'Register using phone + receipt code')+'</button>':'')+
+ (!phoneRegister?'<button class="button" data-action="reset-password">Forgot password?</button>':'')+'</div>')+
+ '<div class="notice">'+(phoneRegister?'A private receipt code proves you have access to a particular purchase. Your phone account can recover receipts claimed with a code. Phone alone cannot reveal every purchase associated with that number. Without a verified email, password reset is not available.':'A verified email can find receipts across stores automatically. Phone-only accounts use private receipt codes to claim purchases. Your password alone does not prove phone ownership.')+'</div>'+
  (state.error?'<div class="notice error" role="alert">'+escape(state.error)+'</div>':'')+
  '</section></div>';
 }
