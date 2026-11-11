@@ -9,7 +9,7 @@ const app=initializeApp({
 });
 const auth=getAuth(app),root=document.getElementById('customer-app'),modal=document.getElementById('modal'),toast=document.getElementById('toast');
 const params=new URL(location.href).searchParams;
-const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',busy:false,error:'',current:null};
+const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',busy:false,error:'',current:null,nextCursor:null};
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cash=(value,currency='NGN')=>new Intl.NumberFormat('en-NG',{style:'currency',currency,currencyDisplay:'narrowSymbol',maximumFractionDigits:2,minimumFractionDigits:2}).format(Number(value||0)/100);
 const date=s=>{const value=new Date(String(s).slice(0,10)+'T12:00:00Z');return Number.isFinite(value.getTime())?value.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}):String(s||'')};
@@ -62,6 +62,7 @@ function customerView(){
  '<div class="spread"><strong class="receipt-total">'+escape(cash(x.total_minor,x.currency||'NGN'))+'</strong><button class="button primary" data-receipt="'+escape(x.id)+'">View / Save PDF</button></div>'+
  '</article>').join('')+'</div>':
  '<div class="empty"><h3>No matching receipts yet</h3><p>'+((!all.length)?'If a business has not recorded your email on a receipt, it will not appear automatically. Ask the business to add your email, or use your receipt code below.':'Try searching for another store or product.')+'</p></div>')+
+ (state.nextCursor?'<div class="row" style="justify-content:center;margin:24px 0"><button class="button" data-action="load-more">Load more receipts</button></div>':'')+
  '<section class="panel" style="margin-top:30px"><div class="eyebrow">ANOTHER WAY TO RECOVER</div><h2>Have a receipt recovery code?</h2><p class="muted" style="font-size:13px">Some older purchases or cash sales may not have an email attached. If a business gave you a Bizlano receipt code, enter it to securely add the receipt to this account.</p>'+
  '<form id="claim-code" class="claim"><label class="field">Receipt code<input name="code" spellcheck="false" autocomplete="off" required maxlength="30" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label><button class="button primary" type="submit">Add receipt</button></form></section>'+
  '<div class="notice">Your purchase history is private. Searching by name or product alone cannot reveal another customer’s receipts. If a receipt is missing, contact the issuing business to confirm your email address.</div></section>';
@@ -98,6 +99,7 @@ async function connect(){
  state.account=await request('/customer/me');
  const result=await request('/customer/receipts');
  state.receipts=result.rows||[];
+ state.nextCursor=result.nextCursor||null;
  state.error='';
  customerView();
 }
@@ -115,6 +117,7 @@ document.addEventListener('click',async event=>{
   if(action==='close-receipt'){closeReceipt();return}
   if(action==='print-receipt'){window.print();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
+  if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
   if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.error='';loginView();return}
   if(action==='check-verification'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified){notice('Please confirm your email before continuing.',true);return}await connect();return}
   if(action==='resend-verification'){await sendEmailVerification(auth.currentUser);notice('Verification email requested. Check your inbox.');return}
@@ -158,6 +161,7 @@ document.addEventListener('submit',async event=>{
    await request('/customer/claim',{code});
    const result=await request('/customer/receipts');
    state.receipts=result.rows||[];
+   state.nextCursor=result.nextCursor||null;
    notice('Receipt added to your private purchase history.');customerView();
   }
  }catch(error){state.error=error.message||'Please try again';notice(state.error,true);if(form.id==='customer-auth')loginView()}
