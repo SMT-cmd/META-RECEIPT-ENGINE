@@ -43,11 +43,11 @@ function loginView(){
  (needsEmailVerification?'Confirm your email':connecting?'Connecting your receipts…':phoneRegister?'Register with your phone':register?'Create your free account':'Find your receipts')+'</h2>'+
  (needsEmailVerification?'<p>Check your email inbox for the verification link sent to <strong>'+escape(state.user.email)+'</strong>. Return here after you confirm it.</p><div class="stack"><button class="button primary" data-action="check-verification">I have verified my email</button><button class="button" data-action="resend-verification">Send the email again</button><button class="button" data-action="sign-out">Use another account</button></div>':
  connecting?'<p>Connecting your verified account to your private purchase history.</p><button class="button primary" data-action="retry">Try again</button>':
- '<p>'+(phoneRegister?'No email address? Use the phone number on your receipt and its private recovery code to create a password-protected account. No SMS verification or charges.':register?'Create an account with your name, email, optional phone number and password. Verify your email for automatic receipt recovery.':'Sign in with your email or a phone number linked to your account, together with your password.')+'</p>'+form+
+ '<p>'+(phoneRegister?'No email? Register with your phone number, the code on your receipt, and a password.':register?'Register for free with your email address, then confirm your email to find your receipts.':'Sign in with your email or a phone number linked to your account, together with your password.')+'</p>'+form+
  '<div class="row" style="margin-top:16px"><button class="button soft" data-action="toggle-auth">'+(phoneRegister?'I have an email address':register?'Already registered? Sign in':'Register for free')+'</button>'+
  (!phoneRegister?'<button class="button" data-action="phone-registration">'+(register?'No email? Use phone + receipt code':'Register using phone + receipt code')+'</button>':'')+
  (!phoneRegister?'<button class="button" data-action="reset-password">Forgot password?</button>':'')+'</div>')+
- '<div class="notice">'+(phoneRegister?'A private receipt code proves you have access to a particular purchase. Your phone account can recover receipts claimed with a code. Phone alone cannot reveal every purchase associated with that number. Without a verified email, password reset is not available.':'A verified email can find receipts across stores automatically. Phone-only accounts use private receipt codes to claim purchases. Your password alone does not prove phone ownership.')+'</div>'+
+ '<div class="notice">'+(phoneRegister?'Use a receipt code to add purchases. Keep your password safe: phone-only accounts cannot reset passwords by email.':'Receipts linked to your verified email appear automatically. You can also add a receipt using its private code.')+'</div>'+
  (state.error?'<div class="notice error" role="alert">'+escape(state.error)+'</div>':'')+
  '</section></div>';
 }
@@ -56,7 +56,7 @@ function customerView(){
  const filtered=all.filter(x=>(!state.business||x.slug===state.business)&&(!needle||[x.business_name,x.items_summary,x.document_number,x.kind].some(y=>String(y||'').toLowerCase().includes(needle))));
  const stores=new Set(all.map(x=>x.slug));
  const heading=state.business?'Receipts from '+(all.find(x=>x.slug===state.business)?.business_name||state.business):'Every receipt, in one place.';
- root.innerHTML='<section class="hero"><div class="eyebrow">MY RECEIPTS</div><div class="spread"><div><h1>'+escape(heading)+'</h1><p>Signed in as <strong>'+escape(state.account.email||state.account.phone||state.account.name)+'</strong>. '+(state.account.phoneOnly?'Your purchases appear here when you enter private receipt codes.':'Receipts appear automatically when businesses use your verified email address.')+'</p></div><button class="button" data-action="sign-out">Sign out</button></div></section>'+
+ root.innerHTML='<section class="hero"><div class="eyebrow">MY RECEIPTS</div><div class="spread"><div><h1>'+escape(heading)+'</h1><p>Signed in as <strong>'+escape(state.account.email||state.account.phone||state.account.name)+'</strong>. '+(state.account.phoneOnly?'Add receipts using the private code provided by the business.':'Your receipts appear here when a business uses this email.')+'</p></div><button class="button" data-action="sign-out">Sign out</button></div></section>'+
  '<section class="dashboard"><div class="stats">'+
  '<div class="stat"><strong>'+all.length+'</strong><span>Receipts available</span></div>'+
  '<div class="stat"><strong>'+stores.size+'</strong><span>Businesses in your history</span></div>'+
@@ -70,7 +70,7 @@ function customerView(){
  '<div class="receipt-desc">'+escape(x.items_summary||'Purchase receipt')+'</div>'+
  '<div class="spread"><strong class="receipt-total">'+escape(cash(x.total_minor,x.currency||'NGN'))+'</strong><button class="button primary" data-receipt="'+escape(x.id)+'">View / Save PDF</button></div>'+
  '</article>').join('')+'</div>':
- '<div class="empty"><h3>No matching receipts yet</h3><p>'+((!all.length)?'If a business has not recorded your email on a receipt, it will not appear automatically. Ask the business to add your email, or use your receipt code below.':'Try searching for another store or product.')+'</p></div>')+
+ '<div class="empty"><h3>No matching receipts yet</h3><p>'+((!all.length)?'Missing a receipt? Use its private code below, or contact the business.':'Try searching for another store or product.')+'</p></div>')+
  (state.nextCursor?'<div class="row" style="justify-content:center;margin:24px 0"><button class="button" data-action="load-more">Load more receipts</button></div>':'')+
  '<section class="panel" style="margin-top:30px"><div class="eyebrow">ANOTHER WAY TO RECOVER</div><h2>Have a receipt recovery code?</h2><p class="muted" style="font-size:13px">Some older purchases or cash sales may not have an email attached. If a business gave you a Bizlano receipt code, enter it to securely add the receipt to this account.</p>'+
  '<form id="claim-code" class="claim"><label class="field">Receipt code<input name="code" spellcheck="false" autocomplete="off" required maxlength="30" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label><button class="button primary" type="submit">Add receipt</button></form></section>'+
@@ -90,7 +90,7 @@ function receiptDocument(r){
  '<div class="total-line" style="font:700 12px DM Sans;color:#6b7892"><span>Amount received</span><span>'+escape(cash(paid,r.currency))+'</span></div>'+
  (paid<total?'<p style="font-size:11px;color:#996d33">Remaining balance: '+escape(cash(total-paid,r.currency))+'</p>':'')+
  (r.recoveryCode?'<div style="margin:20px 0;padding:12px;border:1px dashed #d2c7f3;border-radius:8px;font-size:11px"><strong>Receipt recovery code</strong><div style="font-family:monospace;font-weight:800;letter-spacing:.7px;margin-top:6px">'+escape(r.recoveryCode)+'</div><small>Keep this code private.</small></div>':'')+
- '<div class="document-footer"><div>Thank you for your purchase.</div><strong>Powered by Bizlano</strong><div style="margin-top:5px">bizlano.pages.dev</div></div></article>';
+ '<div class="document-footer"><div>Thank you for your purchase.</div><strong>Powered by Bizlano</strong><div style="margin-top:5px">'+escape(new URL('/receipts',location.origin).href)+'</div></div></article>';
 }
 function showReceipt(r){
  state.current=r;
