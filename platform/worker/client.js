@@ -285,22 +285,19 @@ function targets(){
 function branding(){
  const biz=state.data?.business||state.biz,design=state.design||{};
  const image=(src,label)=>src?'<div class="artwork-frame"><img src="'+e(src)+'" alt="'+e(label)+'"></div>':'<div class="artwork-empty">No '+e(label.toLowerCase())+' uploaded yet</div>';
- return heading('BUSINESS IDENTITY','Your brand, beautifully presented','Keep your business logo and optional signature consistent across receipts and invoices.')+
- '<div class="cols">'+
- '<section class="panel"><h2>Business logo</h2><p class="muted">For the clearest result, use a high-resolution transparent PNG. Square and horizontal logos are both supported.</p>'+
+ return heading('BUSINESS IDENTITY','Your business appearance','Update your logo or add an optional document signature.')+
+ '<section class="panel identity-summary"><div><strong>'+e(biz.business_name)+'</strong><p class="mini muted">Customer receipt page and brand details</p></div><div class="row"><a class="btn" href="'+e(businessHref())+'" target="_blank" rel="noopener noreferrer">View business page ↗</a><button type="button" class="btn" data-action="copy-recovery">Copy customer receipt link</button><button class="btn" type="button" data-nav="design">Document designs →</button></div></section>'+
+ '<div class="cols identity-sections">'+
+ '<details class="panel tidy-details" '+(!biz.logo_url?'open':'')+'><summary><strong>Business logo</strong><span>'+(biz.logo_url?'Logo uploaded · Change':'Add your business logo')+'</span></summary><div class="tidy-content"><p class="muted">A transparent PNG looks best.</p>'+
  image(biz.logo_url,'Business logo')+
  '<form data-form="logo"><label class="field">Choose your logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" required></label>'+
  '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
- '<p class="mini muted">For the best result, upload a transparent PNG.</p>'+
- '<div class="artwork-preview hidden" data-artwork-preview="logo"></div><button class="btn primary">Save my logo</button></form></section>'+
- '<section class="panel"><h2>Authorized signature <span class="mini muted">(optional)</span></h2><p class="muted">Add a transparent business signature for your document signatory area. It only appears when you enable it in the Document studio.</p>'+
+ '<div class="artwork-preview hidden" data-artwork-preview="logo"></div><button class="btn primary">Save my logo</button></form></div></details>'+
+ '<details class="panel tidy-details"><summary><strong>Business signature</strong><span>Optional · Shown only when enabled</span></summary><div class="tidy-content"><p class="muted">Only use a signature you are happy to show customers.</p>'+
  image(design.signature_url,'Authorized signature')+
  '<form data-form="signature"><label class="field">Choose a signature image<input type="file" name="signature" accept="image/png,image/jpeg,image/webp" required></label>'+
  '<label class="field artwork-option"><input type="checkbox" name="removeWhite"> Remove a plain white background (optional)</label>'+
- '<p class="mini muted">Only use a signature you’re happy to show customers.</p>'+
- '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></section></div>'+
- '<section class="panel"><h2>Your business page</h2><p><strong>'+e(biz.business_name)+'</strong></p><p class="muted"><a href="'+e(businessHref())+'" target="_blank" rel="noopener noreferrer">'+e(businessHref())+'</a></p><div class="row"><button type="button" class="btn primary" data-action="copy-recovery">Copy receipt recovery link</button><button type="button" class="btn" data-action="copy-recovery-message">Copy customer message</button></div>'+
- '<button type="button" class="btn" data-nav="design">Manage document designs and signature visibility</button></section>';
+ '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></div></details></div>';
 }
 function team(){
  const rows=state.data?.rows||[];
