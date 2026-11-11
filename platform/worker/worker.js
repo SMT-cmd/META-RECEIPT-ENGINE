@@ -5,6 +5,7 @@ const jwks='https://www.googleapis.com/service_accounts/v1/jwk/securetoken@syste
 const billable=new Set(['receipt','cash-sale','retail-receipt','thermal-receipt','restaurant-bill','wholesale-receipt','service-receipt','rent-receipt','school-fees','medical-receipt','transport-receipt','event-receipt','invoice','tax-invoice','recurring-invoice']);
 const receiptTypes=new Set(['receipt','cash-sale','retail-receipt','thermal-receipt','service-receipt','rent-receipt','school-fees','medical-receipt']);
 const types=new Set([...billable,'quotation','estimate','proforma','purchase-order','delivery-note','credit-note','debit-note','custom']);
+const DESIGN_INDUSTRIES=new Set(['general','electronics','bakery','retail','fashion','services','trades','health','hospitality','logistics']);
 const TEMPLATES=new Set(["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"]);
 const roles=['owner','admin','manager','accountant','cashier','sales','viewer'];
 const access={view:roles,edit:['owner','admin','manager','accountant','cashier','sales'],stock:['owner','admin','manager'],finance:['owner','admin','manager','accountant'],admin:['owner','admin'],owner:['owner']};
@@ -525,18 +526,21 @@ async function api(req,env,url) {
  if(resource==='design'){
   if(method==='GET'){
    const design=await env.DB.prepare("SELECT template,accent,paper,header_note,footer_note,contact,show_logo,show_signature FROM tenant_designs WHERE tenant_id=?").bind(tenant).first();
-   const signature=await env.DB.prepare('SELECT signature_url FROM tenants WHERE id=?').bind(tenant).first();
-   return json({design:{...(design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1,show_signature:0}),signature_url:signature?.signature_url||null},templates:[...TEMPLATES]});
+   const signature=await env.DB.prepare('SELECT signature_url,industry FROM tenants WHERE id=?').bind(tenant).first();
+   return json({industry:DESIGN_INDUSTRIES.has(signature?.industry)?signature.industry:'general',design:{...(design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1,show_signature:0}),signature_url:signature?.signature_url||null},templates:[...TEMPLATES]});
   }
   if(method==='POST'){
    const b=await input(req),template=field(b.template,'receipt design',40),paper=String(b.paper||'a4'),accent=String(b.accent||'#6935df');
    if(!TEMPLATES.has(template))fail(400,'Choose a supported document design');
+   const industry=String(b.industry||'general');
+   if(!DESIGN_INDUSTRIES.has(industry))fail(400,'Choose a supported business category');
    if(!/^(a4|letter|80mm|58mm)$/.test(paper))fail(400,'Choose a supported paper size');
    if(!/^#[0-9a-fA-F]{6}$/.test(accent))fail(400,'Select a six-digit color');
    const note=String(b.footerNote||'Thank you for your business.').trim().slice(0,300),
     contact=String(b.contact||'').trim().slice(0,240),header=String(b.headerNote||'').trim().slice(0,150);
    await env.DB.prepare("INSERT INTO tenant_designs(tenant_id,template,accent,paper,header_note,footer_note,contact,show_logo,show_signature,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(tenant_id) DO UPDATE SET template=excluded.template,accent=excluded.accent,paper=excluded.paper,header_note=excluded.header_note,footer_note=excluded.footer_note,contact=excluded.contact,show_logo=excluded.show_logo,show_signature=excluded.show_signature,updated_by=excluded.updated_by,updated_at=datetime('now')")
     .bind(tenant,template,accent.toLowerCase(),paper,header,note,contact,b.showLogo===false?0:1,b.showSignature===true?1:0,user.id).run();
+   await env.DB.prepare('UPDATE tenants SET industry=? WHERE id=?').bind(industry,tenant).run();
    await audit(env,tenant,user,'design.updated',tenant);
    return json({ok:true,template,paper,accent});
   }
