@@ -1,13 +1,14 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js';
+import {getFirestore,collection,query,where,limit,getDocs} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
 const firebase=initializeApp({
  apiKey:'AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',
  authDomain:'metaforge-6afdf.firebaseapp.com',
  projectId:'metaforge-6afdf',
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
-const auth=getAuth(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null};
+const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:'login',preview:null,legacyArchive:null,backupReady:false};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -51,6 +52,7 @@ async function load(){
  const t='/b/'+state.biz.slug;
  const section=state.view;
  let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section;
+ if(section==='upgrade'){state.data={};render();return}
  if(section==='create') {
   const [p,c]=await Promise.all([api(t+'/products'),api(t+'/customers')]);
   state.products=p.rows;state.customers=c.rows;state.data={};
@@ -85,11 +87,12 @@ function businessPicker(){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
+  if(v==='upgrade')return state.biz?.role==='owner';
   if(v==='team'||v==='branding')return admin();
   if(v==='products'||v==='customers'||v==='payments')return edit();
   if(v==='create')return edit();return true;
@@ -164,6 +167,71 @@ function team(){
  '<div class="cols"><section class="panel"><h2>Invite staff</h2><form data-form="invite">'+input('Staff email','email','email','',true)+select('Permission','role',[['manager','Manager'],['accountant','Accountant'],['cashier','Cashier'],['sales','Sales'],['viewer','View-only']])+'<button class="btn primary">Generate invite</button></form><div id="invite-result" class="banner hidden"></div></section>'+
  '<section class="panel"><h2>Team members</h2>'+simpleRows(rows,s=>'<div class="rowcard"><div><strong>'+e(s.email)+'</strong><small>'+e(s.role)+' · '+(s.disabled_at?'Suspended':'Active')+'</small></div></div>')+'</section></div>';
 }
+function upgrade(){
+ const a=state.legacyArchive;
+ const total=(a?.engines||[]).reduce((v,x)=>v+x.receipts.length,0);
+ return heading('SAFE ACCOUNT MIGRATION','Bring your old receipts forward','Your original MetaForge receipts stay untouched. Imported copies are review-only drafts in Bizlano.')+
+ '<div class="cols"><section class="panel"><h2>Scan your original account</h2><p class="muted">Read your own Firebase receipt engines using your currently signed-in account. This does not change any old document.</p>'+
+ '<div class="row"><button class="btn primary" data-action="scan-legacy">Scan old receipts</button>'+
+ (a?'<button class="btn" data-action="download-legacy">Download original archive</button>':'')+'</div>'+
+ (a?'<div class="banner"><strong>'+a.engines.length+' engines · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Only accessible sources are included.'+
+ (state.backupReady?'<br>Backup prepared; you may stage copies as drafts.':'<br>Download a backup before importing.')+'</div>'+
+ '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
+ '<p class="mini muted">Scans are capped to avoid excessive legacy database reads. If history is missing, use your original MetaForge export and review warnings.</p></section>'+
+ '<section class="panel"><h2>Already have a legacy backup?</h2><p class="muted">Upload a JSON backup downloaded from your old MetaForge account. The uploader verifies its owner UID matches your current Firebase login.</p>'+
+ '<form data-form="legacy-file"><label class="field">Backup archive (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
+ '<label class="field"><input type="checkbox" name="includeBrowser" style="display:inline-block;width:auto"> Include histories saved only on my old browser (may be unverified)</label>'+
+ '<button type="submit" class="btn primary">Review and import backup</button></form>'+
+ '<div class="banner">We never treat historical receipts as newly paid sales. Business and customer information stays scoped to your own workspace.</div></section></div>';
+}
+async function scanLegacy(){
+ if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)throw Error('Only the verified owner can migrate history');
+ const account=auth.currentUser,issues=[],engines=[];
+ const found=await getDocs(query(collection(oldDb,'short_urls'),where('owner_uid','==',account.uid),limit(11)));
+ if(found.size>10)issues.push('There are more than 10 engines; this scan only checks the first 10 to limit cloud reads.');
+ for(const engine of found.docs.slice(0,10)){
+  if(!/^[A-Za-z0-9]{6}$/.test(engine.id))continue;
+  try{
+   const receipts=await getDocs(query(collection(oldDb,'short_urls',engine.id,'receipts'),limit(251)));
+   if(receipts.size>250)issues.push('Engine '+engine.id+' exceeds 250 receipts; use the original export for complete history.');
+   engines.push({code:engine.id,brandName:engine.data().brandName||engine.id,receipts:receipts.docs.slice(0,250).map(x=>({id:x.id,...x.data()}))});
+  }catch(err){issues.push('Could not read engine '+engine.id+' — the original records remain available on the old site.');}
+ }
+ state.legacyArchive={kind:'metaforge-legacy',version:1,createdAt:new Date().toISOString(),userUid:account.uid,email:account.email,engines,settings:null,local:{histories:[],metadata:{},errors:[]},issues};
+ state.backupReady=false;render();
+ flash('Scan complete. Review any warnings and download your backup.');
+}
+function downloadLegacy(){
+ if(!state.legacyArchive)throw Error('Scan legacy data first');
+ const data=JSON.stringify(state.legacyArchive,null,2),blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='bizlano-legacy-archive-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ state.backupReady=true;render();flash('Backup download started. Confirm the file is saved before importing.');
+}
+async function importLegacy(archive,includeBrowser){
+ if(!archive||archive.kind!=='metaforge-legacy'||archive.version!==1)throw Error('Unsupported MetaForge legacy archive');
+ if(archive.userUid!==auth.currentUser?.uid)throw Error('The archive does not belong to your signed-in account');
+ if(state.biz.role!=='owner')throw Error('Only the business owner can import receipts');
+ const groups=(archive.engines||[]).map(x=>({source:'engine:'+x.code,receipts:x.receipts||[]}));
+ if(includeBrowser)for(const history of archive.local?.histories||[])groups.push({source:'browser:'+history.key,receipts:history.receipts||[]});
+ const all=groups.reduce((n,x)=>n+x.receipts.length,0);
+ if(!all)throw Error('The archive contains no readable receipts');
+ if(!confirm('Copy '+all+' historical receipts into '+state.biz.business_name+' as review-only drafts? Original records stay unchanged and no payment is marked as received.'))return;
+ const bytes=new TextEncoder().encode(JSON.stringify(archive));
+ const digest=await crypto.subtle.digest('SHA-256',bytes);
+ const archiveHash=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+ let imported=0,skipped=0;
+ for(const group of groups){
+  for(let offset=0;offset<group.receipts.length;offset+=25){
+   const records=group.receipts.slice(offset,offset+25).map((receipt,i)=>({index:offset+i,receipt}));
+   const result=await api('/b/'+state.biz.slug+'/migrate',{source:group.source,records,ownerUid:archive.userUid,archiveHash,totalCount:all,includeBrowser});
+   imported+=result.imported;skipped+=result.skipped;
+   flash('Legacy import: '+imported+' copied, '+skipped+' skipped.');
+  }
+ }
+ state.legacyArchive=null;state.backupReady=false;
+ flash('Import complete: '+imported+' review drafts staged. '+skipped+' skipped or previously imported.');
+ await navigate('documents');
+}
 function docEditor(){
  const tpl=['signature','classic','executive','retail','thermal','minimal','editorial','bold','artisan','medical','education','hospitality'];
  const options=state.biz.role==='cashier'?[['receipt','Sales receipt'],['cash-sale','Cash sale'],['service-receipt','Service receipt'],['thermal-receipt','Thermal POS']]:
@@ -212,7 +280,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
@@ -239,6 +307,9 @@ document.addEventListener('click',async ev=>{
  if(action==='resend'){await sendEmailVerification(auth.currentUser);flash('Verification email requested. Check your inbox.');return}
  if(action==='refresh'){await reload(auth.currentUser);state.user=auth.currentUser;if(!state.user.emailVerified)throw Error('Email is not yet verified.');await attach();return}
  if(action==='reset'){const address=prompt('Email for password reset');if(address){await sendPasswordResetEmail(auth,address);flash('Password reset email requested.')}return}
+ if(action==='scan-legacy'){await scanLegacy();return}
+ if(action==='download-legacy'){downloadLegacy();return}
+ if(action==='import-scanned'){if(!state.backupReady)throw Error('Download a backup before importing');await importLegacy(state.legacyArchive,false);return}
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(action==='print-preview'){window.print();return}
@@ -276,6 +347,13 @@ document.addEventListener('submit',async ev=>{
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
   if(kind==='expense')await api(t+'/expenses',{description:val(form,'description'),category:val(form,'category'),amount:Number(val(form,'amount')),date:val(form,'date')});
   if(kind==='target')await api(t+'/targets',{month:val(form,'month'),amount:Number(val(form,'amount'))});
+  if(kind==='legacy-file'){
+    const file=form.elements.namedItem('archive')?.files?.[0];
+    if(!file||file.size>4*1024*1024)throw Error('Choose a JSON backup under 4MB');
+    const backup=JSON.parse(await file.text());
+    await importLegacy(backup,form.elements.namedItem('includeBrowser').checked);
+    state.busy=false;return;
+  }
   if(kind==='logo'){
     const file=form.elements.namedItem('logo')?.files?.[0];
     if(!file||file.size>400000||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Select PNG, JPEG or WebP under 400 KB');
