@@ -1,15 +1,6 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
-import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,updateProfile} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js';
-
-const app=initializeApp({
- apiKey:'AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',
- authDomain:'metaforge-6afdf.firebaseapp.com',
- projectId:'metaforge-6afdf',
- appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
-});
-const auth=getAuth(app),root=document.getElementById('customer-app'),modal=document.getElementById('modal'),toast=document.getElementById('toast');
+const root=document.getElementById('customer-app'),modal=document.getElementById('modal'),toast=document.getElementById('toast');
 const params=new URL(location.href).searchParams;
-const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',busy:false,error:'',current:null,nextCursor:null};
+const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,user:null,busy:false,error:'',current:null,nextCursor:null};
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cash=(value,currency='NGN')=>new Intl.NumberFormat('en-NG',{style:'currency',currency,currencyDisplay:'narrowSymbol',maximumFractionDigits:2,minimumFractionDigits:2}).format(Number(value||0)/100);
 const date=s=>{const value=new Date(String(s).slice(0,10)+'T12:00:00Z');return Number.isFinite(value.getTime())?value.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}):String(s||'')};
@@ -25,31 +16,17 @@ async function request(path,data){
  return json;
 }
 function loginView(){
- const needsEmailVerification=state.user&&!state.user.emailVerified;
- const connecting=Boolean(state.user?.emailVerified),register=state.mode==='register',phoneRegister=state.mode==='phone-register';
- const signUpFields=(register||phoneRegister?'<label class="field">Full name<input type="text" name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>':'');
- const phoneFields=phoneRegister?
-  '<label class="field">Phone number<input type="tel" name="phone" required inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>'+
-  '<label class="field">Private receipt code<input name="code" required maxlength="30" autocomplete="off" spellcheck="false" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label>':
-  '<label class="field">'+(register?'Email address (for free verification)':'Email address or phone number')+
-  '<input type="text" name="identifier" required autocomplete="username" inputmode="email" placeholder="you@example.com or +234…"></label>'+
-  (register?'<label class="field">Phone number (optional)<input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>':'');
- const form='<form id="customer-auth" class="stack">'+signUpFields+phoneFields+
-  '<label class="field">Password<input type="password" name="password" required minlength="'+(phoneRegister?'10':register?'8':'6')+'" autocomplete="'+(register||phoneRegister?'new-password':'current-password')+'" placeholder="Your account password"></label>'+
-  '<button class="button primary" type="submit">'+(phoneRegister?'Register with phone and receipt code':register?'Register for free':'Sign in and find receipts')+'</button></form>';
- root.innerHTML='<div class="auth-root">'+
- '<section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>One account.<br>Every business.</h1><p>Never lose track of your purchases again. Save receipts from participating stores in one private, convenient place.</p></div><p>Find a receipt, print it, or save it as a PDF. Access is free.</p></section>'+
- '<section class="panel auth-card"><div class="eyebrow">CUSTOMER RECEIPT ACCESS</div><h2>'+
- (needsEmailVerification?'Confirm your email':connecting?'Connecting your receipts…':phoneRegister?'Register with your phone':register?'Create your free account':'Find your receipts')+'</h2>'+
- (needsEmailVerification?'<p>Check your email inbox for the verification link sent to <strong>'+escape(state.user.email)+'</strong>. Return here after you confirm it.</p><div class="stack"><button class="button primary" data-action="check-verification">I have verified my email</button><button class="button" data-action="resend-verification">Send the email again</button><button class="button" data-action="sign-out">Use another account</button></div>':
- connecting?'<p>Connecting your verified account to your private purchase history.</p><button class="button primary" data-action="retry">Try again</button>':
- '<p>'+(phoneRegister?'No email? Register with your phone number, the code on your receipt, and a password.':register?'Register for free with your email address, then confirm your email to find your receipts.':'Sign in with your email or a phone number linked to your account, together with your password.')+'</p>'+form+
- '<div class="row" style="margin-top:16px"><button class="button soft" data-action="toggle-auth">'+(phoneRegister?'I have an email address':register?'Already registered? Sign in':'Register for free')+'</button>'+
- (!phoneRegister?'<button class="button" data-action="phone-registration">'+(register?'No email? Use phone + receipt code':'Register using phone + receipt code')+'</button>':'')+
- (!phoneRegister?'<button class="button" data-action="reset-password">Forgot password?</button>':'')+'</div>')+
- '<div class="notice">'+(phoneRegister?'Use a receipt code to add purchases. Keep your password safe: phone-only accounts cannot reset passwords by email.':'Receipts linked to your verified email appear automatically. You can also add a receipt using its private code.')+'</div>'+
- (state.error?'<div class="notice error" role="alert">'+escape(state.error)+'</div>':'')+
- '</section></div>';
+ const pending=Boolean(state.pendingEmail),register=state.mode==='register',phoneRegister=state.mode==='phone-register',forgot=state.mode==='forgot',reset=Boolean(state.resetToken);
+ let form='';
+ if(reset)form='<p class="muted">Create a new password of at least 10 characters.</p><form id="customer-auth" class="stack"><label class="field">New password<input type="password" name="password" required minlength="10" autocomplete="new-password"></label><button class="button primary" type="submit">Update password</button></form>';
+ else if(pending)form='<p>We sent a secure verification link to <strong>'+escape(state.pendingEmail)+'</strong>. Open it to confirm your account.</p><div class="stack"><button class="button primary" data-action="resend-verification">Resend verification email</button><button class="button" data-action="check-verification">I have verified</button><button class="button" data-action="sign-out">Use another account</button></div>';
+ else if(forgot)form='<p class="muted">Enter your account email. If it exists, we will send a password reset link.</p><form id="customer-auth" class="stack"><label class="field">Email address<input name="identifier" type="email" required autocomplete="email"></label><button class="button primary" type="submit">Email reset link</button></form><button class="button" data-action="toggle-auth" style="margin-top:15px">Back to sign in</button>';
+ else{
+  const fields=(register||phoneRegister?'<label class="field">Full name<input name="name" required maxlength="120" autocomplete="name"></label>':'')+
+   (phoneRegister?'<label class="field">Phone number<input name="phone" type="tel" required autocomplete="tel" placeholder="080… or +234…"></label><label class="field">Private receipt code<input name="code" required maxlength="30" autocomplete="off" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label>':'<label class="field">Email address'+(register?'':' or phone number')+'<input name="identifier" type="text" required autocomplete="username" placeholder="you@example.com"></label>');
+  form='<p class="muted">'+(phoneRegister?'Create a phone-only account using a valid paid receipt recovery code.':register?'Create a free account using an email address you can verify.':'Sign in to securely access receipts from participating businesses.')+'</p><form id="customer-auth" class="stack">'+fields+'<label class="field">Password<input type="password" name="password" required minlength="'+(phoneRegister||register?'10':'6')+'" autocomplete="'+(register||phoneRegister?'new-password':'current-password')+'"></label><button class="button primary" type="submit">'+(phoneRegister?'Create phone account':register?'Register for free':'Sign in and find receipts')+'</button></form><div class="row" style="margin-top:16px"><button class="button soft" data-action="toggle-auth">'+(phoneRegister?'Use an email':register?'Already registered? Sign in':'Register for free')+'</button>'+(!phoneRegister?'<button class="button" data-action="phone-registration">Phone + receipt code</button><button class="button" data-action="reset-password">Forgot password?</button>':'')+'</div>';
+ }
+ root.innerHTML='<div class="auth-root"><section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>One account.<br>Every business.</h1><p>Find, view and save receipts from participating stores using your secure Bizlano account.</p></div><p>Receipt history and PDF saving are free.</p></section><section class="panel auth-card"><div class="eyebrow">MY RECEIPTS</div><h2>'+(reset?'Reset your password':pending?'Check your email':forgot?'Password recovery':phoneRegister?'Create phone account':register?'Create your account':'Find your receipts')+'</h2>'+form+'<div class="notice">Receipts are private. A verified email or a valid private receipt code is needed to recover a purchase.</div>'+(state.error?'<div class="notice error" role="alert">'+escape(state.error)+'</div>':'')+'</section></div>';
 }
 function customerView(){
  const all=state.receipts,needle=state.filter.toLowerCase().trim();
@@ -106,11 +83,9 @@ async function loadCustomerReceipts(){
  const result=await request('/customer/receipts');state.receipts=result.rows||[];state.nextCursor=result.nextCursor||null;state.error='';customerView();
 }
 async function connect(){
- if(!state.user?.emailVerified)return;
- const token=await state.user.getIdToken();
- await request('/auth',{token});
- const pending=sessionStorage.getItem('bizlano_customer_contact');
- if(pending){try{const saved=JSON.parse(pending);if(saved.uid===state.user.uid&&Date.now()-saved.at<604800000){await request('/customer/profile',{name:saved.name,phone:saved.phone});sessionStorage.removeItem('bizlano_customer_contact')}}catch{sessionStorage.removeItem('bizlano_customer_contact');notice('You can save your phone number from the account section.',true)}}
+ const active=await request('/account/session');
+ if(!active.user)throw Error('Your session has expired. Sign in again.');
+ state.user=active.user;
  state.account=await request('/customer/me');
  await loadCustomerReceipts();
 }
