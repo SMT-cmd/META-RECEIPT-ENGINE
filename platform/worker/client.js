@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,legacyStyles:[],legacyChecked:false,docStep:1};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -119,6 +119,24 @@ const TEMPLATE_FAMILIES=[
  ['Services & specialist',['service','legal','medical','education','real-estate','logistics','hospitality','event']],
  ['Corporate & colour',['corporate','ledger','bold','monochrome','gradient','formal','emerald','sapphire']]
 ];
+// One full-size carousel per department. Every one of the 71 IDs appears in exactly one department.
+const STUDIO_DEPARTMENTS=[
+ {id:'office',name:'Business & professional',description:'Office, corporate, legal and professional services',templates:['heritage-modern-tech','heritage-minimalist-pro','heritage-corporate-luxe','heritage-legal-professional','heritage-swiss-design','heritage-clean-air','heritage-stamp-quality','signature','classic','executive','corporate','formal','minimal','legal']},
+ {id:'technology',name:'Electronics & technology',description:'Gadgets, technology shops and digital businesses',templates:['heritage-cyber-punk','heritage-retro-wave','heritage-neo-brutalist','heritage-startup-modern','heritage-futuristic-glass','modern','digital','startup','sapphire','gradient']},
+ {id:'retail',name:'Shops & retail',description:'Sales counters, general shops and stockists',templates:['heritage-fashion-boutique','heritage-compact-slip','heritage-bold-stripe','heritage-vintage-ticket','retail','thermal','grocery','wholesale']},
+ {id:'food',name:'Food, cafés & bakeries',description:'Bakeries, restaurants, groceries and food businesses',templates:['heritage-bakery-sweet','heritage-restaurant-diner','heritage-nature-organic','restaurant','artisan','artisan-paper']},
+ {id:'fashion',name:'Fashion, beauty & luxury',description:'Clothing, salons, cosmetics and premium brands',templates:['heritage-salon-beauty','heritage-royal-elegance','heritage-art-deco','boutique','salon','luxury','editorial']},
+ {id:'trades',name:'Trades, repairs & delivery',description:'Electrical work, construction, workshops and transport',templates:['heritage-garage-workshop','heritage-construction-industrial','heritage-transport-logistics','service','ledger','logistics']},
+ {id:'health',name:'Health, fitness & education',description:'Clinics, schools, tutoring and fitness businesses',templates:['heritage-pharmacy-medical','heritage-education-academy','heritage-fitness-gym','medical','education']},
+ {id:'events',name:'Hotels, events & property',description:'Hospitality, event planning and property services',templates:['heritage-hotel-resort','heritage-event-planning','heritage-real-estate','event','hospitality','real-estate']},
+ {id:'creative',name:'Creative & expressive',description:'Artistic, minimal, dramatic and colourful identities',templates:['heritage-curved-organic','heritage-geometric-slice','heritage-midnight-special','heritage-japanese-minimal','bold','monochrome','festival','premium-dark','emerald']}
+];
+const STUDIO_INDUSTRY_DEPARTMENT={general:'office',electronics:'technology',bakery:'food',retail:'retail',fashion:'fashion',services:'office',trades:'trades',health:'health',hospitality:'events',logistics:'trades'};
+const departmentForIndustry=id=>STUDIO_INDUSTRY_DEPARTMENT[id]||'office';
+const departmentById=id=>STUDIO_DEPARTMENTS.find(x=>x.id===id)||STUDIO_DEPARTMENTS[0];
+const departmentForTemplate=id=>STUDIO_DEPARTMENTS.find(x=>x.templates.includes(id))||STUDIO_DEPARTMENTS[0];
+const templateCatalogCount=STUDIO_DEPARTMENTS.reduce((total,d)=>total+d.templates.length,0);
+
 const businessCategory=id=>BUSINESS_TYPES.find(x=>x.id===id)||BUSINESS_TYPES[0];
 const templateTitle=id=>HERITAGE_TEMPLATES[id]?.name||String(id).split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' ');
 const FONT_STYLES=[['modern','Modern sans'],['editorial','Editorial serif'],['mono','Technical monospaced'],['rounded','Friendly rounded'],['classic','Classic sans']];
@@ -428,9 +446,9 @@ function stageLegacyStyle(index){
  if(!record||!isHeritage(record.template))throw Error('Could not find that original design');
  state.templateChoice=record.template;
  state.designDraft={...activeDesign(),...record,show_logo:0};
- state.designStep=2;
+ state.designStep=2;state.designBrowseAll=true;state.designDepartment=departmentForTemplate(record.template).id;state.designScroll=0;
  render();
- flash('Original '+templateTitle(record.template)+' layout found. Review and save your colours and font to use it here.');
+ flash('Your previous '+templateTitle(record.template)+' design is ready to review. Save it to use it here.');
 }
 
 function upgrade(){
@@ -570,66 +588,80 @@ async function uploadBusinessArtwork(form,kind,slugValue){
 function designStudio(){
  const design=activeDesign(),sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
  const current=state.templateChoice||design.template||'signature',step=state.designStep;
- const choices=[...new Set([...sector.templates,current])].slice(0,6);
- const head=heading('DOCUMENT STUDIO','Choose your document design','71 layouts from the original MetaForge and Bizlano collections. The design comes first, then your brand.')+
-  guidedSteps(['Business','Layout','Colours & fonts','Finish'],step);
+ const chosenDepartment=departmentById(state.designBrowseAll?state.designDepartment:departmentForIndustry(sector.id));
+ const head=heading('RECEIPT DESIGNS','Find a style for your business','Browse full receipt layouts, choose your colours and font, then save your design.')+
+  guidedSteps(['Your business','Choose a design','Make it yours','Finish'],step);
  const back=step>1?'<button class="btn" type="button" data-action="design-back">← Back</button>':'';
  const next=caption=>'<div class="wizard-actions">'+back+'<button class="btn primary" type="button" data-action="design-next">'+caption+' →</button></div>';
- if(step===1)return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 1 OF 4</div><h2>What business do you run?</h2>'+
-  '<p class="muted">Choose a category to see suitable receipt layouts first. You can browse all 71 next.</p>'+
+ if(step===1)return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 1 OF 4</div><h2>What kind of business do you run?</h2>'+
+  '<p class="muted">Choose your business type. We will show suitable receipt designs first. You can also see every design.</p>'+
   '<label class="field">Business type<select data-business-category>'+BUSINESS_TYPES.map(v=>'<option value="'+e(v.id)+'" '+(sector.id===v.id?'selected':'')+'>'+e(v.name)+'</option>').join('')+'</select></label>'+
-  (state.legacyStyles.length?'<div class="legacy-design-restore"><h3>Your old MetaForge designs</h3><p class="mini muted">Recognised from your signed-in legacy account. Nothing is changed until you save.</p>'+
-   state.legacyStyles.map((x,i)=>'<button type="button" class="btn" data-restore-template="'+i+'">'+e(x.brandName)+' · '+e(templateTitle(x.template))+' →</button>').join('')+'</div>':'')+
-  next('See receipt layouts')+'</section>';
+  (state.legacyStyles.length?'<div class="legacy-design-restore"><h3>Your saved designs from the previous website</h3><p class="mini muted">Choose one to use it again. Your existing documents will stay unchanged.</p>'+
+   state.legacyStyles.map((x,i)=>'<button type="button" class="btn" data-restore-template="'+i+'">'+e(x.brandName)+' · '+e(templateTitle(x.template))+'</button>').join('')+'</div>':'')+
+  next('See designs')+'</section>';
  if(step===2){
+  const choices=chosenDepartment.templates;
+  const selectedInCategory=choices.includes(current);
   const cards=choices.map(id=>{
    const theme=templateArt(id),active=current===id;
    return '<article class="design-card real-template studio-slide '+(active?'selected':'')+'" data-style-id="'+e(id)+'">'+
    '<div class="template-thumbnail"><div class="template-thumbnail-inner '+(isHeritage(id)?'heritage-thumb':'modern-thumb')+'">'+sampleHtml(id,true)+'</div></div>'+
-   '<div class="studio-card-info"><span class="design-card-color" style="background:'+e(theme.accent)+'"></span><div><strong>'+e(templateTitle(id))+'</strong><small>'+(isHeritage(id)?'Original MetaForge':'Bizlano')+' · '+e(theme.note||theme.group||'')+'</small></div></div>'+
-   '<div class="studio-card-actions"><button type="button" class="btn '+(active?'primary':'')+'" data-template="'+e(id)+'">'+(active?'✓ Selected':'Choose this layout')+'</button>'+
-   '<button type="button" class="btn" data-preview-template="'+e(id)+'">Full preview</button></div></article>';
+   '<div class="studio-card-info"><span class="design-card-color" style="background:'+e(theme.accent)+'"></span><div><strong>'+e(templateTitle(id))+'</strong><small>'+e(isHeritage(id)?(HERITAGE_TEMPLATES[id].group+' design'):(theme.note||'Business design'))+'</small></div></div>'+
+   '<div class="studio-card-actions"><button type="button" class="btn '+(active?'primary':'')+'" data-template="'+e(id)+'">'+(active?'✓ Selected':'Use this design')+'</button>'+
+   '<button type="button" class="btn" data-preview-template="'+e(id)+'">See full receipt</button></div></article>';
   }).join('');
+  const index=STUDIO_DEPARTMENTS.findIndex(x=>x.id===chosenDepartment.id);
+  const tabs=state.designBrowseAll?
+   '<div class="studio-department-heading"><div><strong>Choose a category</strong><small>Each category has its own receipt designs. Select any one to browse.</small></div><button type="button" class="btn" data-action="studio-recommended">Show my business designs</button></div>'+
+   '<div class="studio-department-tabs" role="group" aria-label="Receipt design categories">'+STUDIO_DEPARTMENTS.map(dep=>
+    '<button type="button" class="studio-department-tab '+(dep.id===chosenDepartment.id?'active':'')+'" data-design-department="'+e(dep.id)+'" aria-pressed="'+(dep.id===chosenDepartment.id)+'">'+e(dep.name)+' <span>'+dep.templates.length+'</span></button>').join('')+'</div>':
+   '<div class="studio-explore-note"><span>Want a different style? All '+templateCatalogCount+' designs are available.</span><button class="btn" type="button" data-action="studio-explore">Explore all '+templateCatalogCount+' designs →</button></div>';
+  const changeDepartment=state.designBrowseAll?
+    '<div class="studio-department-switch"><button type="button" class="btn" data-action="studio-previous-department" '+(index===0?'disabled':'')+'>← Previous category</button>'+
+    '<span>Category '+(index+1)+' of '+STUDIO_DEPARTMENTS.length+'</span><button type="button" class="btn" data-action="studio-next-department" '+(index===STUDIO_DEPARTMENTS.length-1?'disabled':'')+'>Next category →</button></div>':'';
   return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 2 OF 4</div>'+
-   '<div class="studio-intro"><div><h2>Recommended for '+e(sector.name)+'</h2><p class="muted">Each card shows a miniature version of the actual printable layout.</p></div>'+
-   '<div class="studio-arrows"><button class="btn" type="button" data-action="studio-prev" aria-label="Previous designs">←</button><button class="btn" type="button" data-action="studio-next" aria-label="Next designs">→</button></div></div>'+
-   '<div class="design-grid studio-carousel" id="studio-designs">'+cards+'</div>'+
-   '<label class="field studio-all">Browse all 71 receipt layouts<select data-design-browse><option value="">Choose another layout…</option>'+groupedTemplateOptions(current)+'</select></label>'+
-   '<p class="mini muted">Selected: <strong>'+e(templateTitle(current))+'</strong></p>'+next('Choose my brand colours and font')+'</section>'+
+   '<div class="studio-intro"><div><h2>'+(state.designBrowseAll?e(chosenDepartment.name):'For '+e(sector.name))+'</h2>'+
+   '<p class="muted">'+e(chosenDepartment.description)+'. Browse the designs below, then choose the one you like.</p></div></div>'+
+   tabs+'<div class="studio-carousel-head"><strong>'+chosenDepartment.templates.length+' receipt designs</strong><div class="studio-arrows"><button class="btn" type="button" data-action="studio-prev" aria-label="Previous receipts">←</button><button class="btn" type="button" data-action="studio-next" aria-label="Next receipts">→</button></div></div>'+
+   '<div class="design-grid studio-carousel" id="studio-designs" role="region" aria-label="'+e(chosenDepartment.name)+' receipt designs" tabindex="0">'+cards+'</div>'+
+   changeDepartment+
+   '<p class="studio-selected-summary" aria-live="polite">Your choice: <strong>'+e(templateTitle(current))+'</strong>'+(selectedInCategory?'':' <span>(from another category)</span>')+'</p>'+
+   next('Choose colours and font')+'</section>'+
    '<div class="studio-full-preview hidden" id="studio-preview-modal" role="dialog" aria-modal="true" aria-label="Full receipt preview"><div class="studio-modal-inner">'+
-   '<div class="studio-modal-head"><strong id="studio-modal-title">Receipt preview</strong><button class="btn" type="button" data-action="studio-close-preview">Close ✕</button></div>'+
+   '<div class="studio-modal-head"><strong id="studio-modal-title">See your receipt</strong><button class="btn" type="button" data-action="studio-close-preview">Close ✕</button></div>'+
    '<div id="studio-modal-receipt"></div></div></div>';
  }
  if(step===3){
   const accent=design.accent||templateArt(current).accent,secondary=design.secondary_color||'#19223b';
-  return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 3 OF 4</div><h2>Choose colours, font and branding</h2>'+
-   '<p class="muted">The layout stays the same. Colours and font make it your own.</p>'+
+  return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 3 OF 4</div><h2>Choose your colours, font and business name style</h2>'+
+   '<p class="muted">Keep your chosen receipt layout and make it feel like your business.</p>'+
    '<div class="studio-choice-layout"><form data-form="design" class="design-custom-fields">'+
-   '<div class="form-grid"><label class="field">Primary colour<input type="color" name="accent" value="'+e(accent)+'"></label>'+
-   '<label class="field">Secondary colour<input type="color" name="secondaryColor" value="'+e(secondary)+'"></label></div>'+
+   '<div class="form-grid"><label class="field">Main colour<input type="color" name="accent" value="'+e(accent)+'"></label>'+
+   '<label class="field">Second colour<input type="color" name="secondaryColor" value="'+e(secondary)+'"></label></div>'+
    '<div class="studio-colour-panel">'+colourStoryChooser(accent)+'</div>'+
-   '<div class="form-grid">'+select('Font style','fontFamily',FONT_STYLES,design.font_family||'modern')+
-   select('Text-logo design','textLogoStyle',TEXT_LOGO_STYLES,design.text_logo_style||'split')+
-   select('Paper size','paper',[['a4','A4'],['letter','Letter'],['80mm','80mm POS'],['58mm','58mm POS']],design.paper||'a4')+
-   input('Contact line','contact','text',design.contact||'')+
-   input('Header note','headerNote','text',design.header_note||'')+
-   input('Thank-you note','footerNote','text',design.footer_note||'Thank you for your business.')+'</div>'+
-   '<label class="field inline-check"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+'> Use my uploaded image logo (optional)</label>'+
-   '<p class="mini muted">Without an image logo, we style your business name automatically. You can add an image under <button class="text-link-button" type="button" data-nav="branding">Business identity</button>.</p>'+
-   '<label class="field inline-check"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+'> Show my authorised signature</label>'+
-   next('Review my finished design')+'</form><div class="studio-preview-sticky"><strong>Live receipt preview</strong><div id="studio-live-preview">'+sampleHtml(current)+'</div></div></div></section>';
+   '<div class="form-grid">'+select('Lettering style','fontFamily',FONT_STYLES,design.font_family||'modern')+
+   select('Business name style','textLogoStyle',TEXT_LOGO_STYLES,design.text_logo_style||'split')+
+   select('Paper size','paper',[['a4','A4 paper'],['letter','Letter paper'],['80mm','80mm receipt roll'],['58mm','58mm receipt roll']],design.paper||'a4')+
+   input('Business contact details','contact','text',design.contact||'')+
+   input('Message at the top (optional)','headerNote','text',design.header_note||'')+
+   input('Thank-you message','footerNote','text',design.footer_note||'Thank you for your business.')+'</div>'+
+   '<label class="field inline-check"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+'> Use my uploaded logo (optional)</label>'+
+   '<p class="mini muted">No image logo? Your business name will appear as a styled text logo. You can <button class="text-link-button" type="button" data-nav="branding">add a logo</button> at any time.</p>'+
+   '<label class="field inline-check"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+'> Add my business signature (optional)</label>'+
+   next('Review my receipt')+'</form><div class="studio-preview-sticky"><strong>Your receipt preview</strong><div id="studio-live-preview">'+sampleHtml(current)+'</div></div></div></section>';
  }
  const d={...design,template:current},hidden=(n,v)=>'<input type="hidden" name="'+n+'" value="'+e(v??'')+'">';
  return head+'<section class="panel guided-panel studio-complete"><div class="eyebrow">STEP 4 OF 4</div>'+
- '<h2>Review your finished receipt</h2><p class="muted">This is the full printable layout. Only the sample customer and item details change when you create a real receipt.</p>'+
- '<div class="studio-final-summary"><strong>'+e(templateTitle(current))+'</strong><span>Primary: '+e(d.accent)+' · Secondary: '+e(d.secondary_color||'#19223b')+' · '+e(d.font_family||'modern')+'</span></div>'+
+ '<h2>Your finished receipt design</h2><p class="muted">Review the layout, lettering and colours. Your real customer details will appear when you create a receipt.</p>'+
+ '<div class="studio-final-summary"><strong>'+e(templateTitle(current))+'</strong><span>Chosen colours: '+e(d.accent)+' and '+e(d.secondary_color||'#19223b')+' · '+e(d.font_family||'modern')+'</span></div>'+
  '<div class="studio-final-preview">'+sampleHtml(current)+'</div>'+
  '<form data-form="design">'+hidden('accent',d.accent)+hidden('secondaryColor',d.secondary_color||'#19223b')+hidden('fontFamily',d.font_family||'modern')+
  hidden('textLogoStyle',d.text_logo_style||'split')+hidden('paper',d.paper||'a4')+hidden('contact',d.contact||'')+
  hidden('headerNote',d.header_note||'')+hidden('footerNote',d.footer_note||'Thank you for your business.')+
  '<input type="checkbox" name="showLogo" hidden '+(d.show_logo?'checked':'')+'><input type="checkbox" name="showSignature" hidden '+(d.show_signature?'checked':'')+'>'+
- '<div class="wizard-actions">'+back+'<button class="btn primary" type="submit">Save this receipt style ✓</button></div></form></section>';
+ '<div class="wizard-actions">'+back+'<button class="btn primary" type="submit">Save my receipt design ✓</button></div></form></section>';
 }
+
 function refreshStudioPreview(){const target=document.getElementById('studio-live-preview');if(target)target.innerHTML=sampleHtml(state.templateChoice||activeDesign().template||'signature');}
 function alerts(){
  const rows=state.data?.rows||[];
@@ -825,7 +857,7 @@ function render(){
  if(state.view==='create')drawPreview();
 }
 async function navigate(view){
- closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];if(view==='create')state.docStep=1;if(view==='design'){state.designStep=1;state.designDraft=null;state.templateChoice=null;state.designIndustry=null;}
+ closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];if(view==='create')state.docStep=1;if(view==='design'){state.designStep=1;state.designDraft=null;state.templateChoice=null;state.designIndustry=null;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;}
  try{await load()}catch(err){flash(err.message,true);render()}
  window.scrollTo(0,0);
 }
@@ -853,12 +885,24 @@ document.addEventListener('click',async ev=>{
  if(el.dataset.restoreTemplate!==undefined){stageLegacyStyle(Number(el.dataset.restoreTemplate));return}
  if(action==='design-next'){if(state.designStep<4){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
  if(action==='design-back'){if(state.designStep>1){if(state.designStep!==4)captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
- if(action==='studio-prev'||action==='studio-next'){const scroller=document.getElementById('studio-designs');if(scroller)scroller.scrollBy({left:(action==='studio-next'?1:-1)*Math.max(280,scroller.clientWidth*.76),behavior:'smooth'});return}
+ if(action==='studio-explore'){state.designBrowseAll=true;state.designDepartment=departmentForTemplate(state.templateChoice||activeDesign().template).id;state.designScroll=0;render();return}
+ if(action==='studio-recommended'){state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;render();return}
+ if(action==='studio-previous-department'||action==='studio-next-department'){
+  const active=state.designDepartment||departmentForIndustry(state.designIndustry),index=STUDIO_DEPARTMENTS.findIndex(x=>x.id===active);
+  const nextIndex=Math.max(0,Math.min(STUDIO_DEPARTMENTS.length-1,index+(action==='studio-next-department'?1:-1)));
+  state.designDepartment=STUDIO_DEPARTMENTS[nextIndex].id;state.designScroll=0;render();return;
+ }
+ if(el.dataset.designDepartment){state.designBrowseAll=true;state.designDepartment=el.dataset.designDepartment;state.designScroll=0;render();return}
+ if(action==='studio-prev'||action==='studio-next'){const scroller=document.getElementById('studio-designs');if(scroller){scroller.scrollBy({left:(action==='studio-next'?1:-1)*Math.max(280,scroller.clientWidth*.76),behavior:'smooth'});state.designScroll=scroller.scrollLeft;}return}
  if(action==='studio-close-preview'){document.getElementById('studio-preview-modal')?.classList.add('hidden');return}
  if(el.dataset.previewTemplate){const modal=document.getElementById('studio-preview-modal');if(modal){document.getElementById('studio-modal-title').textContent=templateTitle(el.dataset.previewTemplate);document.getElementById('studio-modal-receipt').innerHTML=sampleHtml(el.dataset.previewTemplate);modal.classList.remove('hidden');modal.querySelector('button')?.focus();}return}
  if(action==='doc-next'){setDocStep(state.docStep+1);return}
  if(action==='doc-back'){setDocStep(state.docStep-1);return}
- if(el.dataset.template){captureDesignForm();state.templateChoice=el.dataset.template;setDesignColour(templateArt(state.templateChoice).accent);render();return}
+ if(el.dataset.template){
+  state.designScroll=document.getElementById('studio-designs')?.scrollLeft||0;
+  captureDesignForm();state.templateChoice=el.dataset.template;setDesignColour(templateArt(state.templateChoice).accent);
+  render();const track=document.getElementById('studio-designs');if(track)track.scrollLeft=state.designScroll;return;
+ }
  if(el.dataset.designColor){setDesignColour(el.dataset.designColor);render();return}
  if(el.dataset.accent){const field=document.querySelector('[data-form=design] [name=accent]');if(field){field.value=el.dataset.accent;captureDesignForm();refreshStudioPreview();}return}
  if(el.dataset.expandLine!==undefined||el.hasAttribute('data-edit-notes')){
@@ -917,8 +961,7 @@ document.addEventListener('input',ev=>{
 });
 document.addEventListener('change',ev=>{
  if(ev.target.matches('[data-design-custom-color]')){setDesignColour(ev.target.value);render();return}
- if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.templateChoice=businessCategory(ev.target.value).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
- if(ev.target.matches('[data-design-browse]')){if(ev.target.value){state.templateChoice=ev.target.value;setDesignColour(templateArt(state.templateChoice).accent);render()}return}
+ if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;state.templateChoice=departmentById(departmentForIndustry(ev.target.value)).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
  const artwork=ev.target.closest('[data-form=logo], [data-form=signature]');
  if(artwork&&(ev.target.type==='file'||ev.target.name==='removeWhite')){
