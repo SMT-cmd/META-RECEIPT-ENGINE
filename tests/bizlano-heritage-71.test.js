@@ -19,9 +19,9 @@ test('original Swiss and Japanese preserve structural differences, not just colo
  assert.match(ui,/heritageReceipt\(doc,number,stored,style\)/);
 });
 test('four-stage flow separates business, layout, colour and font, completion',()=>{
- assert.match(ui,/guidedSteps\(\['Business','Layout','Colours & fonts','Finish'\],step\)/);
+ assert.match(ui,/guidedSteps\(\['Your business','Choose a design','Make it yours','Finish'\],step\)/);
  for(const n of ['STEP 1 OF 4','STEP 2 OF 4','STEP 3 OF 4','STEP 4 OF 4'])assert.ok(ui.includes(n),n);
- assert.match(ui,/Browse all 71 receipt layouts/);
+ assert.match(ui,/Explore all '\+templateCatalogCount\+' designs/);
  assert.match(ui,/data-preview-template/);
  assert.match(ui,/studio-final-preview/);
  assert.match(css,/\.studio-carousel\{display:flex!important/);
@@ -30,8 +30,8 @@ test('optional image logo and styled text logo use chosen font without requiring
  assert.match(ui,/function stylizedCompanyName\(name,mode\)/);
  assert.match(ui,/class="brand-accent"/);
  assert.match(ui,/const fontCssName/);
- assert.match(ui,/Use my uploaded image logo \(optional\)/);
- assert.match(ui,/Without an image logo, we style your business name automatically/);
+ assert.match(ui,/Use my uploaded logo \(optional\)/);
+ assert.match(ui,/No image logo\? Your business name will appear as a styled text logo/);
  assert.match(ui,/show_logo:0/);
 });
 test('primary + secondary colours and typography have schema and server-side validation',()=>{
@@ -48,7 +48,7 @@ test('legacy owner style restoration uses authenticated firebase UID, staged rev
  assert.match(ui,/archive\.userUid!==auth\.currentUser\?\.uid/);
  assert.match(ui,/stageLegacyStyle\(index\)/);
  assert.match(ui,/state\.designStep=2/);
- assert.match(ui,/Nothing is changed until you save/);
+ assert.match(ui,/Your existing documents will stay unchanged/);
  assert.match(ui,/data-restore-template/);
  assert.match(ui,/readLegacyBrandConfig\(data\.config/);
  assert.match(ui,/state\.legacyArchive=archive/);
