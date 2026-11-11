@@ -30,6 +30,7 @@ test('authenticated business workspace footer and sign-in show the parent brand'
   assert.match(html,/footer-parent-logo/);
   assert.match(client,/Powered by Global Web Stores/);
   assert.match(client,/A Global Web Stores brand/);
+  assert.match(client,/auth-parent-mark/);
   assert.ok(client.includes(gws));
   assert.ok(client.includes(logo));
   assert.doesNotMatch(client,/href="https:\/\/www\.globalwebstores\.com\/timi"/);
