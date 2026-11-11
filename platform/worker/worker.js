@@ -20,6 +20,7 @@ const rnd=()=>hex(crypto.getRandomValues(new Uint8Array(32)));
 async function hash(s){return hex(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))))}
 const field=(s,name,max=160)=>{if(typeof s!=='string'||!s.trim()||s.length>max)fail(400,'Invalid '+name);return s.trim()};
 const email=s=>{s=field(s,'email',254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))fail(400,'Invalid email');return s};
+const phone=s=>{const v=String(s||'').trim();if(!v)return null;const n=v.replace(/[\s().-]/g,'');if(/^0[789][01]\d{8}$/.test(n))return '+234'+n.slice(1);if(/^234[789][01]\d{8}$/.test(n))return '+'+n;if(/^\+[1-9]\d{7,14}$/.test(n))return n;fail(400,'Enter a valid phone number, including the country code if outside Nigeria')};
 const cents=v=>{const n=Number(v);if(!Number.isFinite(n)||n<0||n>1e11)fail(400,'Invalid amount');return Math.round(n*100)};
 const milli=v=>{const n=Number(v);if(!Number.isFinite(n)||n<0||n>1e7)fail(400,'Invalid quantity');return Math.round(n*1000)};
 const slugValid=s=>/^[a-z0-9][a-z0-9-]{2,38}[a-z0-9]$/.test(s)&&!reserved.includes(s);
@@ -121,6 +122,8 @@ async function marketplaceApi(req,env,url){
   if(!connection)return json({created:false,reason:'not_connected'});
   const title=field(order.productTitle,'product title',210),docId=crypto.randomUUID(),customer=String(order.customerName||'Customer').trim().slice(0,140)||'Customer';
   const emailAddress=typeof order.customerEmail==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.customerEmail)?order.customerEmail.trim().toLowerCase().slice(0,200):null;
+  const recipientPhone=order.customerPhone?phone(order.customerPhone):null;
+  if(!emailAddress&&!recipientPhone)return json({created:false,reason:'customer_contact_missing'});
   const itemAmount=amount-delivery-handling-processing,unit=Math.floor(itemAmount/qty),remainder=itemAmount-unit*qty;
   const lines=[{desc:title,qty:qty*1000,unit,amount:unit*qty}];
   if(remainder>0)lines.push({desc:'Price rounding',qty:1000,unit:remainder,amount:remainder});
@@ -132,8 +135,8 @@ async function marketplaceApi(req,env,url){
   const customerId=customerExisting?.id||crypto.randomUUID(),now=new Date(),issueDate=now.toISOString().slice(0,10);
   const plans=[
    ...(!customerExisting?[env.DB.prepare("INSERT INTO customers(id,tenant_id,name,email,phone) VALUES(?,?,?,?,?)").bind(customerId,connection.tenant_id,customer,emailAddress,String(order.customerPhone||'').slice(0,70))]:[]),
-   env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,recipient_email,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?,?, 'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
-    .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,emailAddress,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
+   env.DB.prepare("INSERT INTO documents(id,tenant_id,document_number,kind,template,customer_id,recipient_name,recipient_email,recipient_phone,issued_on,currency,subtotal_minor,shipping_minor,total_minor,status,notes,created_by) SELECT ?,?,?, 'receipt',?,?,?,?,?,?, 'NGN',?,?,?,'issued',?,created_by FROM tenants WHERE id=?")
+    .bind(docId,connection.tenant_id,documentNumber,design?.template||'signature',customerId,customer,emailAddress,recipientPhone,issueDate,amount-delivery,delivery,amount,'Prepared automatically from a verified Global Webstores purchase. Reference: '+orderId,connection.tenant_id)
   ];
   for(const line of lines)plans.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?)')
     .bind(crypto.randomUUID(),connection.tenant_id,docId,line.desc,line.qty,line.unit,line.amount));
@@ -178,7 +181,7 @@ async function limitRecoveryClaims(env,userId){
 }
 function customerDocument(row,lines){
  return {id:row.id,tenantId:row.tenant_id,documentNumber:row.document_number,kind:row.kind,template:row.template,
- customer:row.recipient_name,email:row.recipient_email,date:row.issued_on,dueDate:row.due_on,
+ customer:row.recipient_name,email:row.recipient_email,phone:row.recipient_phone,date:row.issued_on,dueDate:row.due_on,
  status:row.status,currency:row.currency,subtotalMinor:row.subtotal_minor,discountMinor:row.discount_minor,taxMinor:row.tax_minor,
  shippingMinor:row.shipping_minor,totalMinor:row.total_minor,paidMinor:row.paid_minor,notes:row.notes,store:row.business_name,
  storeSlug:row.slug,storeLogo:row.logo_url,storeColor:row.brand_color,
@@ -430,10 +433,12 @@ async function api(req,env,url) {
   }
  }
  if(resource==='documents'){
-  if(method==='GET'){const r=await env.DB.prepare('SELECT id,document_number,kind,recipient_name,issued_on,due_on,total_minor,paid_minor,status,currency,template,notes FROM documents WHERE tenant_id=? ORDER BY created_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
+  if(method==='GET'){const r=await env.DB.prepare('SELECT id,document_number,kind,recipient_name,recipient_email,recipient_phone,issued_on,due_on,total_minor,paid_minor,status,currency,template,notes FROM documents WHERE tenant_id=? ORDER BY created_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
   if(method==='POST'){
    await member(env,user,slug,'edit');
    const b=await input(req),kind=field(b.kind,'document type',60),items=b.items;
+   const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
+   if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
    const preferred=await env.DB.prepare('SELECT template FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
    const selectedTemplate=String(b.template||preferred?.template||'signature');
    if(!TEMPLATES.has(selectedTemplate))fail(400,'Unsupported document design');
@@ -456,7 +461,7 @@ async function api(req,env,url) {
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
    const did=crypto.randomUUID(),number=kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),b.customerEmail?email(b.customerEmail):null,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));
    if(received>0&&billable.has(kind)){const code=await recoveryCode(env,tenant,did);batch.push(env.DB.prepare('INSERT INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)').bind(tenant,did,await hash(code)));}
