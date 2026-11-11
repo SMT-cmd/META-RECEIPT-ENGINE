@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#fcfbff"><meta name="robots" content="noindex,nofollow">
-<meta name="description" content="Find receipts from every participating Bizlano business in one private, verified-email account.">
+<meta name="description" content="Find and download receipts from your favourite businesses, all in one place.">
 <link rel="icon" type="image/png" href="/assets/bizlano-mark.png">
 <title>My Receipts — Bizlano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,8 +39,8 @@ header{background:#fff;border-bottom:1px solid var(--line);min-height:78px;displ
 .section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:26px 0 14px}
 .receipt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .receipt-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:22px;min-width:0;display:grid;gap:14px}
-.merchant{display:flex;align-items:center;gap:10px}.merchant-icon{width:41px;height:41px;flex:none;background:#f0edff;border-radius:11px;display:grid;place-items:center;font-weight:850;color:#6742db;font-size:19px}.merchant strong{font-size:13px;display:block}.merchant small{font-size:10px}
-.receipt-meta{color:#8290a9;font-size:11px}.receipt-desc{min-height:30px;color:#626e87;font-size:12px;line-height:1.6}.receipt-total{font:800 20px Manrope}.receipt-card .button{justify-self:start}
+.merchant{display:flex;align-items:center;gap:10px}.merchant-icon{width:41px;height:41px;flex:none;background:#f0edff;border-radius:11px;display:grid;place-items:center;font-weight:850;color:#6742db;font-size:19px}.merchant strong{font-size:13px;display:block}.merchant small{font-size:11px;color:#58657e}
+.receipt-meta{color:#58657e;font-size:12px}.receipt-desc{min-height:30px;color:#626e87;font-size:12px;line-height:1.6}.receipt-total{font:800 20px Manrope}.receipt-card .button{justify-self:start}
 .empty{border:1px dashed #d7d6e8;text-align:center;border-radius:16px;padding:60px 20px;background:#fff;color:var(--muted);font-size:13px}
 .claim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:11px;align-items:end;margin-top:10px}.claim .field{margin:0}
 .drawer{position:fixed;inset:0;z-index:100;background:rgba(18,24,55,.65);display:flex;justify-content:center;align-items:flex-start;padding:35px 15px;overflow:auto}
@@ -66,6 +66,6 @@ footer{border-top:1px solid var(--line);background:#fff;padding:24px 0;color:#82
 </div></header>
 <main class="container" id="customer-app" aria-live="polite"><section class="hero"><div class="eyebrow">My receipts</div><h1>One place for every purchase.</h1><p>Loading your secure receipt dashboard…</p></section></main>
 <div id="modal" hidden></div><div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-<footer><div class="container spread"><span>Bizlano · Your receipts, together.</span><span>Powered by Bizlano</span></div></footer>
+<footer><div class="container spread"><span>© 2026 Bizlano</span><span>Powered by Bizlano</span></div></footer>
 <script type="module" src="/customer.js"></script>
 </body></html>
