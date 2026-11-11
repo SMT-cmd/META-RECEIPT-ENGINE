@@ -3,13 +3,13 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path');
 const source=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const ui=source('platform/worker/client.js'),html=source('platform/worker/index.html'),worker=source('platform/worker/worker.js');
-test('document studio begins with business type and recommends a short category shortlist',()=>{
- assert.match(ui,/What business do you run\?/);
+test('document studio begins with business type and shows matching department',()=>{
+ assert.match(ui,/What kind of business do you run\?/);
  for(const category of ['Electronics & gadgets','Baking, food & cafés','Electrical, repairs & construction','Fashion, beauty & salons']){
   assert.ok(ui.includes(category),category);
  }
- assert.match(ui,/sector\.templates/);
- assert.match(ui,/\.slice\(0,6\)/);
+ assert.match(ui,/departmentForIndustry\(sector\.id\)/);
+ assert.match(ui,/const choices=chosenDepartment\.templates/);
  assert.doesNotMatch(ui,/TEMPLATE_LIST\.map\(\(id,i\)=>/);
 });
 test('template cards and full-sized preview use the actual receipt rendering pipeline',()=>{
