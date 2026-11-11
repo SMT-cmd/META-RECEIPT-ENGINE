@@ -1,0 +1,212 @@
+{
+  "heritage-modern-tech": {
+    "name": "Modern Tech",
+    "group": "Corporate",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-minimalist-pro": {
+    "name": "Minimalist Pro",
+    "group": "Corporate",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-corporate-luxe": {
+    "name": "Corporate Luxe",
+    "group": "Premium",
+    "accent": "#d4af37",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-legal-professional": {
+    "name": "Legal Professional",
+    "group": "Professional",
+    "accent": "#8b0000",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-cyber-punk": {
+    "name": "Cyber Punk",
+    "group": "Tech",
+    "accent": "#00ff41",
+    "secondary": "#2c1810"
+  },
+  "heritage-retro-wave": {
+    "name": "Retro Wave",
+    "group": "Creative",
+    "accent": "#558b2f",
+    "secondary": "#33691e"
+  },
+  "heritage-neo-brutalist": {
+    "name": "Neo Brutalist",
+    "group": "Bold",
+    "accent": "#ff006e",
+    "secondary": "#33691e"
+  },
+  "heritage-startup-modern": {
+    "name": "Startup Modern",
+    "group": "Tech",
+    "accent": "#f4a460",
+    "secondary": "#8b4513"
+  },
+  "heritage-royal-elegance": {
+    "name": "Royal Elegance",
+    "group": "Classic",
+    "accent": "#8b4513",
+    "secondary": "#2c1810"
+  },
+  "heritage-art-deco": {
+    "name": "Art Deco",
+    "group": "Vintage",
+    "accent": "#c9a961",
+    "secondary": "#2c2c2c"
+  },
+  "heritage-fashion-boutique": {
+    "name": "Fashion Boutique",
+    "group": "Retail",
+    "accent": "#000000",
+    "secondary": "#333"
+  },
+  "heritage-hotel-resort": {
+    "name": "Hotel Resort",
+    "group": "Hospitality",
+    "accent": "#b8860b",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-clean-air": {
+    "name": "Clean Air",
+    "group": "Minimal",
+    "accent": "#4299e1",
+    "secondary": "#1a365d"
+  },
+  "heritage-swiss-design": {
+    "name": "Swiss Design",
+    "group": "Professional",
+    "accent": "#ff0000",
+    "secondary": "#33691e"
+  },
+  "heritage-japanese-minimal": {
+    "name": "Japanese Minimal",
+    "group": "Zen",
+    "accent": "#e74c3c",
+    "secondary": "#33691e"
+  },
+  "heritage-compact-slip": {
+    "name": "Compact Slip",
+    "group": "Quick",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-midnight-special": {
+    "name": "Midnight Special",
+    "group": "Dark",
+    "accent": "#e94560",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-garage-workshop": {
+    "name": "Garage Workshop",
+    "group": "Industrial",
+    "accent": "#ff6600",
+    "secondary": "#333"
+  },
+  "heritage-bold-stripe": {
+    "name": "Bold Stripe",
+    "group": "Modern",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-fitness-gym": {
+    "name": "Fitness Gym",
+    "group": "Sports",
+    "accent": "#00ff00",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-pharmacy-medical": {
+    "name": "Pharmacy Medical",
+    "group": "Medical",
+    "accent": "#0066cc",
+    "secondary": "#333"
+  },
+  "heritage-bakery-sweet": {
+    "name": "Bakery Sweet",
+    "group": "Food",
+    "accent": "#ff6b9d",
+    "secondary": "#333"
+  },
+  "heritage-nature-organic": {
+    "name": "Nature Organic",
+    "group": "Eco",
+    "accent": "#558b2f",
+    "secondary": "#33691e"
+  },
+  "heritage-salon-beauty": {
+    "name": "Salon Beauty",
+    "group": "Beauty",
+    "accent": "#ff69b4",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-restaurant-diner": {
+    "name": "Restaurant Diner",
+    "group": "Food",
+    "accent": "#d2691e",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-construction-industrial": {
+    "name": "Construction",
+    "group": "Industrial",
+    "accent": "#f4a460",
+    "secondary": "#8b4513"
+  },
+  "heritage-education-academy": {
+    "name": "Education Academy",
+    "group": "Education",
+    "accent": "#4169e1",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-transport-logistics": {
+    "name": "Transport",
+    "group": "Logistics",
+    "accent": "#ffd700",
+    "secondary": "#2f4f4f"
+  },
+  "heritage-real-estate": {
+    "name": "Real Estate",
+    "group": "Property",
+    "accent": "#8b4513",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-event-planning": {
+    "name": "Event Planning",
+    "group": "Events",
+    "accent": "#ff1493",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-curved-organic": {
+    "name": "Curved Organic",
+    "group": "Artistic",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-geometric-slice": {
+    "name": "Geometric Slice",
+    "group": "Bold",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-vintage-ticket": {
+    "name": "Vintage Ticket",
+    "group": "Retro",
+    "accent": "#7d6b5d",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-futuristic-glass": {
+    "name": "Futuristic Glass",
+    "group": "Tech",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  },
+  "heritage-stamp-quality": {
+    "name": "Stamp Quality",
+    "group": "Premium",
+    "accent": "#ff6b00",
+    "secondary": "#1a1a1a"
+  }
+}
