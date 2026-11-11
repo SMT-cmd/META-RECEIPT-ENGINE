@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,docStep:1};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,legacyStyles:[],legacyChecked:false,docStep:1};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -55,7 +55,7 @@ async function load(){
   const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
   state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
  }
- if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;state.designIndustry=state.designIndustry||x.industry||state.biz.industry||'general';render();return}
+ if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;state.designIndustry=state.designIndustry||x.industry||state.biz.industry||'general';render();if(!state.legacyChecked)void findLegacyStyles();return}
  if(section==='branding'){const [main,details]=await Promise.all([api(t+'/overview'),api(t+'/design')]);state.data=main;state.design=details.design;render();return}
  if(section==='create') {
   const [p,c,d]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design')]);
@@ -97,17 +97,20 @@ function businessPicker(){
 const TEMPLATE_LIST=["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire"];
 
 // Business-specific suggestions only guide selection; all original template IDs stay valid.
+const HERITAGE_TEMPLATES={"heritage-modern-tech":{"name":"Modern Tech","group":"Corporate","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-minimalist-pro":{"name":"Minimalist Pro","group":"Corporate","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-corporate-luxe":{"name":"Corporate Luxe","group":"Premium","accent":"#d4af37","secondary":"#1a1a1a"},"heritage-legal-professional":{"name":"Legal Professional","group":"Professional","accent":"#8b0000","secondary":"#1a1a1a"},"heritage-cyber-punk":{"name":"Cyber Punk","group":"Tech","accent":"#00ff41","secondary":"#1a1a1a"},"heritage-retro-wave":{"name":"Retro Wave","group":"Creative","accent":"#558b2f","secondary":"#1a1a1a"},"heritage-neo-brutalist":{"name":"Neo Brutalist","group":"Bold","accent":"#ff006e","secondary":"#1a1a1a"},"heritage-startup-modern":{"name":"Startup Modern","group":"Tech","accent":"#f4a460","secondary":"#1a1a1a"},"heritage-royal-elegance":{"name":"Royal Elegance","group":"Classic","accent":"#8b4513","secondary":"#1a1a1a"},"heritage-art-deco":{"name":"Art Deco","group":"Vintage","accent":"#c9a961","secondary":"#1a1a1a"},"heritage-fashion-boutique":{"name":"Fashion Boutique","group":"Retail","accent":"#000000","secondary":"#1a1a1a"},"heritage-hotel-resort":{"name":"Hotel Resort","group":"Hospitality","accent":"#b8860b","secondary":"#1a1a1a"},"heritage-clean-air":{"name":"Clean Air","group":"Minimal","accent":"#4299e1","secondary":"#1a1a1a"},"heritage-swiss-design":{"name":"Swiss Design","group":"Professional","accent":"#ff0000","secondary":"#1a1a1a"},"heritage-japanese-minimal":{"name":"Japanese Minimal","group":"Zen","accent":"#e74c3c","secondary":"#1a1a1a"},"heritage-compact-slip":{"name":"Compact Slip","group":"Quick","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-midnight-special":{"name":"Midnight Special","group":"Dark","accent":"#e94560","secondary":"#1a1a1a"},"heritage-garage-workshop":{"name":"Garage Workshop","group":"Industrial","accent":"#ff6600","secondary":"#1a1a1a"},"heritage-bold-stripe":{"name":"Bold Stripe","group":"Modern","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-fitness-gym":{"name":"Fitness Gym","group":"Sports","accent":"#00ff00","secondary":"#1a1a1a"},"heritage-pharmacy-medical":{"name":"Pharmacy Medical","group":"Medical","accent":"#0066cc","secondary":"#1a1a1a"},"heritage-bakery-sweet":{"name":"Bakery Sweet","group":"Food","accent":"#ff6b9d","secondary":"#1a1a1a"},"heritage-nature-organic":{"name":"Nature Organic","group":"Eco","accent":"#558b2f","secondary":"#1a1a1a"},"heritage-salon-beauty":{"name":"Salon Beauty","group":"Beauty","accent":"#ff69b4","secondary":"#1a1a1a"},"heritage-restaurant-diner":{"name":"Restaurant Diner","group":"Food","accent":"#d2691e","secondary":"#1a1a1a"},"heritage-construction-industrial":{"name":"Construction","group":"Industrial","accent":"#f4a460","secondary":"#1a1a1a"},"heritage-education-academy":{"name":"Education Academy","group":"Education","accent":"#4169e1","secondary":"#1a1a1a"},"heritage-transport-logistics":{"name":"Transport","group":"Logistics","accent":"#ffd700","secondary":"#1a1a1a"},"heritage-real-estate":{"name":"Real Estate","group":"Property","accent":"#8b4513","secondary":"#1a1a1a"},"heritage-event-planning":{"name":"Event Planning","group":"Events","accent":"#ff1493","secondary":"#1a1a1a"},"heritage-curved-organic":{"name":"Curved Organic","group":"Artistic","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-geometric-slice":{"name":"Geometric Slice","group":"Bold","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-vintage-ticket":{"name":"Vintage Ticket","group":"Retro","accent":"#7d6b5d","secondary":"#1a1a1a"},"heritage-futuristic-glass":{"name":"Futuristic Glass","group":"Tech","accent":"#ff6b00","secondary":"#1a1a1a"},"heritage-stamp-quality":{"name":"Stamp Quality","group":"Premium","accent":"#ff6b00","secondary":"#1a1a1a"}};
+const HERITAGE_KEYS=Object.keys(HERITAGE_TEMPLATES);
+const isHeritage=id=>Object.hasOwn(HERITAGE_TEMPLATES,String(id||''));
 const BUSINESS_TYPES=[
- {id:'general',name:'General business',templates:['signature','modern','classic','minimal'],item:'Product or service'},
- {id:'electronics',name:'Electronics & gadgets',templates:['modern','sapphire','digital','retail'],item:'Wireless speaker'},
- {id:'bakery',name:'Baking, food & cafés',templates:['artisan-paper','artisan','restaurant','boutique'],item:'Freshly baked cake'},
- {id:'retail',name:'Retail, grocery & supermarkets',templates:['retail','grocery','thermal','modern'],item:'Household supplies'},
- {id:'fashion',name:'Fashion, beauty & salons',templates:['boutique','salon','luxury','editorial'],item:'Customer order'},
- {id:'services',name:'Professional services',templates:['service','formal','corporate','minimal'],item:'Professional service'},
- {id:'trades',name:'Electrical, repairs & construction',templates:['service','ledger','premium-dark','logistics'],item:'Equipment installation'},
- {id:'health',name:'Health & education',templates:['medical','education','formal','classic'],item:'Service charges'},
- {id:'hospitality',name:'Hotels, events & hospitality',templates:['hospitality','event','festival','premium-dark'],item:'Booking service'},
- {id:'logistics',name:'Logistics & wholesale',templates:['logistics','wholesale','ledger','executive'],item:'Delivery service'}
+ {id:'general',name:'General business',templates:['heritage-swiss-design','heritage-japanese-minimal','heritage-modern-tech','signature','modern'],item:'Product or service'},
+ {id:'electronics',name:'Electronics & gadgets',templates:['heritage-cyber-punk','heritage-modern-tech','heritage-neo-brutalist','heritage-swiss-design','sapphire'],item:'Wireless speaker'},
+ {id:'bakery',name:'Baking, food & cafés',templates:['heritage-bakery-sweet','heritage-vintage-ticket','heritage-art-deco','heritage-nature-organic','artisan-paper'],item:'Freshly baked cake'},
+ {id:'retail',name:'Retail, grocery & supermarkets',templates:['heritage-compact-slip','heritage-bold-stripe','heritage-vintage-ticket','heritage-nature-organic','retail'],item:'Household supplies'},
+ {id:'fashion',name:'Fashion, beauty & salons',templates:['heritage-fashion-boutique','heritage-salon-beauty','heritage-art-deco','heritage-royal-elegance','boutique'],item:'Customer order'},
+ {id:'services',name:'Professional services',templates:['heritage-swiss-design','heritage-legal-professional','heritage-minimalist-pro','heritage-corporate-luxe','corporate'],item:'Professional service'},
+ {id:'trades',name:'Electrical, repairs & construction',templates:['heritage-garage-workshop','heritage-construction-industrial','heritage-swiss-design','heritage-japanese-minimal','service'],item:'Equipment installation'},
+ {id:'health',name:'Health & education',templates:['heritage-pharmacy-medical','heritage-education-academy','heritage-clean-air','heritage-stamp-quality','medical'],item:'Service charges'},
+ {id:'hospitality',name:'Hotels, events & hospitality',templates:['heritage-hotel-resort','heritage-event-planning','heritage-royal-elegance','heritage-art-deco','hospitality'],item:'Booking service'},
+ {id:'logistics',name:'Logistics & wholesale',templates:['heritage-transport-logistics','heritage-swiss-design','heritage-construction-industrial','heritage-bold-stripe','wholesale'],item:'Delivery service'}
 ];
 const TEMPLATE_FAMILIES=[
  ['Everyday business',['signature','classic','executive','minimal','modern','retail','digital','startup']],
@@ -117,12 +120,26 @@ const TEMPLATE_FAMILIES=[
  ['Corporate & colour',['corporate','ledger','bold','monochrome','gradient','formal','emerald','sapphire']]
 ];
 const businessCategory=id=>BUSINESS_TYPES.find(x=>x.id===id)||BUSINESS_TYPES[0];
-const templateTitle=id=>String(id).split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' ');
-function activeDesign(){return state.designDraft||state.design||{template:'signature',accent:'#6935df',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:1,show_signature:0};}
+const templateTitle=id=>HERITAGE_TEMPLATES[id]?.name||String(id).split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' ');
+const FONT_STYLES=[['modern','Modern sans'],['editorial','Editorial serif'],['mono','Technical monospaced'],['rounded','Friendly rounded'],['classic','Classic sans']];
+const TEXT_LOGO_STYLES=[['split','Two-tone business name'],['plain','Plain wordmark'],['caps','Uppercase wordmark']];
+const fontCssName=id=>({modern:"'Manrope',Arial,sans-serif",editorial:'Georgia,Times,serif',mono:'ui-monospace,Consolas,monospace',rounded:"'Trebuchet MS',Arial,sans-serif",classic:'Arial,Helvetica,sans-serif'})[id]||'Arial,sans-serif';
+function stylizedCompanyName(name,mode){
+ const original=String(name||'Business'),words=original.trim().split(/\s+/);
+ if(mode==='caps')return '<span class="wordmark-caps">'+e(original)+'</span>';
+ if(mode==='plain')return e(original);
+ const i=words.length>1?words.slice(0,Math.ceil(words.length/2)).join(' ').length:Math.ceil(original.length/2);
+ return e(original.slice(0,i))+'<span class="brand-accent">'+e(original.slice(i))+'</span>';
+}
+function activeDesign(){return state.designDraft||state.design||{template:'signature',accent:'#6935df',secondary_color:'#19223b',font_family:'modern',text_logo_style:'split',paper:'a4',header_note:'',footer_note:'Thank you for your business.',contact:'',show_logo:0,show_signature:0};}
 function captureDesignForm(){
  const f=document.querySelector('[data-form=design]');if(!f)return;
- const previous=activeDesign();
- state.designDraft={...previous,accent:val(f,'accent'),paper:val(f,'paper'),contact:val(f,'contact'),header_note:val(f,'headerNote'),footer_note:val(f,'footerNote'),show_logo:f.elements.namedItem('showLogo').checked?1:0,show_signature:f.elements.namedItem('showSignature').checked?1:0};
+ const prev=activeDesign(),value=(n,def)=>f.elements.namedItem(n)?.value??def;
+ state.designDraft={...prev,accent:value('accent',prev.accent),secondary_color:value('secondaryColor',prev.secondary_color||'#19223b'),
+  font_family:value('fontFamily',prev.font_family||'modern'),text_logo_style:value('textLogoStyle',prev.text_logo_style||'split'),
+  paper:value('paper',prev.paper||'a4'),contact:value('contact',prev.contact||''),header_note:value('headerNote',prev.header_note||''),
+  footer_note:value('footerNote',prev.footer_note||'Thank you for your business.'),
+  show_logo:f.elements.namedItem('showLogo')?.checked?1:0,show_signature:f.elements.namedItem('showSignature')?.checked?1:0};
 }
 function sampleDocument(template){
  const sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
@@ -130,12 +147,13 @@ function sampleDocument(template){
 }
 function sampleHtml(template,asCard=false){
  const theme=templateArt(template);
- const design={...activeDesign(),accent:asCard?theme.accent:(state.designDraft?.accent||(
+ const design={...activeDesign(),font_family:asCard?undefined:activeDesign().font_family,secondary_color:asCard?(HERITAGE_TEMPLATES[template]?.secondary||'#19223b'):activeDesign().secondary_color,accent:asCard?theme.accent:(state.designDraft?.accent||(
    template===(state.design?.template||'signature')?activeDesign().accent:theme.accent)),paper:'a4',show_signature:0,show_logo:activeDesign().show_logo};
  return receipt(sampleDocument(template),'BZ-00021',false,design).replace(' id="printable"','');
 }
 function groupedTemplateOptions(selected){
- return TEMPLATE_FAMILIES.map(([label,ids])=>'<optgroup label="'+e(label)+'">'+ids.map(id=>'<option value="'+e(id)+'" '+(selected===id?'selected':'')+'>'+e(templateTitle(id))+'</option>').join('')+'</optgroup>').join('');
+ const families=[['Original MetaForge designs · 35',HERITAGE_KEYS],...TEMPLATE_FAMILIES];
+ return families.map(([label,ids])=>'<optgroup label="'+e(label)+'">'+ids.map(id=>'<option value="'+e(id)+'" '+(selected===id?'selected':'')+'>'+e(templateTitle(id))+'</option>').join('')+'</optgroup>').join('');
 }
 function guidedSteps(labels,step){
  return '<div class="wizard-steps" role="list" aria-label="Your progress">'+labels.map((label,i)=>'<div role="listitem" class="wizard-step '+(i+1===step?'current':i+1<step?'done':'')+'"><span class="wizard-number">'+(i+1)+'</span><span>'+e(label)+'</span></div>').join('')+'</div>';
@@ -179,7 +197,7 @@ const RECEIPT_ART={
  emerald:{accent:'#198564',layout:'emerald',story:'Emerald growth',note:'Green business report'},
  sapphire:{accent:'#255bb5',layout:'sapphire',story:'Sapphire precision',note:'Clear blue invoice'}
 };
-const templateArt=id=>RECEIPT_ART[id]||RECEIPT_ART.signature;
+const templateArt=id=>HERITAGE_TEMPLATES[id]?{accent:HERITAGE_TEMPLATES[id].accent,layout:'heritage-'+id,story:HERITAGE_TEMPLATES[id].name,note:'Original '+HERITAGE_TEMPLATES[id].group+' design'}:(RECEIPT_ART[id]||RECEIPT_ART.signature);
 const COLOR_STORIES=[
  {name:'Midnight',hex:'#1d2b52',meaning:'Trust & precision'},
  {name:'Electric blue',hex:'#2668c5',meaning:'Modern technology'},
@@ -372,6 +390,49 @@ function team(){
  '<div class="cols"><section class="panel"><h2>Invite staff</h2><form data-form="invite">'+input('Staff email','email','email','',true)+select('Permission','role',[['manager','Manager'],['accountant','Accountant'],['cashier','Cashier'],['sales','Sales'],['viewer','View-only']])+'<button class="btn primary">Generate invite</button></form><div id="invite-result" class="banner hidden"></div></section>'+
  '<section class="panel"><h2>Team members</h2>'+simpleRows(rows,s=>'<div class="rowcard"><div><strong>'+e(s.email)+'</strong><small>'+e(s.role)+' · '+(s.disabled_at?'Suspended':'Active')+'</small></div></div>')+'</section></div>';
 }
+function readLegacyBrandConfig(raw){
+ if(!raw)return null;
+ try{
+  const payload=typeof raw==='object'?raw:JSON.parse(new TextDecoder().decode(
+   Uint8Array.from(atob(String(raw).replace(/-/g,'+').replace(/_/g,'/').replace(/[^a-zA-Z0-9+/=]/g,'')),x=>x.charCodeAt(0))));
+  const original=String(payload.tp||payload.template||''),key=original.startsWith('heritage-')?original:'heritage-'+original;
+  if(!isHeritage(key))return null;
+  const colour=String(payload.pc||payload.primaryColor||HERITAGE_TEMPLATES[key].accent);
+  const secondary=String(payload.sc||payload.secondaryColor||'#19223b');
+  const hex=(x,fallback)=>/^#[0-9a-fA-F]{6}$/.test(x)?x.toLowerCase():fallback;
+  const font=String(payload.ff||payload.fontFamily||'modern').toLowerCase();
+  const fontFamily=font.includes('mono')||font.includes('rajdhani')?'mono':font.includes('serif')||font.includes('cinzel')||font.includes('playfair')?'editorial':font.includes('poppins')?'rounded':'modern';
+  return {template:key,accent:hex(colour,HERITAGE_TEMPLATES[key].accent),secondary_color:hex(secondary,'#19223b'),
+   font_family:fontFamily,text_logo_style:'split'};
+ }catch{return null}
+}
+async function findLegacyStyles(){
+ if(state.legacyChecked)return;
+ state.legacyChecked=true;
+ if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)return;
+ try{
+  const q=query(collection(oldDb,'short_urls'),where('owner_uid','==',auth.currentUser.uid),limit(20));
+  const rows=await getDocs(q),styles=[];
+  for(const doc of rows.docs){
+   const data=doc.data();
+   const settings=readLegacyBrandConfig(data.config||data.original_url?.split('#')[1]);
+   if(settings)styles.push({code:doc.id,brandName:String(data.brandName||doc.id).slice(0,100),...settings});
+  }
+  state.legacyStyles=styles;
+  if(state.view==='design'&&state.designStep===1)render();
+ }catch{state.legacyStyles=[]}
+}
+function stageLegacyStyle(index){
+ if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)throw Error('Only the verified business owner can restore an old design');
+ const record=state.legacyStyles[index];
+ if(!record||!isHeritage(record.template))throw Error('Could not find that original design');
+ state.templateChoice=record.template;
+ state.designDraft={...activeDesign(),...record,show_logo:0};
+ state.designStep=2;
+ render();
+ flash('Original '+templateTitle(record.template)+' layout found. Review and save your colours and font to use it here.');
+}
+
 function upgrade(){
  const a=state.legacyArchive;
  const total=(a?.engines||[]).reduce((v,x)=>v+x.receipts.length,0);
@@ -382,6 +443,8 @@ function upgrade(){
  (a?'<div class="banner"><strong>'+a.engines.length+' receipt collections · '+total+' accessible receipts</strong><br>'+e((a.issues||[]).length+' warning(s).')+' Your old receipts remain unchanged.'+
  (state.backupReady?'<br>Your backup is ready. You can now review the receipts.':'<br>Save a backup before continuing.')+'</div>'+
  '<button class="btn primary" data-action="import-scanned" '+(state.backupReady?'':'disabled')+'>Copy to Bizlano for review</button>':'')+
+ (state.legacyStyles.length?'<div class="legacy-design-restore"><h3>Recovered document styles</h3>'+
+ state.legacyStyles.map((x,i)=>'<button type="button" class="btn" data-restore-template="'+i+'">'+e(x.brandName)+' · '+e(templateTitle(x.template))+'</button>').join('')+'</div>':'')+
  '<p class="mini muted">If some receipts are missing, try uploading your previous backup.</p></section>'+
  '<section class="panel"><h2>Already have a receipt backup?</h2><p class="muted">Already have a receipt backup from MetaForge? Choose that file to bring your previous records into Bizlano securely.</p>'+
  '<form data-form="legacy-file"><label class="field">Backup file (.json)<input type="file" name="archive" accept=".json,application/json" required></label>'+
@@ -399,11 +462,13 @@ async function scanLegacy(){
   try{
    const receipts=await getDocs(query(collection(oldDb,'short_urls',engine.id,'receipts'),limit(251)));
    if(receipts.size>250)issues.push('There may be more receipts for '+engine.id+'. Try your original backup for the complete history.');
-   engines.push({code:engine.id,brandName:engine.data().brandName||engine.id,receipts:receipts.docs.slice(0,250).map(x=>({id:x.id,...x.data()}))});
+   engines.push({code:engine.id,brandName:engine.data().brandName||engine.id,config:engine.data().config||'',receipts:receipts.docs.slice(0,250).map(x=>({id:x.id,...x.data()}))});
   }catch(err){issues.push('We could not load the receipts for '+engine.id+'. You can try your original backup.');}
  }
  state.legacyArchive={kind:'metaforge-legacy',version:1,createdAt:new Date().toISOString(),userUid:account.uid,email:account.email,engines,settings:null,local:{histories:[],metadata:{},errors:[]},issues};
- state.backupReady=false;render();
+ state.backupReady=false;
+ state.legacyStyles=engines.map(x=>({code:x.code,brandName:x.brandName,...readLegacyBrandConfig(x.config)})).filter(x=>isHeritage(x.template));
+ state.legacyChecked=true;render();
  flash('Scan complete. Review any warnings and download your backup.');
 }
 function downloadLegacy(){
@@ -416,10 +481,12 @@ async function importLegacy(archive,includeBrowser){
  if(!archive||archive.kind!=='metaforge-legacy'||archive.version!==1)throw Error('Unsupported MetaForge legacy archive');
  if(archive.userUid!==auth.currentUser?.uid)throw Error('The archive does not belong to your signed-in account');
  if(state.biz.role!=='owner')throw Error('Only the business owner can import receipts');
+ state.legacyStyles=(archive.engines||[]).map(x=>({code:x.code,brandName:String(x.brandName||x.code),...readLegacyBrandConfig(x.config||x.settings)})).filter(x=>isHeritage(x.template));
+ state.legacyChecked=true;
  const groups=(archive.engines||[]).map(x=>({source:'engine:'+x.code,receipts:x.receipts||[]}));
  if(includeBrowser)for(const history of archive.local?.histories||[])groups.push({source:'browser:'+history.key,receipts:history.receipts||[]});
  const all=groups.reduce((n,x)=>n+x.receipts.length,0);
- if(!all)throw Error('The archive contains no readable receipts');
+ if(!all){if(state.legacyStyles.length){state.legacyArchive=archive;flash('Original receipt design found. Choose it below to continue.');render();return;}throw Error('The archive contains no readable receipts or saved designs');}
  if(!confirm('Copy '+all+' historical receipts into '+state.biz.business_name+' as review-only drafts? Original records stay unchanged and no payment is marked as received.'))return;
  const bytes=new TextEncoder().encode(JSON.stringify(archive));
  const digest=await crypto.subtle.digest('SHA-256',bytes);
@@ -433,7 +500,7 @@ async function importLegacy(archive,includeBrowser){
    flash('Legacy import: '+imported+' copied, '+skipped+' skipped.');
   }
  }
- state.legacyArchive=null;state.backupReady=false;
+ state.legacyArchive=archive;state.backupReady=false;
  flash('Import complete: '+imported+' review drafts staged. '+skipped+' skipped or previously imported.');
  await navigate('documents');
 }
@@ -502,48 +569,68 @@ async function uploadBusinessArtwork(form,kind,slugValue){
 }
 function designStudio(){
  const design=activeDesign(),sector=businessCategory(state.designIndustry||state.biz?.industry||'general');
- const current=state.templateChoice||design.template||'signature';
- const selected=[...new Set([current,...sector.templates])].slice(0,5);
- const back=state.designStep>1?'<button type="button" class="btn" data-action="design-back">← Back</button>':'';
- const top=heading('DOCUMENT DESIGN STUDIO','Make your documents look professional','A few simple choices. Your preview shows the actual printable receipt style.')+
- guidedSteps(['Your business','Choose a look','Personalise'],state.designStep);
- if(state.designStep===1){
-  return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 1 OF 3</div><h2>What kind of business do you run?</h2><p class="muted">We will recommend designs that fit your work. You can still use any design later.</p>'+
-  '<label class="field">Business category<select id="business-category" name="industry" data-business-category>'+BUSINESS_TYPES.map(x=>'<option value="'+e(x.id)+'" '+(x.id===sector.id?'selected':'')+'>'+e(x.name)+'</option>').join('')+'</select></label>'+
-  '<div class="wizard-actions"><button class="btn primary" type="button" data-action="design-next">Show my recommended designs →</button></div></section>';
- }
- if(state.designStep===2){
-  const cards=selected.map(id=>{
-   const active=current===id;
-   return '<button type="button" class="design-card real-template '+(active?'selected':'')+'" data-template="'+e(id)+'" aria-pressed="'+active+'" aria-label="'+e(templateTitle(id))+' receipt design">'+
-    '<span class="template-thumbnail" aria-hidden="true"><span class="template-thumbnail-inner">'+sampleHtml(id,true)+'</span></span>'+
-    '<strong>'+e(templateTitle(id))+'</strong>'+templateDisplayArt(id)+'<small>'+(active?'✓ Selected':'Select design')+'</small></button>';
+ const current=state.templateChoice||design.template||'signature',step=state.designStep;
+ const choices=[...new Set([...sector.templates,current])].slice(0,6);
+ const head=heading('DOCUMENT STUDIO','Choose your document design','71 layouts from the original MetaForge and Bizlano collections. The design comes first, then your brand.')+
+  guidedSteps(['Business','Layout','Colours & fonts','Finish'],step);
+ const back=step>1?'<button class="btn" type="button" data-action="design-back">← Back</button>':'';
+ const next=caption=>'<div class="wizard-actions">'+back+'<button class="btn primary" type="button" data-action="design-next">'+caption+' →</button></div>';
+ if(step===1)return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 1 OF 4</div><h2>What business do you run?</h2>'+
+  '<p class="muted">Choose a category to see suitable receipt layouts first. You can browse all 71 next.</p>'+
+  '<label class="field">Business type<select data-business-category>'+BUSINESS_TYPES.map(v=>'<option value="'+e(v.id)+'" '+(sector.id===v.id?'selected':'')+'>'+e(v.name)+'</option>').join('')+'</select></label>'+
+  (state.legacyStyles.length?'<div class="legacy-design-restore"><h3>Your old MetaForge designs</h3><p class="mini muted">Recognised from your signed-in legacy account. Nothing is changed until you save.</p>'+
+   state.legacyStyles.map((x,i)=>'<button type="button" class="btn" data-restore-template="'+i+'">'+e(x.brandName)+' · '+e(templateTitle(x.template))+' →</button>').join('')+'</div>':'')+
+  next('See receipt layouts')+'</section>';
+ if(step===2){
+  const cards=choices.map(id=>{
+   const theme=templateArt(id),active=current===id;
+   return '<article class="design-card real-template studio-slide '+(active?'selected':'')+'" data-style-id="'+e(id)+'">'+
+   '<div class="template-thumbnail"><div class="template-thumbnail-inner '+(isHeritage(id)?'heritage-thumb':'modern-thumb')+'">'+sampleHtml(id,true)+'</div></div>'+
+   '<div class="studio-card-info"><span class="design-card-color" style="background:'+e(theme.accent)+'"></span><div><strong>'+e(templateTitle(id))+'</strong><small>'+(isHeritage(id)?'Original MetaForge':'Bizlano')+' · '+e(theme.note||theme.group||'')+'</small></div></div>'+
+   '<div class="studio-card-actions"><button type="button" class="btn '+(active?'primary':'')+'" data-template="'+e(id)+'">'+(active?'✓ Selected':'Choose this layout')+'</button>'+
+   '<button type="button" class="btn" data-preview-template="'+e(id)+'">Full preview</button></div></article>';
   }).join('');
-  return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 2 OF 3</div><h2>Recommended for '+e(sector.name)+'</h2>'+
-  '<p class="muted">Choose a style. These are miniature versions of the actual receipt, not generic placeholders.</p>'+
-  '<div class="studio-choice-layout"><div><div class="design-grid">'+cards+'</div><label class="field" style="margin-top:20px">Looking for a different style?<select data-design-browse aria-label="Browse all 36 receipt designs"><option value="">Browse all 36 designs…</option>'+groupedTemplateOptions(current)+'</select></label>'+
-  '<div class="studio-colour-panel">'+colourStoryChooser(state.designDraft?.accent||(
-    current===(state.design?.template||'signature')?activeDesign().accent:templateArt(current).accent))+'</div></div>'+
-  '<details class="studio-receipt-preview" '+(window.innerWidth>1100?'open':'')+'><summary>See the full-size receipt preview</summary><div class="full-receipt-sample">'+sampleHtml(current)+'</div><p class="mini muted">This is the real printable layout with sample details.</p></details></div>'+
-  '<div class="wizard-actions">'+back+'<button type="button" class="btn primary" data-action="design-next">Personalise this design →</button></div></section>';
+  return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 2 OF 4</div>'+
+   '<div class="studio-intro"><div><h2>Recommended for '+e(sector.name)+'</h2><p class="muted">Each card shows a miniature version of the actual printable layout.</p></div>'+
+   '<div class="studio-arrows"><button class="btn" type="button" data-action="studio-prev" aria-label="Previous designs">←</button><button class="btn" type="button" data-action="studio-next" aria-label="Next designs">→</button></div></div>'+
+   '<div class="design-grid studio-carousel" id="studio-designs">'+cards+'</div>'+
+   '<label class="field studio-all">Browse all 71 receipt layouts<select data-design-browse><option value="">Choose another layout…</option>'+groupedTemplateOptions(current)+'</select></label>'+
+   '<p class="mini muted">Selected: <strong>'+e(templateTitle(current))+'</strong></p>'+next('Choose my brand colours and font')+'</section>'+
+   '<div class="studio-full-preview hidden" id="studio-preview-modal" role="dialog" aria-modal="true" aria-label="Full receipt preview"><div class="studio-modal-inner">'+
+   '<div class="studio-modal-head"><strong id="studio-modal-title">Receipt preview</strong><button class="btn" type="button" data-action="studio-close-preview">Close ✕</button></div>'+
+   '<div id="studio-modal-receipt"></div></div></div>';
  }
- return top+'<section class="panel guided-panel"><div class="eyebrow">STEP 3 OF 3</div><h2>Finish your document style</h2><div class="studio-choice-layout"><form data-form="design" class="design-custom-fields">'+
- '<div class="form-grid"><label class="field">Accent colour<input name="accent" type="color" value="'+e(design.accent)+'"></label>'+
- select('Paper size','paper',[['a4','A4 · Standard print'],['letter','US Letter'],['80mm','80mm · POS roll'],['58mm','58mm · Compact roll']],design.paper)+
- input('Business contact line','contact','text',design.contact)+
- input('Header message (optional)','headerNote','text',design.header_note)+
- input('Thank-you / footer message','footerNote','text',design.footer_note)+'</div>'+
- '<div class="row colour-row"><span class="mini muted">Quick colours</span>'+DESIGN_PALETTE.map(c=>'<button type="button" class="color-swatch" data-accent="'+c+'" aria-label="Choose '+c+'" style="background:'+c+'"></button>').join('')+'</div>'+
- '<label class="field inline-check"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+'> Show my business logo</label>'+
- '<label class="field inline-check"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+'> Show uploaded business signature</label>'+
- '<p class="mini muted">Only use a signature that you are happy to display on customer documents.</p>'+
- '<div class="wizard-actions">'+back+'<button type="submit" class="btn primary">Save my document design ✓</button></div></form>'+
- '<details class="studio-receipt-preview" '+(window.innerWidth>1100?'open':'')+'><summary>See my updated document preview</summary><div class="full-receipt-sample" id="studio-live-preview">'+sampleHtml(current)+'</div></details></div></section>';
+ if(step===3){
+  const accent=design.accent||templateArt(current).accent,secondary=design.secondary_color||'#19223b';
+  return head+'<section class="panel guided-panel"><div class="eyebrow">STEP 3 OF 4</div><h2>Choose colours, font and branding</h2>'+
+   '<p class="muted">The layout stays the same. Colours and font make it your own.</p>'+
+   '<div class="studio-choice-layout"><form data-form="design" class="design-custom-fields">'+
+   '<div class="form-grid"><label class="field">Primary colour<input type="color" name="accent" value="'+e(accent)+'"></label>'+
+   '<label class="field">Secondary colour<input type="color" name="secondaryColor" value="'+e(secondary)+'"></label></div>'+
+   '<div class="studio-colour-panel">'+colourStoryChooser(accent)+'</div>'+
+   '<div class="form-grid">'+select('Font style','fontFamily',FONT_STYLES,design.font_family||'modern')+
+   select('Text-logo design','textLogoStyle',TEXT_LOGO_STYLES,design.text_logo_style||'split')+
+   select('Paper size','paper',[['a4','A4'],['letter','Letter'],['80mm','80mm POS'],['58mm','58mm POS']],design.paper||'a4')+
+   input('Contact line','contact','text',design.contact||'')+
+   input('Header note','headerNote','text',design.header_note||'')+
+   input('Thank-you note','footerNote','text',design.footer_note||'Thank you for your business.')+'</div>'+
+   '<label class="field inline-check"><input type="checkbox" name="showLogo" '+(design.show_logo?'checked':'')+'> Use my uploaded image logo (optional)</label>'+
+   '<p class="mini muted">Without an image logo, we style your business name automatically. You can add an image under <button class="text-link-button" type="button" data-nav="branding">Business identity</button>.</p>'+
+   '<label class="field inline-check"><input type="checkbox" name="showSignature" '+(design.show_signature?'checked':'')+'> Show my authorised signature</label>'+
+   next('Review my finished design')+'</form><div class="studio-preview-sticky"><strong>Live receipt preview</strong><div id="studio-live-preview">'+sampleHtml(current)+'</div></div></div></section>';
+ }
+ const d={...design,template:current},hidden=(n,v)=>'<input type="hidden" name="'+n+'" value="'+e(v??'')+'">';
+ return head+'<section class="panel guided-panel studio-complete"><div class="eyebrow">STEP 4 OF 4</div>'+
+ '<h2>Review your finished receipt</h2><p class="muted">This is the full printable layout. Only the sample customer and item details change when you create a real receipt.</p>'+
+ '<div class="studio-final-summary"><strong>'+e(templateTitle(current))+'</strong><span>Primary: '+e(d.accent)+' · Secondary: '+e(d.secondary_color||'#19223b')+' · '+e(d.font_family||'modern')+'</span></div>'+
+ '<div class="studio-final-preview">'+sampleHtml(current)+'</div>'+
+ '<form data-form="design">'+hidden('accent',d.accent)+hidden('secondaryColor',d.secondary_color||'#19223b')+hidden('fontFamily',d.font_family||'modern')+
+ hidden('textLogoStyle',d.text_logo_style||'split')+hidden('paper',d.paper||'a4')+hidden('contact',d.contact||'')+
+ hidden('headerNote',d.header_note||'')+hidden('footerNote',d.footer_note||'Thank you for your business.')+
+ '<input type="checkbox" name="showLogo" hidden '+(d.show_logo?'checked':'')+'><input type="checkbox" name="showSignature" hidden '+(d.show_signature?'checked':'')+'>'+
+ '<div class="wizard-actions">'+back+'<button class="btn primary" type="submit">Save this receipt style ✓</button></div></form></section>';
 }
-function refreshStudioPreview(){
- const target=document.getElementById('studio-live-preview');
- if(target)target.innerHTML=sampleHtml(state.templateChoice||activeDesign().template||'signature');
-}
+function refreshStudioPreview(){const target=document.getElementById('studio-live-preview');if(target)target.innerHTML=sampleHtml(state.templateChoice||activeDesign().template||'signature');}
 function alerts(){
  const rows=state.data?.rows||[];
  return heading('BUSINESS UPDATES','Your receipts are ready','See receipts prepared from business activity and share them with customers.')+
@@ -629,7 +716,66 @@ function currentDoc(){
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
  return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
+
+// The original August 19 MetaForge document structure, adapted to Bizlano's tenant-scoped,
+// read-only, escaped receipt model. No legacy Firebase writes or editor handlers are copied.
+function heritageReceipt(doc,number,stored=false,style=state.design){
+ const id=String(doc.template||style?.template||'heritage-modern-tech');
+ const meta=HERITAGE_TEMPLATES[id];
+ if(!meta)return '';
+ const company=String(state.biz?.business_name||'Business');
+ const logo=style?.show_logo===0?'':(state.biz?.logo_url||state.data?.business?.logo_url||'');
+ const primary=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:meta.accent;
+ const secondary=meta.secondary||'#1a1a1a',note=style?.footer_note||'Thank you for your business.';
+ const invoice=String(doc.kind||'receipt').replace(/-/g,' ').toUpperCase();
+ const rows=(doc.items||[]).filter(x=>x.description).map((x,i)=>
+  '<tr><td>'+(i+1)+'</td><td>'+e(x.description)+'</td><td>'+e(x.qty)+'</td><td>'+oldMoney(x.price)+'</td><td>'+oldMoney(Number(x.price)*Number(x.qty))+'</td></tr>').join('');
+ const sub=(doc.items||[]).reduce((a,x)=>a+((Number(x.price)||0)*(Number(x.qty)||0)),0);
+ const discount=Math.round(sub*(Number(doc.discountPct)||0))/100;
+ const vat=Math.round((sub-discount)*(Number(doc.taxPct)||0))/100;
+ const total=stored?doc.total_minor/100:sub-discount+vat+Number(doc.shipping||0);
+ const paid=doc.received??(stored?doc.paid_minor/100:0);
+ const balance=Math.max(0,total-Number(paid||0));
+ const logoMarkup=logo?'<img src="'+e(logo)+'" alt="Business logo" class="heritage-logo">':'';
+ const brand='<div class="brand-block">'+logoMarkup+'<div class="brand-name">'+stylizedCompanyName(company,style?.text_logo_style||'split')+'</div>'+
+  (style?.header_note?'<div class="brand-tagline">'+e(style.header_note)+'</div>':'')+
+  (style?.contact?'<div class="brand-contact">'+e(style.contact)+'</div>':'')+'</div>';
+ const badge='<div class="doc-type-badge">'+e(invoice)+'</div>';
+ const header='<header class="receipt-header"><div class="header-content">'+brand+badge+'</div><div class="header-accent"></div></header>';
+ const info='<section class="info-section"><div class="info-block"><span class="info-label">CUSTOMER / CLIENT</span><strong>'+e(doc.customer||doc.recipient_name||'Walk-in customer')+'</strong>'+
+ (doc.customerEmail||doc.recipient_email?'<span>'+e(doc.customerEmail||doc.recipient_email)+'</span>':'')+
+ (doc.customerPhone||doc.recipient_phone?'<span>'+e(doc.customerPhone||doc.recipient_phone)+'</span>':'')+
+ '</div><div class="info-block"><span class="info-label">DOCUMENT NUMBER</span><strong>'+e(number||'UNSAVED DRAFT')+'</strong><span>'+e(doc.date||doc.issued_on||today())+'</span></div></section>';
+ const itemTable='<section class="items-section"><div class="section-header"><div class="section-line"></div><div class="section-title">Items & services</div><div class="section-line"></div></div>'+
+ '<table class="items-table"><thead><tr><th>NO.</th><th>ITEM DESCRIPTION</th><th>QTY</th><th>PRICE</th><th>AMOUNT</th></tr></thead><tbody>'+rows+'</tbody></table></section>';
+ const summary='<div class="bottom-section"><div class="words-section"><div class="words-box"><div class="words-label">Document details</div>'+
+ '<span>'+e(doc.notes||note)+'</span></div></div><div class="totals-section"><div class="totals-box">'+
+ '<div class="total-row"><span class="total-label">Subtotal</span><span class="total-value">'+oldMoney(sub)+'</span></div>'+
+ (discount?'<div class="total-row"><span class="total-label">Discount</span><span class="total-value">'+oldMoney(discount)+'</span></div>':'')+
+ (vat?'<div class="total-row"><span class="total-label">Tax</span><span class="total-value">'+oldMoney(vat)+'</span></div>':'')+
+ (Number(doc.shipping)>0?'<div class="total-row"><span class="total-label">Other charges</span><span class="total-value">'+oldMoney(doc.shipping)+'</span></div>':'')+
+ '<div class="total-row"><span class="total-label">TOTAL</span><span class="total-value grand">'+oldMoney(total)+'</span></div>'+
+ '<div class="total-row"><span class="total-label">Received</span><span class="total-value">'+oldMoney(paid)+'</span></div>'+
+ '<div class="total-row"><span class="total-label">Balance</span><span class="total-value">'+oldMoney(balance)+'</span></div></div></div></div>';
+ const isPaid=total>0&&Number(paid)>=total;
+ const status=doc.draft===true||doc.status==='draft'?'DRAFT':isPaid?'PAID':Number(paid)>0?'PART PAID':'ISSUED';
+ const signature=style?.show_signature&&style?.signature_url?'<img class="signature-img heritage-signed" src="'+e(style.signature_url)+'" alt="Authorized business signature">':'';
+ const signatures='<section class="signature-section"><div class="signature-box"><div class="signature-line"></div><div class="signature-label">Customer signature</div></div>'+
+ '<div class="signature-box"><div class="digital-stamp"><div class="stamp-outer"><div class="stamp-inner"></div><div class="stamp-content"><div class="stamp-status">'+status+'</div><div class="stamp-divider"></div><div class="stamp-date">'+e(doc.date||doc.issued_on||today())+'</div></div></div></div>'+
+ signature+'<div class="signature-line"></div><div class="signature-label">Authorized signature</div></div></section>';
+ const recCode=doc.recoveryCode?'<div class="heritage-recovery">PRIVATE RECOVERY CODE: <strong>'+e(doc.recoveryCode)+'</strong></div>':'';
+ const footer='<div class="footer-message"><div class="message-text">'+e(note)+'</div></div>'+
+ '<footer class="receipt-footer"><div class="footer-brand">'+e(company)+'</div><div class="footer-contact">'+e(style?.contact||'Official business document')+'</div></footer>'+
+ recCode+'<div class="powered-by-footer">Powered by <strong class="powered-link">Bizlano</strong> · Your business, beautifully managed.</div>';
+ const swiss=id==='heritage-swiss-design';
+ const content=(swiss?'':header)+info+itemTable+summary+signatures+footer;
+ const body=swiss?'<aside class="heritage-rail"><span class="brand-name">'+stylizedCompanyName(company,style?.text_logo_style||'plain')+'</span><span class="doc-type-badge">'+e(invoice)+'</span></aside>'+
+ '<div class="heritage-main">'+logoMarkup+content+'</div>':content;
+ return '<article class="legacy-receipt receipt-container tpl-'+e(id.slice(9))+'" style="'+(style?.font_family?'font-family:'+e(fontCssName(style.font_family))+';':'')+'--brand-primary:'+e(primary)+';--brand-secondary:'+e(style?.secondary_color||secondary)+';--brand-dark:'+e(secondary)+';--brand-gray:#586275;--brand-light:#f8f7f4;--tpl-primary:'+e(primary)+';--tpl-secondary:'+e(style?.secondary_color||secondary)+'" data-template-id="'+e(id)+'">'+body+'</article>';
+}
+
 function receipt(doc,number,stored=false,style=state.design){
+ if(isHeritage(doc.template||style?.template))return heritageReceipt(doc,number,stored,style);
  const lines=doc.items||[];
  let subtotal=0;
  const rows=lines.filter(i=>i.description).map(i=>{
@@ -646,9 +792,9 @@ function receipt(doc,number,stored=false,style=state.design){
  const company=String(state.biz?.business_name||'Business'),initials=company.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
  const documentType=String(doc.kind||'Invoice').replaceAll('-',' ').toUpperCase(),documentNumber=number||'UNSAVED DRAFT';
  const head='<div class="r-head"><div class="r-brand"><div class="r-brand-identity">'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'<span class="r-initials" aria-hidden="true">'+e(initials)+'</span>')+
-  '<div class="r-brand-name"><span class="r-overline">BUSINESS DOCUMENT</span><h2>'+e(company)+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div></div></div>'+
+  '<div class="r-brand-name"><span class="r-overline">BUSINESS DOCUMENT</span><h2>'+stylizedCompanyName(company,style?.text_logo_style||'split')+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div></div></div>'+
   '<div class="r-document-identity"><span class="r-doc-kicker">DOCUMENT</span><h3>'+e(documentType)+'</h3><div class="r-small r-document-number">'+e(documentNumber)+'</div></div></div>';
- return '<article class="receipt style-'+e(template)+' receipt-layout-'+e(art.layout)+' paper-'+e(paper)+'" id="printable" style="--receipt-accent:'+e(accent)+';--receipt-ink:#26324c">'+
+ return '<article class="receipt style-'+e(template)+' receipt-layout-'+e(art.layout)+' paper-'+e(paper)+'" id="printable" style="font-family:'+e(fontCssName(style?.font_family||'modern'))+';--receipt-accent:'+e(accent)+';--receipt-ink:'+e(style?.secondary_color||'#26324c')+'">'+
  '<div class="r-design-strip" aria-hidden="true"><i></i><i></i><i></i></div>'+head+
  '<div class="r-section"><div><strong>Issued to</strong><div class="r-small">'+e(doc.customer||doc.recipient_name||'Walk-in')+'</div>'+
  (doc.customerEmail||doc.recipient_email?'<div class="r-small">'+e(doc.customerEmail||doc.recipient_email)+'</div>':'')+
@@ -704,8 +850,12 @@ document.addEventListener('click',async ev=>{
  if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=null;await attach();return}
  if(action==='reset'){state.authMode='forgot';render();return}
- if(action==='design-next'){if(state.designStep<3){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
- if(action==='design-back'){if(state.designStep>1){captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
+ if(el.dataset.restoreTemplate!==undefined){stageLegacyStyle(Number(el.dataset.restoreTemplate));return}
+ if(action==='design-next'){if(state.designStep<4){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
+ if(action==='design-back'){if(state.designStep>1){if(state.designStep!==4)captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
+ if(action==='studio-prev'||action==='studio-next'){const scroller=document.getElementById('studio-designs');if(scroller)scroller.scrollBy({left:(action==='studio-next'?1:-1)*Math.max(280,scroller.clientWidth*.76),behavior:'smooth'});return}
+ if(action==='studio-close-preview'){document.getElementById('studio-preview-modal')?.classList.add('hidden');return}
+ if(el.dataset.previewTemplate){const modal=document.getElementById('studio-preview-modal');if(modal){document.getElementById('studio-modal-title').textContent=templateTitle(el.dataset.previewTemplate);document.getElementById('studio-modal-receipt').innerHTML=sampleHtml(el.dataset.previewTemplate);modal.classList.remove('hidden');modal.querySelector('button')?.focus();}return}
  if(action==='doc-next'){setDocStep(state.docStep+1);return}
  if(action==='doc-back'){setDocStep(state.docStep-1);return}
  if(el.dataset.template){captureDesignForm();state.templateChoice=el.dataset.template;setDesignColour(templateArt(state.templateChoice).accent);render();return}
@@ -829,7 +979,7 @@ document.addEventListener('submit',async ev=>{
   }
   if(kind==='design'){
     captureDesignForm();const template=state.templateChoice||state.design?.template||'signature';
-    await api(t+'/design',{template,industry:state.designIndustry||'general',accent:val(form,'accent'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
+    await api(t+'/design',{template,industry:state.designIndustry||'general',accent:val(form,'accent'),secondaryColor:val(form,'secondaryColor'),fontFamily:val(form,'fontFamily'),textLogoStyle:val(form,'textLogoStyle'),paper:val(form,'paper'),contact:val(form,'contact'),headerNote:val(form,'headerNote'),footerNote:val(form,'footerNote'),showLogo:form.elements.namedItem('showLogo').checked,showSignature:form.elements.namedItem('showSignature').checked});
     state.templateChoice=null;state.designDraft=null;state.designStep=1;flash('Your document design is saved for this business.');await navigate('design');state.busy=false;return;
   }
   if(kind==='logo'||kind==='signature'){
