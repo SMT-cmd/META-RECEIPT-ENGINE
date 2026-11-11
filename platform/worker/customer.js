@@ -1,5 +1,5 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
-import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut,updateProfile} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js';
 
 const app=initializeApp({
  apiKey:'AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',
@@ -28,17 +28,19 @@ function loginView(){
  const verified=state.user&&!state.user.emailVerified;
  const registered=Boolean(state.user?.emailVerified);
  root.innerHTML='<div class="auth-root">'+
- '<section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>Your email.<br>One secure place.</h1><p>No need to contact every store or remember where you bought something. Sign in with the email address used on your receipts.</p></div><p>From your favorite stores to the next one you discover, keep track of your purchases in Bizlano.</p></section>'+
+ '<section class="auth-story"><div><div class="eyebrow" style="color:#c3b4ff">YOUR PURCHASES, ALL TOGETHER</div><h1>Your receipts.<br>One account.<br>Every business.</h1><p>No need to contact every store or remember where you bought something. Receipts linked to your verified email stay together. You can also sign in with a phone number linked to your account.</p></div><p>From your favorite stores to the next one you discover, keep track of your purchases in Bizlano.</p></section>'+
  '<section class="panel auth-card"><div class="eyebrow">CUSTOMER RECEIPT ACCESS</div><h2>'+(verified?'Confirm your email':registered?'Connecting your receipts…':state.mode==='register'?'Create your free account':'Find your receipts')+'</h2>'+
  (verified?'<p>We sent a verification link to <strong>'+escape(state.user.email)+'</strong>. Open that link and return here to continue.</p><div class="stack"><button class="button primary" data-action="check-verification">I have verified my email</button><button class="button" data-action="resend-verification">Send the email again</button><button class="button" data-action="sign-out">Use another email</button></div>':
  registered?'<p>We are securely connecting the purchases associated with your verified email address.</p><button class="button primary" data-action="retry">Try again</button>':
- '<p>'+(state.mode==='register'?'Use the same email address that businesses put on your receipts. Registration is free.':'Enter the email you used when buying from participating businesses. Only you can see the receipts linked to your verified email.')+'</p>'+
+ '<p>'+(state.mode==='register'?'Use an email address you can verify. Add your name and an optional phone number for easier sign-in. Registration is free.':'Sign in with your verified email or a phone number saved to your account, plus your password. Your receipt history stays private.')+'</p>'+
  '<form id="customer-auth" class="stack">'+
- '<label class="field">Email address<input type="email" name="email" required autocomplete="email" placeholder="you@example.com"></label>'+
+ (state.mode==='register'?'<label class="field">Your full name<input type="text" name="name" required maxlength="120" autocomplete="name" placeholder="Your name"></label>':'')+
+ '<label class="field">'+(state.mode==='register'?'Email address (for free verification)':'Email address or phone number')+'<input type="text" name="identifier" required autocomplete="username" inputmode="email" placeholder="you@example.com or +234…"></label>'+
+ (state.mode==='register'?'<label class="field">Phone number (optional)<input type="tel" name="phone" inputmode="tel" autocomplete="tel" placeholder="080… or +234…"></label>':'')+
  '<label class="field">Password<input type="password" name="password" required minlength="'+(state.mode==='register'?'8':'6')+'" autocomplete="'+(state.mode==='register'?'new-password':'current-password')+'" placeholder="Your account password"></label>'+
  '<button class="button primary" type="submit">'+(state.mode==='register'?'Register for free':'Sign in and find receipts')+'</button></form>'+
  '<div class="row" style="margin-top:15px"><button class="button soft" data-action="toggle-auth">'+(state.mode==='register'?'Already registered? Sign in':'New here? Register for free')+'</button><button class="button" data-action="reset-password">Forgot password?</button></div>')+
- '<div class="notice">Your email is your key. Bizlano only shows purchases that a business associated with your verified email address, or receipts you securely claim using a receipt code. No business account is needed.</div>'+
+ '<div class="notice">Your verified email automatically finds matching receipts across businesses. If a business recorded only your phone number, you can privately add that receipt using its recovery code. Your password alone cannot prove ownership of a phone number. No business account is required.</div>'+
  (state.error?'<div class="notice error" role="alert">'+escape(state.error)+'</div>':'')+
  '</section></div>';
 }
@@ -65,7 +67,8 @@ function customerView(){
  (state.nextCursor?'<div class="row" style="justify-content:center;margin:24px 0"><button class="button" data-action="load-more">Load more receipts</button></div>':'')+
  '<section class="panel" style="margin-top:30px"><div class="eyebrow">ANOTHER WAY TO RECOVER</div><h2>Have a receipt recovery code?</h2><p class="muted" style="font-size:13px">Some older purchases or cash sales may not have an email attached. If a business gave you a Bizlano receipt code, enter it to securely add the receipt to this account.</p>'+
  '<form id="claim-code" class="claim"><label class="field">Receipt code<input name="code" spellcheck="false" autocomplete="off" required maxlength="30" placeholder="BZ-XXXXXX-XXXXXX-XXXXXX-XXXXXX"></label><button class="button primary" type="submit">Add receipt</button></form></section>'+
- '<div class="notice">Your purchase history is private. Searching by name or product alone cannot reveal another customer’s receipts. If a receipt is missing, contact the issuing business to confirm your email address.</div></section>';
+ '<div class="notice">Your purchase history is private. A name or phone number alone cannot open another customer’s receipts. Ask the issuing business for a private recovery code if it only recorded your phone number.</div>'+ 
+ '<section class="panel" style="margin-top:25px"><div class="eyebrow">MY ACCOUNT</div><h2>Contact details</h2><p class="muted" style="font-size:12px">An optional phone number helps you sign in with your password. It does not automatically unlock receipts tied to that number.</p><form id="customer-profile" class="stack"><label class="field">Your name<input name="name" maxlength="120" value="'+escape(state.account.name||'')+'" required autocomplete="name"></label><label class="field">Phone number (optional)<input type="tel" name="phone" autocomplete="tel" inputmode="tel" value="'+escape(state.account.phone||'')+'" placeholder="080… or +234…"></label><button class="button" type="submit">Save my details</button></form></section></section>';
 }
 function receiptDocument(r){
  const total=Number(r.totalMinor||0),paid=Number(r.paidMinor||0);
@@ -96,6 +99,8 @@ async function connect(){
  if(!state.user?.emailVerified)return;
  const token=await state.user.getIdToken();
  await request('/auth',{token});
+ const pending=sessionStorage.getItem('bizlano_customer_contact');
+ if(pending){try{const saved=JSON.parse(pending);if(saved.uid===state.user.uid&&Date.now()-saved.at<604800000){await request('/customer/profile',{name:saved.name,phone:saved.phone});sessionStorage.removeItem('bizlano_customer_contact')}}catch{sessionStorage.removeItem('bizlano_customer_contact');notice('You can save your phone number from the account section.',true)}}
  state.account=await request('/customer/me');
  const result=await request('/customer/receipts');
  state.receipts=result.rows||[];
@@ -143,19 +148,31 @@ document.addEventListener('input',event=>{
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!modal.hidden)closeReceipt()});
 document.addEventListener('submit',async event=>{
  const form=event.target;
- if(form.id!=='customer-auth'&&form.id!=='claim-code')return;
+ if(!['customer-auth','claim-code','customer-profile'].includes(form.id))return;
  event.preventDefault();
  if(state.busy)return;
  state.busy=true;
  const submit=form.querySelector('[type=submit]');if(submit)submit.disabled=true;
  try{
   if(form.id==='customer-auth'){
-   const email=form.elements.namedItem('email').value.trim(),password=form.elements.namedItem('password').value;
+   const identifier=form.elements.namedItem('identifier').value.trim(),password=form.elements.namedItem('password').value;
    if(state.mode==='register'){
-    const result=await createUserWithEmailAndPassword(auth,email,password);
+    if(!identifier.includes('@'))throw Error('An email address is needed for free account verification. You can add a phone number too.');
+    const name=form.elements.namedItem('name').value.trim(),phone=form.elements.namedItem('phone').value.trim();
+    if(!name)throw Error('Enter your full name');
+    const result=await createUserWithEmailAndPassword(auth,identifier,password);
+    await updateProfile(result.user,{displayName:name});
+    if(phone)sessionStorage.setItem('bizlano_customer_contact',JSON.stringify({uid:result.user.uid,name,phone,at:Date.now()}));
     await sendEmailVerification(result.user);
-    notice('Account created. Check your email to verify your free account.');
-   }else await signInWithEmailAndPassword(auth,email,password);
+    notice('Account created. Verify your email to view your receipts.');
+   }else{
+    const email=identifier.includes('@')?identifier:(await request('/customer/phone-login',{phone:identifier,password})).email;
+    await signInWithEmailAndPassword(auth,email,password);
+   }
+  }else if(form.id==='customer-profile'){
+   const result=await request('/customer/profile',{name:form.elements.namedItem('name').value.trim(),phone:form.elements.namedItem('phone').value.trim()});
+   state.account={...state.account,name:result.name,phone:result.phone};
+   notice('Your contact details have been saved.');customerView();
   }else{
    const code=form.elements.namedItem('code').value.trim();
    await request('/customer/claim',{code});
