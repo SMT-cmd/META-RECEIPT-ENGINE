@@ -8,7 +8,9 @@ const src=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 test('marketing footer is concise and business-facing',()=>{
  const home=src('platform/worker/landing.html');
  assert.doesNotMatch(home,/All business figures shown|Product illustration · Demonstration figures|Sample receipt · Illustrative document/);
- assert.match(home,/>Powered by <a href="https:\/\/www\.globalwebstores\.com\/"/);
+ assert.match(home,/href="\/legal\/privacy"/);
+ assert.match(home,/href="\/legal\/terms"/);
+ assert.match(home,/href="\/contact"/);
  assert.match(home,/href="\/receipts"/);
  assert.match(home,/>Register for free/);
 });

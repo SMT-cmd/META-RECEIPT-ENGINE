@@ -39,6 +39,17 @@ function extractIds(html) {
 }
 
 function parseLocalHref(htmlFilePath, href) {
+  // These HTML files are embedded in a Cloudflare Worker; /app, /receipts,
+  // legal pages and /assets are actual Worker routes, not disk paths.
+  const workerRoot=path.join(rootDir,'platform','worker')+path.sep;
+  if(htmlFilePath.startsWith(workerRoot)&&href.startsWith('/')){
+   const route=href.split(/[?#]/)[0];
+   const legal=Object.keys(JSON.parse(fs.readFileSync(path.join(rootDir,'platform','worker','legal-content.json'),'utf8')));
+   const routes=new Set(['/','/app','/receipts','/assets/bizlano-logo.png','/assets/bizlano-mark.png','/assets/bizlano-hero.jpg',...legal]);
+   if(routes.has(route))return null;
+  }
+  // Vite replaces BASE_URL during build; it is not a file-system path.
+  if(href.startsWith('%BASE_URL%'))return null;
   if (
     href.startsWith('http://') ||
     href.startsWith('https://') ||

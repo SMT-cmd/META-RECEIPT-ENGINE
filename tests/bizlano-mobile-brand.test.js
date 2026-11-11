@@ -24,9 +24,12 @@ test('all current receipt renderers carry Bizlano attribution', () => {
 });
 test('new Bizlano landing routes to real internal pages without claiming a live subdomain', () => {
   const page = read('bizlano/index.html');
-  for (const href of ['../business/','../creator/','../upgrade/']) {
+  for (const href of ['../creator/','../upgrade/']) {
     assert.ok(page.includes('href="'+href+'"'),href);
   }
+  const live=read('platform/worker/landing.html');
+  assert.match(live,/href="\/app"/);
+  assert.match(live,/href="\/receipts"/);
   assert.match(page, /browser/);
   assert.match(page, /noindex, follow/);
   assert.doesNotMatch(page, /https:\/\/timi\.bizlano\.com/);

@@ -23,8 +23,11 @@ test('customer auth is verified-email based and never requires a business member
  assert.match(worker,/d\.paid_minor>0/);
  const customerRoutes=worker.slice(worker.indexOf("if(path==='/api/customer/me'"),worker.indexOf("if(path==='/api/me'"));
  assert.doesNotMatch(customerRoutes,/await member\(env,user,/);
- assert.match(client,/const auth=getAuth\(app\)/);
- assert.match(client,/state\.user\?\.emailVerified/);
+ assert.match(client,/request\('\/account\/session'\)/);
+ assert.doesNotMatch(client,/firebasejs/);
+ const native=read('platform/worker/native-auth.js');
+ assert.match(native,/email_verified_at/);
+ assert.match(native,/auth_action_tokens/);
 });
 
 test('customer cannot enumerate receipts by someone else name or product',()=>{
@@ -63,7 +66,8 @@ test('dedicated customer portal is mobile-first and never creates a business',()
  const html=read('platform/worker/customer.html'),client=read('platform/worker/customer.js');
  assert.match(html,/@media\(max-width:480px\)/);
  assert.match(html,/@media print/);
- assert.match(client,/Create your free account/);
+ assert.match(client,/Create your account/);
+ assert.match(client,/request\('\/account\/register'/);
  assert.match(client,/data-action="load-more"/);
  assert.match(client,/View \/ Save PDF/);
  assert.doesNotMatch(client,/\/businesses/);

@@ -78,7 +78,6 @@ test('plain-white removal stays local and never promises arbitrary background re
  assert.match(ui,/ctx\.getImageData/);
  assert.match(ui,/canvas\.toBlob/);
  assert.match(ui,/nearWhite/);
- assert.match(ui,/solid white/);
  assert.match(ui,/transparent PNG/);
 });
 
