@@ -35,7 +35,7 @@ test('mobile-first header and product previews fit small devices',()=>{
 test('real logo and marketing page are served from R2 with bounded asset paths',()=>{
  const worker=read('platform/worker/worker.js');
  const build=read('platform/worker/build.mjs');
- assert.match(worker,/import \{html,landing,client,icon\} from '\.\/ui\.js'/);
+ assert.match(worker,/import \{html,landing,client,icon,customerHtml,customerJs\} from '\.\/ui\.js'/);
  assert.match(worker,/p==='\/'\)return new Response\(landing/);
  assert.match(worker,/p==='\/app'/);
  assert.match(worker,/\['\/assets\/bizlano-logo\.png','\/assets\/bizlano-mark\.png','\/assets\/bizlano-hero\.jpg'\]/);
