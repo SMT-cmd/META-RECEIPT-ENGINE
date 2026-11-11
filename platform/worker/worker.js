@@ -52,7 +52,7 @@ const sessionCookie=(value,age)=>'bizlano_session='+value+'; HttpOnly; Secure; S
 function sessionToken(req){return req.headers.get('cookie')?.split(';').map(s=>s.trim()).find(s=>s.startsWith('bizlano_session='))?.split('=')[1]||''}
 async function identity(req,env){
  const token=sessionToken(req);if(!/^[a-f0-9]{64}$/.test(token))fail(401,'Sign in to continue');
- const user=await env.DB.prepare("SELECT u.id,u.email,u.display_name FROM sessions s JOIN users u ON s.user_id=u.id WHERE token_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL AND u.disabled_at IS NULL").bind(await hash(token)).first();
+ const user=await env.DB.prepare("SELECT u.id,u.email,u.display_name,u.contact_phone FROM sessions s JOIN users u ON s.user_id=u.id WHERE token_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL AND u.disabled_at IS NULL").bind(await hash(token)).first();
  if(!user)fail(401,'Your session has expired. Sign in again.');
  return user;
 }
@@ -190,6 +190,29 @@ function customerDocument(row,lines){
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
+ if(path==='/api/customer/phone-login'&&method==='POST'){
+  const b=await input(req),alias=phone(b.phone),password=b.password;
+  if(!alias||typeof password!=='string'||password.length<6||password.length>256)fail(400,'Enter your phone number and password');
+  const remoteIp=req.headers.get('cf-connecting-ip')||'unknown',key=await hash('phone-signin:'+alias+':'+remoteIp),now=Math.floor(Date.now()/1000);
+  await env.DB.prepare("INSERT INTO recovery_attempts(attempt_key,count,period_start) VALUES(?,1,?) ON CONFLICT(attempt_key) DO UPDATE SET count=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN 1 ELSE recovery_attempts.count+1 END,period_start=CASE WHEN excluded.period_start-recovery_attempts.period_start>=900 THEN excluded.period_start ELSE recovery_attempts.period_start END,updated_at=datetime('now')").bind(key,now).run();
+  const attempts=await env.DB.prepare("SELECT count FROM recovery_attempts WHERE attempt_key=?").bind(key).first();
+  if((attempts?.count||0)>8)fail(429,'Too many sign-in attempts. Please wait 15 minutes.');
+  const account=await env.DB.prepare("SELECT email FROM users WHERE contact_phone=? AND disabled_at IS NULL").bind(alias).first();
+  if(!account||!account.email||account.email.endsWith('.invalid'))fail(401,'Phone number or password is incorrect');
+  let result;
+  try{
+   result=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({email:account.email,password,returnSecureToken:true}),signal:AbortSignal.timeout(8500)
+   });
+  }catch{fail(503,'Sign-in service is temporarily unavailable')}
+  if(!result.ok)fail(401,'Phone number or password is incorrect');
+  const verified=await result.json();
+  if(!verified.idToken)fail(401,'Phone number or password is incorrect');
+  // The password was independently checked by Firebase. The caller still
+  // establishes its own Firebase session before accessing customer data.
+  return json({email:account.email});
+ }
  if(path==='/api/auth'&&method==='POST'){
   const claim=await verifyFirebase((await input(req)).token);
   let known=await env.DB.prepare("SELECT user_id FROM legacy_identity_links WHERE provider='firebase-metaforge' AND legacy_uid=?").bind(claim.uid).first();
@@ -214,7 +237,17 @@ async function api(req,env,url) {
  }
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
- if(path==='/api/customer/me'&&method==='GET')return json({email:user.email,name:user.display_name,verified:true});
+ if(path==='/api/customer/me'&&method==='GET')return json({email:user.email,name:user.display_name,phone:user.contact_phone||null,verified:true});
+ if(path==='/api/customer/profile'&&method==='POST'){
+  const b=await input(req),contact=phone(b.phone),name=b.name?field(b.name,'display name',120):user.display_name;
+  try{
+   await env.DB.prepare('UPDATE users SET contact_phone=?,display_name=? WHERE id=? AND disabled_at IS NULL').bind(contact,name,user.id).run();
+  }catch(err){
+   if(String(err).includes('UNIQUE'))fail(409,'This phone number is already registered to another account');
+   throw err;
+  }
+  return json({ok:true,name,phone:contact});
+ }
  if(path==='/api/customer/receipts'&&method==='GET'){
   // Cursor-based pagination supports history from many stores without loading it all.
   // Do not resolve customer identity from name or product: email is from the verified session.
