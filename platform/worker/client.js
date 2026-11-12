@@ -558,7 +558,7 @@ function billing(){
  '<section class="panel"><h2>'+e(p.name)+(p.id==='standard'?' · Recommended':'')+'</h2>'+
  '<div class="metric" style="margin:12px 0"><span>Proposed monthly price</span><strong>'+money(p.priceNGN.monthly)+'</strong></div>'+
  '<p class="muted">'+Number(p.monthlyTransactions).toLocaleString('en-NG')+' completed business transactions per month</p>'+
- '<p class="muted">'+p.designProfiles+' saved design profiles · '+p.availableDesigns+' designs available</p>'+
+ '<p class="muted">'+p.designProfiles+' saved design profiles · '+p.availableDesigns+' designs available for saving · all 71 to preview</p>'+
  '<p class="muted">'+p.staff+' team members · '+p.brands+' business arms · '+p.locations+' locations</p>'+
  '<details class="tidy-details"><summary>See all payment periods</summary><div class="tidy-content">'+periods.map(([term,label])=>
  '<p class="row"><span>'+label+'</span><strong>'+money(p.priceNGN[term])+'</strong></p>').join('')+'</div></details></section>').join('')+'</div>'+

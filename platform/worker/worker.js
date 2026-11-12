@@ -603,7 +603,7 @@ async function api(req,env,url) {
    if(convertedFrom){
     if(!/^[a-f0-9-]{36}$/.test(convertedFrom))fail(400,'Invalid source document');
     const origin=await env.DB.prepare('SELECT id,kind,status,economic_transaction_id,arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,convertedFrom).first();
-    if(!origin||!['quotation','estimate','proforma','invoice','tax-invoice'].includes(origin.kind)||origin.status==='voided')fail(404,'Source document cannot be converted');
+    if(!origin||!['quotation','estimate','proforma'].includes(origin.kind)||origin.status==='voided'||origin.status==='draft'||!['invoice','tax-invoice'].includes(kind))fail(404,'Only issued quotes or estimates can be converted into invoices');
     await assertDocumentReadScope(env,user,t,origin.arm_id,origin.location_id);
     if(origin.arm_id!==docScope.armId||origin.location_id!==docScope.locationId)fail(400,'Converted documents must belong to the same business arm and location');
     transactionId=origin.economic_transaction_id||origin.id;
@@ -611,7 +611,8 @@ async function api(req,env,url) {
    const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
    if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
    const preferred=await env.DB.prepare('SELECT * FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
-   const profileId=b.profileId||null;
+   const assignedArm=await env.DB.prepare('SELECT design_profile_id FROM business_arms WHERE tenant_id=? AND id=?').bind(tenant,docScope.armId).first();
+   const profileId=b.profileId||assignedArm?.design_profile_id||null;
    let profile=null;
    if(profileId){
     if(!/^[a-f0-9-]{36}$/.test(profileId))fail(400,'Invalid design profile');

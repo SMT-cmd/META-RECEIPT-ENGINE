@@ -164,7 +164,15 @@ export async function billingPaystackWebhook(req,env){
 }
 export async function runBillingCron(env){
  if(!billingEnabled(env))return {disabled:true};
- const due=await env.DB.prepare("SELECT s.id,s.tenant_id,s.plan_id,s.current_period_end,s.term,u.email,t.business_name FROM subscriptions s JOIN billing_accounts b ON b.tenant_id=s.tenant_id JOIN users u ON u.id=b.billing_contact_user_id JOIN tenants t ON t.id=s.tenant_id WHERE s.status='active' AND s.current_period_end BETWEEN datetime('now') AND datetime('now','+30 days') LIMIT 100").all();
+ const expired=await env.DB.prepare("SELECT s.id,s.tenant_id,s.plan_id,s.current_period_end,u.email,t.business_name FROM subscriptions s JOIN billing_accounts ba ON ba.tenant_id=s.tenant_id JOIN users u ON u.id=ba.billing_contact_user_id JOIN tenants t ON t.id=s.tenant_id WHERE s.status IN('active','grace') AND datetime(s.current_period_end)<=datetime('now') LIMIT 100").all();
+ for(const row of expired.results||[]){
+  await env.DB.batch([
+   env.DB.prepare("UPDATE subscriptions SET status='expired' WHERE id=? AND tenant_id=? AND status IN('active','grace')").bind(row.id,row.tenant_id),
+   env.DB.prepare("UPDATE tenant_entitlements SET plan_id='free',transactions_per_month=30,saved_design_profiles=1,staff_limit=1,arm_limit=1,location_limit=1,enabled=1,ends_at=NULL,updated_at=datetime('now') WHERE tenant_id=?").bind(row.tenant_id),
+   env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),row.tenant_id,'expired:'+row.id,'subscription_expired',row.email,JSON.stringify({subject:'Your Bizlano Free workspace is ready',text:row.business_name+': Your '+row.plan_id+' paid term has ended. You can still access previous receipts, invoices and records on Free. Upgrade only when you choose.'}))
+  ]);
+ }
+ const due=await env.DB.prepare("SELECT s.id,s.tenant_id,s.plan_id,s.current_period_end,s.term,u.email,t.business_name FROM subscriptions s JOIN billing_accounts b ON b.tenant_id=s.tenant_id JOIN users u ON u.id=b.billing_contact_user_id JOIN tenants t ON t.id=s.tenant_id WHERE s.status='active' AND datetime(s.current_period_end) BETWEEN datetime('now') AND datetime('now','+30 days') LIMIT 100").all();
  for(const row of due.results||[]){
   const days=Math.ceil((Date.parse(row.current_period_end)-Date.now())/86400000);
   const intervals=row.term==='monthly'?[7,1]:[30,7,1];
@@ -179,7 +187,7 @@ export async function runBillingCron(env){
  for(const item of queue.results||[]){
   const lock=await env.DB.prepare("UPDATE outbox_notifications SET status='sending',attempts=attempts+1 WHERE id=? AND status IN('pending','failed')").bind(item.id).run();
   if(!lock.meta?.changes)continue;
-  let payload;try{payload=JSON.parse(item.payload_json)}catch{continue}
+  let payload;try{payload=JSON.parse(item.payload_json)}catch{await env.DB.prepare("UPDATE outbox_notifications SET status='failed',next_attempt_at=datetime('now','+1 day') WHERE id=?").bind(item.id).run();continue}
   try{
    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.BIZLANO_RESEND_API_KEY,'Content-Type':'application/json','Idempotency-Key':item.dedupe_key},body:JSON.stringify({from:env.BIZLANO_BILLING_FROM,to:[item.recipient],subject:payload.subject,text:payload.text})});
    if(!r.ok)throw Error('Mail provider rejected the message');
