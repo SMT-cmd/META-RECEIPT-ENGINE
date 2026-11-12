@@ -427,17 +427,12 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
- if(resource==='billing'){
-  await member(env,user,slug,'owner');
-  if(method!=='GET')fail(405,'Paid subscriptions are not available yet');
-  // Read-only proposal. No payments, subscriptions or quotas are active.
-  return json({...publicBillingCatalogue(),currentPlan:'free',businessName:t.business_name});
- }
+ if(['billing','arms','locations','stock-locations','stock-transfer','staff-scopes'].includes(resource))return workspaceExtraAPI(req,env,user,t,resource);
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
   const b=await input(req),source=field(b.source,'migration source',190),records=b.records||[];
@@ -594,10 +589,11 @@ async function api(req,env,url) {
   }
  }
  if(resource==='documents'){
-  if(method==='GET'){const r=await env.DB.prepare('SELECT id,document_number,kind,recipient_name,recipient_email,recipient_phone,issued_on,due_on,total_minor,paid_minor,status,currency,template,notes FROM documents WHERE tenant_id=? ORDER BY created_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
+  if(method==='GET'){const r=await env.DB.prepare('SELECT id,document_number,kind,recipient_name,recipient_email,recipient_phone,issued_on,due_on,total_minor,paid_minor,status,currency,template,notes,arm_id,location_id FROM documents WHERE tenant_id=? ORDER BY created_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
   if(method==='POST'){
    await member(env,user,slug,'edit');
    const b=await input(req),kind=field(b.kind,'document type',60),items=b.items;
+   const docScope=await assertDocumentOrgScope(env,user,t,b.armId,b.locationId);
    const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
    if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
    const preferred=await env.DB.prepare('SELECT template FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
@@ -621,8 +617,8 @@ async function api(req,env,url) {
    if(receiptTypes.has(kind)&&!draft&&received===0)fail(400,'Record actual payment on a receipt, or issue an invoice');
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
-   const did=crypto.randomUUID(),number=kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id)];
+   const did=crypto.randomUUID(),number=docScope.documentPrefix+'-'+kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by,arm_id,location_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id,docScope.armId,docScope.locationId)];
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));
    if(received>0&&billable.has(kind)){const code=await recoveryCode(env,tenant,did);batch.push(env.DB.prepare('INSERT INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)').bind(tenant,did,await hash(code)));}

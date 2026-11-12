@@ -18,7 +18,8 @@ const embedded=[
   'const icon='+JSON.stringify(canonical)+';',
   'const legalPages='+JSON.stringify(JSON.parse(read('legal-content.json')))+';',
   read('native-auth.js'),
-  read('subscription.mjs').replace(/^export /gm,'')
+  read('subscription.mjs').replace(/^export /gm,''),
+  read('workspace-extra.mjs').replace(/^export /gm,'')
 ].join('\n');
 const bundle=source.replace(marker,embedded);
 mkdirSync(join(dir,'dist'),{recursive:true});
