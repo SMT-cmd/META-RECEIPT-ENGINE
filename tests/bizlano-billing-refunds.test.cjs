@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+test('Paystack refund event is signed and provider-verified',()=>{const s=read('platform/worker/billing-runtime.mjs');assert.match(s,/signedPaystackEvent\(req,env\)/);assert.match(s,/reconcileBillingRefund\(env,e\)/);assert.match(s,/GET','\/refund\?reference=/);assert.match(s,/amount>invoice.amount_minor/);});
+test('full refunds revoke only the refunded active term, partial refunds await review',()=>{const s=read('platform/worker/billing-runtime.mjs'),m=read('platform/migrations/0026_billing_refunds.sql');assert.match(s,/needsManualReview:true/);assert.match(s,/state='refunded'/);assert.match(s,/cycle.subscription_id/);assert.match(m,/UNIQUE\(tenant_id,refund_reference\)/);assert.match(m,/trg_billing_refund_amount_immutable/)});

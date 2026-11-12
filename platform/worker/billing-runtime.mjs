@@ -171,6 +171,50 @@ export async function billingAccountAPI(req,env,url,user,t,action){
  }
  fail(405,'Subscription action not supported');
 }
+async function reconcileBillingRefund(env,event){
+ const data=event.data||{},paymentReference=String(data.transaction_reference||''),refundReference=String(data.refund_reference||'');
+ if(!/^BZL[A-Z0-9]{32}$/.test(paymentReference))return {ignored:true,reason:'Not a Bizlano subscription'};
+ const invoice=await env.DB.prepare("SELECT id,tenant_id,amount_minor,currency,state,billing_cycle_id,purchaser_user_id FROM subscription_invoices WHERE payment_reference=?").bind(paymentReference).first();
+ if(!invoice)return {ignored:true,reason:'No matching Bizlano invoice'};
+ const amount=Number(data.amount),state=String(data.status||event.event.slice(7));
+ if(data.currency!=='NGN'||!Number.isSafeInteger(amount)||amount<1||amount>invoice.amount_minor||!['pending','processing','failed','processed','needs-attention'].includes(state))fail(400,'Refund event does not match Bizlano invoice');
+ const keyed=/^[a-zA-Z0-9_-]{8,64}$/.test(refundReference);
+ if(!keyed){
+  if(state==='processed'){
+   const owner=await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(invoice.purchaser_user_id).first();
+   if(owner?.email)await env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)")
+    .bind(crypto.randomUUID(),invoice.tenant_id,'refund-review:'+invoice.id+':'+amount,'refund_review',owner.email,JSON.stringify({subject:'Bizlano refund needs review',text:'A Paystack refund event was received without a unique reference. Review transaction '+paymentReference+' in Paystack before changing subscription access.'})).run();
+  }
+  return {ok:true,needsManualReview:true};
+ }
+ if(state==='processed'){
+  const provider=await paystackCall(env,'GET','/refund?reference='+encodeURIComponent(refundReference));
+  const match=(Array.isArray(provider)?provider:[]).find(x=>x.reference===refundReference&&x.status==='processed'&&x.currency==='NGN'&&Number(x.amount)===amount);
+  if(!match)fail(409,'Refund is not yet confirmed by Paystack');
+ }
+ const existing=await env.DB.prepare('SELECT status,amount_minor FROM billing_refunds WHERE tenant_id=? AND refund_reference=?').bind(invoice.tenant_id,refundReference).first();
+ if(existing&&existing.amount_minor!==amount)fail(409,'Refund amount changed for an existing reference');
+ await env.DB.prepare("INSERT INTO billing_refunds(id,tenant_id,invoice_id,refund_reference,amount_minor,status,received_at) VALUES(?,?,?,?,?,?,datetime('now')) ON CONFLICT(tenant_id,refund_reference) DO UPDATE SET status=CASE WHEN billing_refunds.status='processed' THEN 'processed' ELSE excluded.status END,received_at=datetime('now')")
+  .bind(crypto.randomUUID(),invoice.tenant_id,invoice.id,refundReference,amount,state).run();
+ if(state!=='processed')return {ok:true,refundStatus:state};
+ const total=await env.DB.prepare("SELECT COALESCE(sum(amount_minor),0) amount FROM billing_refunds WHERE tenant_id=? AND invoice_id=? AND status='processed'").bind(invoice.tenant_id,invoice.id).first();
+ if(total?.amount<invoice.amount_minor)return {ok:true,refundStatus:'processed',partial:true,needsManualReview:true};
+ if(invoice.state!=='paid')return {ok:true,alreadySettled:true};
+ const cycle=invoice.billing_cycle_id?await env.DB.prepare('SELECT subscription_id FROM billing_cycles WHERE id=?').bind(invoice.billing_cycle_id).first():null;
+ const active=cycle?await env.DB.prepare("SELECT id FROM subscriptions WHERE id=? AND tenant_id=? AND status IN('active','grace')").bind(cycle.subscription_id,invoice.tenant_id).first():null;
+ const owner=await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(invoice.purchaser_user_id).first();
+ const jobs=[
+  env.DB.prepare("UPDATE subscription_invoices SET state='refunded' WHERE id=? AND tenant_id=? AND state='paid'").bind(invoice.id,invoice.tenant_id),
+  ...(active?[
+   env.DB.prepare("UPDATE subscriptions SET status='cancelled' WHERE id=? AND tenant_id=? AND status IN('active','grace')").bind(active.id,invoice.tenant_id),
+   env.DB.prepare("UPDATE tenant_entitlements SET plan_id='free',transactions_per_month=30,saved_design_profiles=1,staff_limit=1,arm_limit=1,location_limit=1,enabled=1,ends_at=NULL,updated_at=datetime('now') WHERE tenant_id=?").bind(invoice.tenant_id)
+  ]:[]),
+  env.DB.prepare('INSERT INTO billing_audit_events(id,tenant_id,actor_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),invoice.tenant_id,invoice.purchaser_user_id,'refund.processed','subscription_invoice',invoice.id),
+  ...(owner?.email?[env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),invoice.tenant_id,'refund-full:'+invoice.id,'refund_processed',owner.email,JSON.stringify({subject:'Bizlano subscription refund recorded',text:'Your Bizlano subscription payment has been refunded. Existing business records remain available. Check Plans & Billing for current access.'}))]:[])
+ ];
+ await env.DB.batch(jobs);
+ return {ok:true,refundStatus:'processed',full:true};
+}
 export async function billingPaystackWebhook(req,env){
  if(req.method!=='POST')fail(405,'Method not allowed');
  if(!billingEnabled(env))fail(503,'Bizlano subscription billing is disabled');
@@ -179,7 +223,8 @@ export async function billingPaystackWebhook(req,env){
   if(typeof e.data.reference!=='string')fail(400,'Missing payment reference');
   return json(await settleBillingPayment(env,e.data.reference,String(e.data.id||e.data.reference)),200);
  }
- // Ignore events that do not indicate verified successful charges.
+ if(['refund.pending','refund.processing','refund.needs-attention','refund.failed','refund.processed'].includes(e.event))
+  return json(await reconcileBillingRefund(env,e),200);
  return json({ok:true,ignored:e.event},200);
 }
 export async function runBillingCron(env){
