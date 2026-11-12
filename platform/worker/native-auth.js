@@ -1,6 +1,13 @@
 // Bizlano-native email/password authentication on Cloudflare D1.
 // RESEND_API_KEY is a Worker SECRET; RESEND_FROM_EMAIL is a verified Bizlano sender.
 // No Cloudflare Access seats, Supabase credentials, or Firebase client auth are required.
+function nativePublicOrigin(env){
+ const base=String(env.BIZLANO_PUBLIC_ORIGIN||'https://bizlano.pages.dev');
+ let url;
+ try{url=new URL(base)}catch{fail(503,'Bizlano public address is not configured')}
+ if(url.protocol!=='https:'||url.username||url.password||url.pathname!=='/'||url.search||url.hash)fail(503,'Bizlano public address is not valid');
+ return url.origin;
+}
 function nativeSafe(s){return String(s||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function nativeEmailConfig(env){
  if(typeof env.RESEND_API_KEY!=='string'||!/^re_\S{8,}$/.test(env.RESEND_API_KEY)||typeof env.RESEND_FROM_EMAIL!=='string'||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.RESEND_FROM_EMAIL))
@@ -27,7 +34,7 @@ async function nativeSession(env,user){
  return {body:json({user:{id:user.id,email:user.email,name:user.display_name,emailVerified:true}},200,{'set-cookie':sessionCookie(token,604800)}),token};
 }
 async function nativeAuthApi(req,env,url){
- const path=url.pathname,method=req.method;
+ const path=url.pathname,method=req.method,publicOrigin=nativePublicOrigin(env);
  if(path==='/api/account/session'&&method==='GET'){
   try{
    const user=await identity(req,env);
@@ -50,7 +57,7 @@ async function nativeAuthApi(req,env,url){
    env.DB.prepare('INSERT INTO users(id,email,display_name,password_hash,password_salt) VALUES(?,?,?,?,?)').bind(id,address,name,digest,salt),
    env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'verify_email',datetime('now','+20 minutes'))").bind(await hash(token),id)
   ]);
-  await nativeSend(env,address,'verify_email',name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),url.origin);
+  await nativeSend(env,address,'verify_email',name,publicOrigin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),publicOrigin);
   return json({ok:true,verificationRequired:true},201);
  }
  if(path==='/api/account/resend'){
@@ -59,7 +66,7 @@ async function nativeAuthApi(req,env,url){
   const address=email(b.email),user=await env.DB.prepare('SELECT id,email,display_name,email_verified_at FROM users WHERE email=? COLLATE NOCASE AND disabled_at IS NULL').bind(address).first();
   if(user&&!user.email_verified_at&&user.password_hash!=='firebase'){
    const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'verify_email',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();
-   await nativeSend(env,address,'verify_email',user.display_name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),url.origin);
+   await nativeSend(env,address,'verify_email',user.display_name,publicOrigin+(b.audience==='customer'?'/receipts':'/app')+'?verify='+encodeURIComponent(token),publicOrigin);
   }
   return json({ok:true});
  }
@@ -89,7 +96,7 @@ async function nativeAuthApi(req,env,url){
   nativeEmailConfig(env);
   await limitAnonymousAttempt(env,'password-reset',remote);
   const address=email(b.email),user=await env.DB.prepare("SELECT id,email,display_name FROM users WHERE email=? COLLATE NOCASE AND password_hash!='firebase' AND disabled_at IS NULL AND email_verified_at IS NOT NULL").bind(address).first();
-  if(user){const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'reset_password',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();await nativeSend(env,address,'reset_password',user.display_name,url.origin+(b.audience==='customer'?'/receipts':'/app')+'?reset='+encodeURIComponent(token),url.origin)}
+  if(user){const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'reset_password',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();await nativeSend(env,address,'reset_password',user.display_name,publicOrigin+(b.audience==='customer'?'/receipts':'/app')+'?reset='+encodeURIComponent(token),publicOrigin)}
   return json({ok:true});
  }
  if(path==='/api/account/reset'){
