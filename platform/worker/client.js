@@ -1019,9 +1019,23 @@ function receipt(doc,number,stored=false,style=state.design){
  (doc.recoveryCode?'<div class="r-recovery"><strong>Receipt recovery code</strong><div class="r-recovery-code">'+e(doc.recoveryCode)+'</div><small>Keep this private. Recover a lost receipt at '+e(new URL('/receipts',location.origin).toString())+'</small></div>':'')+
  '<div class="powered">Powered by <strong>Bizlano</strong> · Your business, beautifully managed.</div></article>';
 }
+function currentDocumentPreviewStyle(){
+ const f=document.querySelector('form[data-form="document"]');
+ const armId=f?.elements.namedItem('armId')?.value;
+ const arm=state.org.arms.find(x=>x.id===armId);
+ const selectedProfile=f?.elements.namedItem('profileId')?.value||arm?.design_profile_id;
+ const profile=state.org.profiles.find(x=>x.id===selectedProfile&&!x.archived_at);
+ const base=state.design||{};
+ return {...base,template:profile?.template||f?.elements.namedItem('template')?.value||base.template||'signature',
+  accent:profile?.accent||base.accent,secondary_color:profile?.secondary_color||base.secondary_color,
+  font_family:profile?.font_family||base.font_family,header_note:profile?.header_note||base.header_note,
+  footer_note:profile?.footer_note||arm?.receipt_footer||base.footer_note,
+  contact:arm?.contact_phone||base.contact,business_name:arm?.name||state.biz?.business_name,
+  logo_url:state.biz?.logo_url||null};
+}
 function drawPreview(){
  const div=document.getElementById('preview');if(!div)return;
- const d=currentDoc();if(d){state.items=d.items;div.innerHTML=receipt(d,'PREVIEW');}
+ const d=currentDoc();if(d){state.items=d.items;div.innerHTML=receipt(d,'PREVIEW',false,currentDocumentPreviewStyle());}
 }
 const PAPER_CHOICES=[
  ['a4','A4 · office printer'],

@@ -621,7 +621,7 @@ async function api(req,env,url) {
    const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
    if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
    const preferred=await env.DB.prepare('SELECT * FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
-   const assignedArm=await env.DB.prepare('SELECT design_profile_id FROM business_arms WHERE tenant_id=? AND id=?').bind(tenant,docScope.armId).first();
+   const assignedArm=await env.DB.prepare('SELECT name,design_profile_id,receipt_footer,contact_phone FROM business_arms WHERE tenant_id=? AND id=?').bind(tenant,docScope.armId).first();
    const profileId=b.profileId||assignedArm?.design_profile_id||null;
    let profile=null;
    if(profileId){
@@ -630,7 +630,7 @@ async function api(req,env,url) {
     if(!profile)fail(404,'Saved design not found');
    }
    const selectedTemplate=String(profile?.template||b.template||preferred?.template||'signature');
-   const snapshot={template:selectedTemplate,accent:profile?.accent||preferred?.accent||'#6935df',secondary_color:profile?.secondary_color||preferred?.secondary_color||'#19223b',font_family:profile?.font_family||preferred?.font_family||'modern',text_logo_style:preferred?.text_logo_style||'split',header_note:profile?.header_note||preferred?.header_note||'',footer_note:profile?.footer_note||preferred?.footer_note||'Thank you for your business.',contact:preferred?.contact||'',paper:preferred?.paper||'a4',show_logo:preferred?.show_logo??1,logo_url:t.logo_url||null,business_name:t.business_name};
+   const snapshot={template:selectedTemplate,accent:profile?.accent||preferred?.accent||'#6935df',secondary_color:profile?.secondary_color||preferred?.secondary_color||'#19223b',font_family:profile?.font_family||preferred?.font_family||'modern',text_logo_style:preferred?.text_logo_style||'split',header_note:profile?.header_note||preferred?.header_note||'',footer_note:profile?.footer_note||assignedArm?.receipt_footer||preferred?.footer_note||'Thank you for your business.',contact:assignedArm?.contact_phone||preferred?.contact||'',paper:preferred?.paper||'a4',show_logo:preferred?.show_logo??1,logo_url:t.logo_url||null,business_name:assignedArm?.name||t.business_name};
    if(!TEMPLATES.has(selectedTemplate))fail(400,'Unsupported document design');
    if(!types.has(kind))fail(400,'Invalid document type');
    cashier(t,kind);
