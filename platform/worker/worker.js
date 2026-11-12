@@ -595,6 +595,16 @@ async function api(req,env,url) {
    await member(env,user,slug,'edit');
    const b=await input(req),kind=field(b.kind,'document type',60),items=b.items;
    const docScope=await assertDocumentOrgScope(env,user,t,b.armId,b.locationId);
+   const convertedFrom=b.convertFrom||null;
+   let transactionId=null;
+   if(convertedFrom){
+    if(!/^[a-f0-9-]{36}$/.test(convertedFrom))fail(400,'Invalid source document');
+    const origin=await env.DB.prepare('SELECT id,kind,status,economic_transaction_id,arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,convertedFrom).first();
+    if(!origin||!['quotation','estimate','proforma','invoice','tax-invoice'].includes(origin.kind)||origin.status==='voided')fail(404,'Source document cannot be converted');
+    await assertDocumentReadScope(env,user,t,origin.arm_id,origin.location_id);
+    if(origin.arm_id!==docScope.armId||origin.location_id!==docScope.locationId)fail(400,'Converted documents must belong to the same business arm and location');
+    transactionId=origin.economic_transaction_id||origin.id;
+   }
    const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
    if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
    const preferred=await env.DB.prepare('SELECT template FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
@@ -618,8 +628,9 @@ async function api(req,env,url) {
    if(receiptTypes.has(kind)&&!draft&&received===0)fail(400,'Record actual payment on a receipt, or issue an invoice');
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
-   const did=crypto.randomUUID(),number=docScope.documentPrefix+'-'+kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by,arm_id,location_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id,docScope.armId,docScope.locationId)];
+   const did=crypto.randomUUID(),economicId=transactionId||did,number=docScope.documentPrefix+'-'+kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by,arm_id,location_id,economic_transaction_id,origin_document_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id,docScope.armId,docScope.locationId,economicId,convertedFrom)];
+   if(!draft&&billable.has(kind))batch.push(env.DB.prepare('INSERT INTO usage_events(tenant_id,origin_transaction_id,period_wat) VALUES(?,?,?) ON CONFLICT(tenant_id,origin_transaction_id) DO NOTHING').bind(tenant,economicId,lagosUsagePeriod()));
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));
    if(received>0&&billable.has(kind)){const code=await recoveryCode(env,tenant,did);batch.push(env.DB.prepare('INSERT INTO receipt_recovery_codes(tenant_id,document_id,code_hash) VALUES(?,?,?)').bind(tenant,did,await hash(code)));}
@@ -647,7 +658,11 @@ async function api(req,env,url) {
   const d=await env.DB.prepare('SELECT kind,status,arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
   if(!d||d.status!=='draft')fail(404,'Draft not found');await assertDocumentReadScope(env,user,t,d.arm_id,d.location_id);cashier(t,d.kind);
   if(receiptTypes.has(d.kind))fail(400,'Issue paid receipts through new sale flow');
-  await env.DB.prepare("UPDATE documents SET status='issued',updated_at=datetime('now') WHERE tenant_id=? AND id=? AND status='draft'").bind(tenant,did).run();
+  const economicId=await env.DB.prepare('SELECT economic_transaction_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
+  await env.DB.batch([
+   env.DB.prepare("UPDATE documents SET status='issued',updated_at=datetime('now') WHERE tenant_id=? AND id=? AND status='draft'").bind(tenant,did),
+   ...(billable.has(d.kind)?[env.DB.prepare('INSERT INTO usage_events(tenant_id,origin_transaction_id,period_wat) VALUES(?,?,?) ON CONFLICT(tenant_id,origin_transaction_id) DO NOTHING').bind(tenant,economicId?.economic_transaction_id||did,lagosUsagePeriod())]:[])
+  ]);
   return json({ok:true});
  }
  if(resource==='void'&&method==='POST'){
