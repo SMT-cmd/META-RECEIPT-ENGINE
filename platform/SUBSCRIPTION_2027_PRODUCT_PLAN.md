@@ -42,7 +42,7 @@ These are **proposals only**, not provider plans or production prices. Keep Stan
 
 | Allowance / module | Free | Lite | Standard | Business | Business Max |
 |---|---:|---:|---:|---:|---:|
-| New issued documents/month | 30 | 150 | 600 | 2,500 | 10,000 |
+| Finalized sales/issuances per month (one transaction, one usage unit) | 30 | 150 | 600 | 2,500 | 10,000 |
 | Simultaneously saved document design profiles | 1 | 2 | 4 | 8 | 20 |
 | Visible/previewable designs | all 71 | all 71 | all 71 | all 71 | all 71 |
 | Designs available to save as new profiles | 12 essentials + grandfathered originals | 35 + grandfathered originals | all 71 | all 71 | all 71 |
@@ -57,7 +57,7 @@ These are **proposals only**, not provider plans or production prices. Keep Stan
 | Supplier/purchase workflows | no | no | basic | multi-location | multi-location |
 | Staff approvals, audit dashboards | no | no | basic roles | yes | yes |
 
-Modules/allowances above must only be marketed as **available** once verified and implemented. Sales quotas count **newly issued** documents, not drafts, previews, template experimentation, customer downloads, reprints, recovered historical receipts, void lookups, imports or quotes later converted to a paid document twice. Count at the point of final issuance, atomically and idempotently, in an Africa/Lagos calendar month. Unlimited reads and historical access regardless of plan. Clearly show current count and next reset date, with 70% / 90% notices, grace handling and upgrades. No hidden pay-per-document overage; either upgrade or optionally buy a clearly stated document pack later. Existing documents remain printable/recoverable on downgrade.
+Modules/allowances above must only be marketed as **available** once verified and implemented. Quotas count **finalized economic transactions**, not paper pages or document variants. A connected estimate, quote, invoice, partial payments, and receipt for the *same sale* must consume **one usage unit only**, tracked by the originating transaction ID. Drafts, unconverted quotes/estimates, previews, template experimentation, customer downloads, reprints, recovered historical receipts, void lookups, and imported old records are excluded. Count once at first final sale issuance, atomically and idempotently, in an Africa/Lagos calendar month. A standalone newly issued sales invoice or receipt counts once. Unlimited reads and historical access regardless of plan. Clearly show current count and next reset date, with 70% / 90% notices, grace handling and upgrades. No hidden pay-per-document overage; either upgrade or optionally buy a clearly stated document pack later. Existing documents remain printable/recoverable on downgrade.
 
 ### Design profile rule
 
