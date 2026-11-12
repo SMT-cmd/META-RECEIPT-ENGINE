@@ -15,7 +15,7 @@ export default {
   const original=new URL(request.url);
   if(!['GET','HEAD','POST'].includes(request.method))
    return new Response('Method not allowed',{status:405,headers:{...EDGE_HEADERS,allow:'GET, HEAD, POST'}});
-  const webhook=original.pathname.startsWith('/api/integrations/gws/');
+  const webhook=original.pathname.startsWith('/api/integrations/gws/')||original.pathname==='/api/billing/paystack/webhook';
   const suppliedOrigin=request.headers.get('origin');
   if(request.method==='POST'&&!webhook&&suppliedOrigin!==original.origin)
    return new Response(JSON.stringify({error:'Cross-site requests are not permitted'}),{status:403,headers:{'content-type':'application/json',...EDGE_HEADERS}});

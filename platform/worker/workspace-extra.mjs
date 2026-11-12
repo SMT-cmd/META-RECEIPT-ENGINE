@@ -47,7 +47,7 @@ export async function workspaceExtraAPI(req,env,user,t,resource){
   }
   if(!['create','update'].includes(action))fail(400,'Invalid design action');
   const template=str(b.template,90),name=required(b.name,100),accent=str(b.accent||'#6935df',7),secondary=str(b.secondary||'#19223b',7),font=str(b.font||'modern',20);
-  if(!TEMPLATES.has(template))fail(400,'Choose one of the available designs');
+  await assertTemplateAllowance(env,tenant,template);
   if(!/^#[0-9a-fA-F]{6}$/.test(accent)||!/^#[0-9a-fA-F]{6}$/.test(secondary)||!['modern','editorial','mono','rounded'].includes(font))fail(400,'Choose valid colours and a font');
   if(action==='create'){
    const newId=crypto.randomUUID();

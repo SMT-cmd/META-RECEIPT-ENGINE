@@ -8,6 +8,16 @@ const types=new Set([...billable,'quotation','estimate','proforma','purchase-ord
 const DESIGN_INDUSTRIES=new Set(['general','electronics','bakery','retail','fashion','services','trades','health','hospitality','logistics']);
 const HERITAGE_TEMPLATE_IDS=["heritage-modern-tech","heritage-minimalist-pro","heritage-corporate-luxe","heritage-legal-professional","heritage-cyber-punk","heritage-retro-wave","heritage-neo-brutalist","heritage-startup-modern","heritage-royal-elegance","heritage-art-deco","heritage-fashion-boutique","heritage-hotel-resort","heritage-clean-air","heritage-swiss-design","heritage-japanese-minimal","heritage-compact-slip","heritage-midnight-special","heritage-garage-workshop","heritage-bold-stripe","heritage-fitness-gym","heritage-pharmacy-medical","heritage-bakery-sweet","heritage-nature-organic","heritage-salon-beauty","heritage-restaurant-diner","heritage-construction-industrial","heritage-education-academy","heritage-transport-logistics","heritage-real-estate","heritage-event-planning","heritage-curved-organic","heritage-geometric-slice","heritage-vintage-ticket","heritage-futuristic-glass","heritage-stamp-quality"];
 const TEMPLATES=new Set(["signature","classic","executive","retail","thermal","minimal","editorial","bold","artisan","medical","education","hospitality","luxury","corporate","ledger","modern","boutique","monochrome","festival","restaurant","grocery","service","legal","real-estate","logistics","salon","artisan-paper","gradient","formal","event","digital","wholesale","startup","premium-dark","emerald","sapphire",...HERITAGE_TEMPLATE_IDS]);
+// Restrict newly selected templates only when an approved entitlement is active.
+// Prepaid customers retain read/print access to every previously issued document.
+async function assertTemplateAllowance(env,tenant,template){
+ if(!TEMPLATES.has(template))fail(400,'Choose a supported document design');
+ const e=await env.DB.prepare('SELECT plan_id,enabled FROM tenant_entitlements WHERE tenant_id=?').bind(tenant).first();
+ if(!e||e.enabled!==1)return;
+ const plan=PLANS.find(x=>x.id===e.plan_id)||PLANS[0];
+ const visible=[...TEMPLATES].slice(0,plan.availableDesigns);
+ if(!visible.includes(template))fail(403,'This design is available on a higher Bizlano plan. Your older documents remain accessible.');
+}
 const roles=['owner','admin','manager','accountant','cashier','sales','viewer'];
 const access={view:roles,edit:['owner','admin','manager','accountant','cashier','sales'],stock:['owner','admin','manager'],finance:['owner','admin','manager','accountant'],admin:['owner','admin'],owner:['owner']};
 const reserved=['www','api','auth','app','admin','billing','support','bizlano','metaforge','timi'];
@@ -548,7 +558,7 @@ async function api(req,env,url) {
   if(method==='POST'){
    const b=await input(req),template=field(b.template,'receipt design',60),paper=String(b.paper||'a4'),accent=String(b.accent||'#6935df');
    const secondaryColor=String(b.secondaryColor||'#19223b'),fontFamily=String(b.fontFamily||'modern'),textLogoStyle=String(b.textLogoStyle||'split');
-   if(!TEMPLATES.has(template))fail(400,'Choose a supported document design');
+   await assertTemplateAllowance(env,tenant,template);
    const industry=String(b.industry||'general');
    if(!DESIGN_INDUSTRIES.has(industry))fail(400,'Choose a supported business category');
    if(!/^(a4|letter|80mm|58mm)$/.test(paper))fail(400,'Choose a supported paper size');
@@ -631,7 +641,7 @@ async function api(req,env,url) {
    }
    const selectedTemplate=String(profile?.template||b.template||preferred?.template||'signature');
    const snapshot={template:selectedTemplate,accent:profile?.accent||preferred?.accent||'#6935df',secondary_color:profile?.secondary_color||preferred?.secondary_color||'#19223b',font_family:profile?.font_family||preferred?.font_family||'modern',text_logo_style:preferred?.text_logo_style||'split',header_note:profile?.header_note||preferred?.header_note||'',footer_note:profile?.footer_note||assignedArm?.receipt_footer||preferred?.footer_note||'Thank you for your business.',contact:assignedArm?.contact_phone||preferred?.contact||'',paper:preferred?.paper||'a4',show_logo:preferred?.show_logo??1,logo_url:t.logo_url||null,business_name:assignedArm?.name||t.business_name};
-   if(!TEMPLATES.has(selectedTemplate))fail(400,'Unsupported document design');
+   await assertTemplateAllowance(env,tenant,selectedTemplate);
    if(!types.has(kind))fail(400,'Invalid document type');
    cashier(t,kind);
    if(!Array.isArray(items)||items.length<1||items.length>100)fail(400,'Add at least one line item');
