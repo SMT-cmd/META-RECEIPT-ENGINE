@@ -703,7 +703,7 @@ async function api(req,env,url) {
   }
  }
  if(resource==='team'&&method==='GET'){
-  const r=await env.DB.prepare('SELECT u.email,m.role,m.joined_at,m.disabled_at FROM memberships m JOIN users u ON m.user_id=u.id WHERE m.tenant_id=?').bind(tenant).all();return json({rows:r.results});
+  const r=await env.DB.prepare('SELECT u.id AS user_id,u.email,m.role,m.joined_at,m.disabled_at FROM memberships m JOIN users u ON m.user_id=u.id WHERE m.tenant_id=?').bind(tenant).all();return json({rows:r.results});
  }
  if(resource==='invite'&&method==='POST'){
   const b=await input(req),to=email(b.email),role=field(b.role,'role',30);

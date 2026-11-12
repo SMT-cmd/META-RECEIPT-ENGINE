@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null,pendingConversion:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -51,6 +51,10 @@ async function load(){
  const section=state.view;
  let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section==='gws'?'marketplace':section;
  if(section==='upgrade'){state.data={};render();return}
+ if(section==='team'){
+  const [team,scopes,arms,locations]=await Promise.all([api(t+'/team'),api(t+'/staff-scopes'),api(t+'/arms'),api(t+'/locations')]);
+  state.data={...team,scopes:scopes.rows||[]};state.org.arms=arms.rows||[];state.org.locations=locations.rows||[];render();return;
+ }
  if(section==='designProfiles'){
   const [profiles,arms]=await Promise.all([api(t+'/design-profiles'),api(t+'/arms')]);
   state.org.profiles=profiles.rows||[];state.org.arms=arms.rows||[];state.data=profiles;render();return;
@@ -369,7 +373,8 @@ function gridRows(rows,headers,fn){return '<div class="table-scroll"><table><the
 function docs(){
  const rows=state.data?.rows||[];
  return heading('RECEIPTS & INVOICES','Your business documents','Create, view and share every receipt in one place.',edit()?'<button class="btn primary" data-nav="create">+ New document</button>':'')+
- '<section class="panel"><div class="recovery-quick"><strong>Customer lost a receipt?</strong><span>Send them your recovery link.</span><button class="btn" data-action="copy-recovery">Copy link</button><button class="btn" data-action="copy-recovery-message">Copy message</button></div>'+(rows.length?gridRows(rows,['Document','Customer','Total','Status','Actions'],d=>'<tr><td><strong>'+e(d.document_number)+'</strong><br><small>'+e(d.kind)+' · '+e(d.issued_on)+'</small></td><td>'+e(d.recipient_name)+'</td><td>'+curr(d.total_minor)+'</td><td>'+e(d.status)+'</td><td><button class="btn" data-doc="'+e(d.id)+'">Preview / Print</button>'+(!['voided','draft','paid'].includes(d.status)&&edit()?'<button class="btn" data-payment="'+e(d.id)+'">Payment</button>':'')+(d.status==='draft'&&edit()?'<button class="btn" data-issue="'+e(d.id)+'">Issue</button>':'')+'</td></tr>'):'<div class="empty">Your document history is empty. Create the first receipt or invoice to begin.</div>')+'</section>';
+ '<section class="panel"><div class="recovery-quick"><strong>Customer lost a receipt?</strong><span>Send them your recovery link.</span><button class="btn" data-action="copy-recovery">Copy link</button><button class="btn" data-action="copy-recovery-message">Copy message</button></div>'+(rows.length?gridRows(rows,['Document','Customer','Total','Status','Actions'],d=>'<tr><td><strong>'+e(d.document_number)+'</strong><br><small>'+e(d.kind)+' · '+e(d.issued_on)+'</small></td><td>'+e(d.recipient_name)+'</td><td>'+curr(d.total_minor)+'</td><td>'+e(d.status)+'</td><td><button class="btn" data-doc="'+e(d.id)+'">Preview / Print</button>'+(!['voided','draft','paid'].includes(d.status)&&edit()?'<button class="btn" data-payment="'+e(d.id)+'">Payment</button>':'')+(d.status==='draft'&&edit()?'<button class="btn" data-issue="'+e(d.id)+'">Issue</button>':'')+
+ (['quotation','estimate','proforma'].includes(d.kind)&&d.status==='issued'&&edit()?'<button class="btn" data-convert="'+e(d.id)+'">Convert to invoice</button>':'')+'</td></tr>'):'<div class="empty">Your document history is empty. Create the first receipt or invoice to begin.</div>')+'</section>';
 }
 function customers(){
  const rows=state.data?.rows||[];
@@ -485,10 +490,28 @@ function branding(){
  '<div class="artwork-preview hidden" data-artwork-preview="signature"></div><button class="btn primary">Save my signature</button></form></div></details></div>';
 }
 function team(){
- const rows=state.data?.rows||[];
- return heading('TEAM & ACCESS','Build your team','Invite staff through a private one-time link. They must have a verified email account.')+
- '<div class="cols"><section class="panel"><h2>Invite staff</h2><form data-form="invite">'+input('Staff email','email','email','',true)+select('Permission','role',[['manager','Manager'],['accountant','Accountant'],['cashier','Cashier'],['sales','Sales'],['viewer','View-only']])+'<button class="btn primary">Generate invite</button></form><div id="invite-result" class="banner hidden"></div></section>'+
- '<section class="panel"><h2>Team members</h2>'+simpleRows(rows,s=>'<div class="rowcard"><div><strong>'+e(s.email)+'</strong><small>'+e(s.role)+' · '+(s.disabled_at?'Suspended':'Active')+'</small></div></div>')+'</section></div>';
+ const rows=state.data?.rows||[],arms=state.org.arms.filter(x=>!x.archived_at),locations=state.org.locations.filter(x=>!x.archived_at),editable=rows.filter(x=>!['owner','admin'].includes(x.role)&&!x.disabled_at);
+ return heading('TEAM & ACCESS','Your business team','Invite colleagues, give them the right role, and choose where they can issue or view business documents.')+
+ '<div class="cols"><section class="panel"><h2>Invite a colleague</h2>'+
+ '<form data-form="invite">'+input('Staff email','email','email','',true)+
+ select('Permission','role',[['manager','Manager'],['accountant','Accountant'],['cashier','Cashier'],['sales','Sales'],['viewer','View-only']])+
+ '<button class="btn primary">Generate private invite</button></form><div id="invite-result" class="banner hidden"></div></section>'+
+ '<section class="panel"><h2>Team members</h2>'+simpleRows(rows,s=>'<div class="rowcard"><div><strong>'+e(s.email)+'</strong><small>'+e(s.role)+' · '+(s.disabled_at?'Suspended':'Active')+'</small></div></div>')+'</section></div>'+
+ '<section class="panel"><h2>Assign a team member to locations</h2><p class="muted">Choose the business arms and locations where a team member may issue, view and take payments for documents. Leaving a group unselected means access to every arm or location in that group. Owners and administrators always have business-wide access.</p>'+
+ (editable.length?
+ '<form data-form="staff-scope">'+select('Team member','userId',editable.map(x=>[x.user_id,x.email]))+
+ '<details class="tidy-details" open><summary>Business arms</summary><div class="tidy-content">'+arms.map(x=>'<label class="field"><input type="checkbox" name="armScope" value="'+e(x.id)+'" style="display:inline-block;width:auto"> '+e(x.name)+'</label>').join('')+'</div></details>'+
+ '<details class="tidy-details" open><summary>Locations</summary><div class="tidy-content">'+locations.map(x=>'<label class="field"><input type="checkbox" name="locationScope" value="'+e(x.id)+'" style="display:inline-block;width:auto"> '+e(x.name)+'</label>').join('')+'</div></details>'+
+ '<button class="btn primary">Save assignments</button></form>':'<p class="muted">Invite a non-administrator colleague to configure assignments.</p>')+
+ '</section>';
+}
+function syncStaffScopeForm(){
+ const f=document.querySelector('form[data-form="staff-scope"]');if(!f)return;
+ const rows=(state.data?.scopes||[]).filter(x=>x.user_id===val(f,'userId'));
+ const allowedArms=new Set(rows.map(x=>x.arm_id).filter(Boolean));
+ const allowedLocations=new Set(rows.map(x=>x.location_id).filter(Boolean));
+ f.querySelectorAll('input[name="armScope"]').forEach(x=>x.checked=allowedArms.has(x.value));
+ f.querySelectorAll('input[name="locationScope"]').forEach(x=>x.checked=allowedLocations.has(x.value));
 }
 function readLegacyBrandConfig(raw){
  if(!raw)return null;
@@ -788,7 +811,7 @@ function alerts(){
 }
 function docEditor(){
  const options=state.biz.role==='cashier'?[['receipt','Sales receipt'],['cash-sale','Cash sale'],['service-receipt','Service receipt'],['thermal-receipt','Thermal POS']]:
- [['receipt','Sales receipt'],['invoice','Sales invoice'],['quotation','Quotation'],['estimate','Estimate'],['proforma','Proforma'],['retail-receipt','Retail receipt'],['service-receipt','Service receipt'],['tax-invoice','Tax invoice'],['thermal-receipt','Thermal POS']];
+ [['receipt','Sales receipt'],['invoice','Sales invoice'],['quotation','Quotation'],['estimate','Estimate'],['proforma','Proforma'],['purchase-order','Purchase order'],['delivery-note','Delivery note'],['credit-note','Credit note'],['debit-note','Debit note'],['retail-receipt','Retail receipt'],['service-receipt','Service receipt'],['tax-invoice','Tax invoice'],['thermal-receipt','Thermal POS']];
  const step=state.docStep||1;
  const panel=(n,content)=>'<section class="doc-step" data-doc-panel="'+n+'" '+(n!==step?'hidden':'')+'>'+content+'</section>';
  const forward='<button class="btn primary" type="button" data-action="doc-next">Continue →</button>';
@@ -866,7 +889,7 @@ function editorDialog(){
 function currentDoc(){
  const f=document.querySelector('[data-form=document]');if(!f)return null;
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
- return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),armId:val(f,'armId'),locationId:val(f,'locationId'),profileId:val(f,'profileId'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
+ return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),armId:val(f,'armId'),locationId:val(f,'locationId'),profileId:val(f,'profileId'),convertFrom:state.pendingConversion||null,customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
 
 // The original August 19 MetaForge document structure, adapted to Bizlano's tenant-scoped,
@@ -1019,6 +1042,7 @@ function render(){
  const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,designProfiles,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
+ if(state.view==='team')syncStaffScopeForm();
  if(state.view==='create')drawPreview();
 }
 async function navigate(view){
@@ -1132,6 +1156,18 @@ document.addEventListener('click',async ev=>{
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(action==='print-preview'){printDocument();return}
+ if(el.dataset.convert){
+  const original=(await api('/b/'+state.biz.slug+'/doc/'+el.dataset.convert)).document;
+  await navigate('create');
+  state.pendingConversion=original.id;
+  state.items=(original.items||[]).map(x=>({...x}));
+  const f=document.querySelector('form[data-form="document"]');
+  if(!f)throw Error('Unable to open document editor');
+  const fields={kind:'invoice',customer:original.recipient_name,customerEmail:original.recipient_email||'',customerPhone:original.recipient_phone||'',armId:original.arm_id||state.biz.id,locationId:original.location_id||state.biz.id,template:original.template};
+  for(const [name,value] of Object.entries(fields)){const el=f.elements.namedItem(name);if(el&&value)el.value=value}
+  const lines=document.getElementById('lines');if(lines)lines.innerHTML=state.items.map((item,n)=>lineHtml(item,n)).join('');
+  flash('Quotation loaded. Review the invoice before issuing it.');drawPreview();return;
+ }
  if(el.dataset.doc){const [d,settings]=await Promise.all([api('/b/'+state.biz.slug+'/doc/'+el.dataset.doc),api('/b/'+state.biz.slug+'/design')]);state.design=settings.design;printPage(d.document);return}
  if(el.dataset.payment){const value=prompt('Amount actually received in ₦');if(value===null)return;await api('/b/'+state.biz.slug+'/payments',{documentId:el.dataset.payment,amount:Number(value),method:'Manual'});flash('Payment recorded.');await navigate('documents');return}
  if(el.dataset.issue){if(!confirm('Issue this draft? Issued documents cannot be edited.'))return;await api('/b/'+state.biz.slug+'/issue',{documentId:el.dataset.issue});flash('Draft issued.');await navigate('documents');return}
@@ -1155,6 +1191,7 @@ document.addEventListener('change',ev=>{
   if(profile)form.elements.namedItem('template').value=profile.template;
   drawPreview();return;
  }
+ if(ev.target.closest('[data-form="staff-scope"]')&&ev.target.name==='userId'){syncStaffScopeForm();return}
  if(ev.target.matches('[data-print-paper]')){applyPrintPaper(ev.target.value);return}
  if(ev.target.matches('[data-design-custom-color]')){setDesignColour(ev.target.value);render();return}
  if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;state.templateChoice=departmentById(departmentForIndustry(ev.target.value)).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
@@ -1207,6 +1244,10 @@ document.addEventListener('submit',async ev=>{
   const t='/b/'+state.biz.slug;
   if(kind==='customer')await api(t+'/customers',{name:val(form,'name'),phone:val(form,'phone'),email:val(form,'email'),address:val(form,'address')});
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
+  if(kind==='staff-scope'){
+    const userId=val(form,'userId'),locations=[...form.querySelectorAll('input[name="locationScope"]:checked')].map(x=>x.value),arms=[...form.querySelectorAll('input[name="armScope"]:checked')].map(x=>x.value);
+    await api(t+'/staff-scopes',{userId,locations,arms});flash('Staff assignments saved.');await navigate('team');state.busy=false;return;
+  }
   if(kind==='billing-quote'){
     state.billingQuote=await api(t+'/billing/quote',{plan:val(form,'plan'),term:val(form,'term')});
     render();flash('Here is your proposed plan price.');state.busy=false;return;
