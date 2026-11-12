@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[]}};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -51,6 +51,10 @@ async function load(){
  const section=state.view;
  let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section==='gws'?'marketplace':section;
  if(section==='upgrade'){state.data={};render();return}
+ if(section==='locationStock'){
+  const [p,l,balances]=await Promise.all([api(t+'/products'),api(t+'/locations'),api(t+'/stock-locations')]);
+  state.products=p.rows||[];state.org.locations=l.rows||[];state.data={rows:balances.rows||[]};render();return;
+ }
  if(section==='overview'){
   const [main,trends,goals]=await Promise.all([api(t+'/overview'),api(t+'/trends'),api(t+'/targets')]);
   state.data={...main,trends:trends.rows,goals:goals.rows};render();return;
@@ -58,7 +62,8 @@ async function load(){
  if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;state.designIndustry=state.designIndustry||x.industry||state.biz.industry||'general';render();if(!state.legacyChecked)void findLegacyStyles();return}
  if(section==='branding'){const [main,details]=await Promise.all([api(t+'/overview'),api(t+'/design')]);state.data=main;state.design=details.design;render();return}
  if(section==='create') {
-  const [p,c,d]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design')]);
+  const [p,c,d,arms,locations]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design'),api(t+'/arms'),api(t+'/locations')]);
+  state.org={arms:arms.rows||[],locations:locations.rows||[]};
   state.design=d.design;
   state.products=p.rows;state.customers=c.rows;state.data={};
  }else state.data=await api(t+'/'+resource);
@@ -246,14 +251,15 @@ function colourStoryChooser(selected){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['arms','⌂','Business arms'],['locations','▤','Locations'],['locationStock','▥','Stock by location'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
   if(v==='billing')return state.biz?.role==='owner';
   if(v==='upgrade')return state.biz?.role==='owner';
-  if(v==='team'||v==='branding'||v==='design'||v==='gws')return admin();
+  if(v==='team'||v==='branding'||v==='design'||v==='gws'||v==='arms'||v==='locations')return admin();
+  if(v==='locationStock')return stock();
   if(v==='alerts')return true;
   if(v==='products'||v==='customers'||v==='payments'||v==='create')return edit();
   return true;
@@ -386,6 +392,50 @@ function targets(){
  '<div class="cols"><section class="panel"><h2>Set sales target</h2><form data-form="target">'+input('Month','month','month',today().slice(0,7),true)+input('Monthly target (₦)','amount','number','',true,'min=".01" step=".01"')+'<button class="btn primary">Save target</button></form></section>'+
  '<section class="panel"><h2>Saved goals</h2>'+simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.label)+'</strong><small>'+e(x.period_start)+' to '+e(x.period_end)+'</small></div><strong>'+curr(x.target_minor)+'</strong></div>')+'</section></div>';
 }
+function businessArms(){
+ const rows=state.data?.rows||[];
+ const active=rows.filter(x=>!x.archived_at);
+ return heading('BUSINESS SETTINGS','Business arms','Manage different brands or departments under the same business without duplicating your financial records.')+
+ '<div class="cols"><section class="panel"><h2>Add a business arm</h2><p class="muted">Use this for another shop department, service division or trading name belonging to the same legal business.</p>'+
+ '<form data-form="arm">'+input('Department or brand name','name','text','',true)+input('Short code','slug','text','',true,'pattern="[a-z0-9-]{3,40}" placeholder="e.g. repairs"')+
+ input('Document prefix','prefix','text','BZ',true,'pattern="[a-zA-Z0-9]{2,8}" maxlength="8"')+
+ input('Contact phone (optional)','phone')+
+ '<label class="field">Receipt footer (optional)<textarea name="footer" rows="2" maxlength="260"></textarea></label>'+
+ '<button class="btn primary">Add business arm</button></form></section>'+
+ '<section class="panel"><h2>Business arms ('+active.length+')</h2>'+
+ simpleRows(rows,r=>'<div class="rowcard"><div><strong>'+e(r.name)+(r.is_primary?' · Main':'')+'</strong><small>'+e(r.slug)+' · Prefix '+e(r.document_prefix)+(r.archived_at?' · Archived':'')+'</small></div>'+
+ (!r.is_primary&&!r.archived_at?'<button class="btn" type="button" data-action="archive-arm" data-org-id="'+e(r.id)+'">Archive</button>':'')+'</div>')+
+ '</section></div>';
+}
+function businessLocations(){
+ const rows=state.data?.rows||[];
+ const active=rows.filter(x=>!x.archived_at);
+ return heading('BUSINESS SETTINGS','Locations & outlets','Keep each shop, office and warehouse organized while using one business account.')+
+ '<div class="cols"><section class="panel"><h2>Add a location</h2>'+
+ '<form data-form="location">'+input('Location name','name','text','',true)+input('Location code','code','text','',true,'pattern="[a-zA-Z0-9-]{2,20}" maxlength="20" placeholder="e.g. IKEJA"')+
+ select('Type','type',[['shop','Shop / outlet'],['warehouse','Warehouse'],['office','Office'],['service','Service base']])+
+ '<label class="field">Address<input name="address" maxlength="400" placeholder="Street, city and state"></label>'+
+ '<button class="btn primary">Add location</button></form></section>'+
+ '<section class="panel"><h2>Your locations ('+active.length+')</h2>'+
+ simpleRows(rows,r=>'<div class="rowcard"><div><strong>'+e(r.name)+(r.is_primary?' · Main':'')+'</strong><small>'+e(r.code)+' · '+e(r.type)+(r.archived_at?' · Archived':'')+'</small><small>'+e(r.address||'')+'</small></div>'+
+ (!r.is_primary&&!r.archived_at?'<button type="button" class="btn" data-action="archive-location" data-org-id="'+e(r.id)+'">Archive</button>':'')+'</div>')+
+ '</section></div>';
+}
+function locationStock(){
+ const rows=state.data?.rows||[],locations=state.org.locations.filter(x=>!x.archived_at),products=state.products.filter(x=>x.track_stock);
+ const opts=locations.map(x=>[x.id,x.name]),productOpts=products.map(x=>[x.id,x.name]);
+ return heading('STOCK MANAGEMENT','Stock by location','Move stock between shops and warehouses while keeping total inventory accurate.')+
+ '<div class="cols"><section class="panel"><h2>Transfer stock</h2><p class="muted">A transfer moves stock between two locations without recording a new sale.</p>'+
+ (locations.length>1&&products.length?
+ '<form data-form="stock-transfer">'+select('Product','productId',productOpts)+select('From location','fromLocationId',opts)+select('To location','toLocationId',opts)+
+ input('Quantity','quantity','number','1',true,'min=".001" step=".001"')+
+ input('Reason (optional)','reason')+'<button class="btn primary">Transfer stock</button></form>':
+ '<p class="muted">Create another location and add a stocked product to transfer inventory.</p>')+
+ '</section><section class="panel"><h2>Available stock</h2>'+
+ simpleRows(rows,r=>'<div class="rowcard"><div><strong>'+e(r.product_name)+'</strong><small>'+e(r.location_name)+'</small></div><strong>'+(r.stock_milli/1000).toLocaleString('en-NG')+'</strong></div>')+
+ '</section></div>';
+}
+
 function branding(){
  const biz=state.data?.business||state.biz,design=state.design||{};
  const image=(src,label)=>src?'<div class="artwork-frame"><img src="'+e(src)+'" alt="'+e(label)+'"></div>':'<div class="artwork-empty">No '+e(label.toLowerCase())+' uploaded yet</div>';
@@ -701,7 +751,9 @@ function docEditor(){
  panel(1,'<div class="eyebrow">STEP 1 OF 4</div><h2>What would you like to create?</h2>'+
  '<div class="form-grid">'+select('Document type','kind',options)+input('Issue date','date','date',today(),true)+
  input('Due date (optional)','dueDate','date')+
- '<label class="field">Receipt design<select name="template" aria-label="Receipt design">'+groupedTemplateOptions(state.design?.template||'signature')+'</select></label></div>'+
+ '<label class="field">Receipt design<select name="template" aria-label="Receipt design">'+groupedTemplateOptions(state.design?.template||'signature')+'</select></label></div>'+ 
+ '<div class="form-grid">'+select('Business arm','armId',state.org.arms.filter(x=>!x.archived_at).map(x=>[x.id,x.name]))+
+ select('Sale location','locationId',state.org.locations.filter(x=>!x.archived_at).map(x=>[x.id,x.name]))+'</div>'+
  '<p class="mini muted">The receipt will use this exact style. Change your business default any time in Document Studio.</p>'+
  '<div class="wizard-actions">'+forward+'</div>')+
  panel(2,'<div class="eyebrow">STEP 2 OF 4</div><h2>Who is this for?</h2>'+
@@ -765,7 +817,7 @@ function editorDialog(){
 function currentDoc(){
  const f=document.querySelector('[data-form=document]');if(!f)return null;
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
- return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
+ return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),armId:val(f,'armId'),locationId:val(f,'locationId'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
 
 // The original August 19 MetaForge document structure, adapted to Bizlano's tenant-scoped,
@@ -915,7 +967,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
@@ -937,6 +989,11 @@ document.addEventListener('click',async ev=>{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;render();return}
+ if(action==='archive-arm'||action==='archive-location'){
+  if(!confirm('Archive this item? Historical documents will remain available.'))return;
+  await api('/b/'+state.biz.slug+(action==='archive-arm'?'/arms':'/locations'),{action:'archive',id:el.dataset.orgId});
+  flash('Archived.');await navigate(action==='archive-arm'?'arms':'locations');return;
+ }
  if(action==='copy-recovery'){await copyShareText(recoveryHref());return}
  if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}
@@ -1076,6 +1133,9 @@ document.addEventListener('submit',async ev=>{
   const t='/b/'+state.biz.slug;
   if(kind==='customer')await api(t+'/customers',{name:val(form,'name'),phone:val(form,'phone'),email:val(form,'email'),address:val(form,'address')});
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
+  if(kind==='arm'){await api(t+'/arms',{name:val(form,'name'),slug:val(form,'slug'),prefix:val(form,'prefix'),phone:val(form,'phone'),footer:val(form,'footer')});flash('Business arm added.');await navigate('arms');return}
+  if(kind==='location'){await api(t+'/locations',{name:val(form,'name'),code:val(form,'code'),type:val(form,'type'),address:val(form,'address')});flash('Location added.');await navigate('locations');return}
+  if(kind==='stock-transfer'){const fromLocationId=val(form,'fromLocationId'),toLocationId=val(form,'toLocationId');if(fromLocationId===toLocationId)throw Error('Choose two different locations');await api(t+'/stock-transfer',{productId:val(form,'productId'),fromLocationId,toLocationId,quantity:Number(val(form,'quantity')),reason:val(form,'reason')});flash('Stock transferred.');await navigate('locationStock');return}
   if(kind==='expense')await api(t+'/expenses',{description:val(form,'description'),category:val(form,'category'),amount:Number(val(form,'amount')),date:val(form,'date')});
   if(kind==='target')await api(t+'/targets',{month:val(form,'month'),amount:Number(val(form,'amount'))});
   if(kind==='legacy-file'){
