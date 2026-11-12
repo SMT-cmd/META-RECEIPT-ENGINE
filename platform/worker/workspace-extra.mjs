@@ -151,3 +151,13 @@ export async function assertDocumentOrgScope(env,user,t,armId,locationId){
  }
  return {armId:arm,locationId:location,documentPrefix:a.document_prefix};
 }
+
+export async function assertDocumentReadScope(env,user,t,armId,locationId){
+ if(['owner','admin'].includes(t.role))return;
+ const [arms,places]=await Promise.all([
+  env.DB.prepare('SELECT count(*) n FROM staff_arm_scopes WHERE tenant_id=? AND user_id=?').bind(t.id,user.id).first(),
+  env.DB.prepare('SELECT count(*) n FROM staff_location_scopes WHERE tenant_id=? AND user_id=?').bind(t.id,user.id).first()
+ ]);
+ if(arms?.n&&!await env.DB.prepare('SELECT 1 ok FROM staff_arm_scopes WHERE tenant_id=? AND user_id=? AND arm_id=?').bind(t.id,user.id,armId||t.id).first())fail(403,'Document belongs to another business arm');
+ if(places?.n&&!await env.DB.prepare('SELECT 1 ok FROM staff_location_scopes WHERE tenant_id=? AND user_id=? AND location_id=?').bind(t.id,user.id,locationId||t.id).first())fail(403,'Document belongs to another location');
+}

@@ -419,6 +419,7 @@ async function api(req,env,url) {
   const tenant=await member(env,user,detail[1]);
   const d=await env.DB.prepare('SELECT * FROM documents WHERE tenant_id=? AND id=?').bind(tenant.id,detail[2]).first();
   if(!d)fail(404,'Document not found in this business');
+  await assertDocumentReadScope(env,user,tenant,d.arm_id,d.location_id);
   const items=await env.DB.prepare('SELECT product_id,description,quantity_milli,unit_price_minor,line_total_minor FROM document_lines WHERE tenant_id=? AND document_id=? ORDER BY rowid').bind(tenant.id,detail[2]).all();
   const code=await ensureRecoveryCode(env,tenant.id,d.id,d.paid_minor>0&&billable.has(d.kind)&&d.status!=='voided');
   return json({document:{...d,recoveryCode:code,customer:d.recipient_name,date:d.issued_on,received:d.paid_minor/100,
@@ -589,7 +590,7 @@ async function api(req,env,url) {
   }
  }
  if(resource==='documents'){
-  if(method==='GET'){const r=await env.DB.prepare('SELECT id,document_number,kind,recipient_name,recipient_email,recipient_phone,issued_on,due_on,total_minor,paid_minor,status,currency,template,notes,arm_id,location_id FROM documents WHERE tenant_id=? ORDER BY created_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
+  if(method==='GET'){const r=await env.DB.prepare("SELECT d.id,d.document_number,d.kind,d.recipient_name,d.recipient_email,d.recipient_phone,d.issued_on,d.due_on,d.total_minor,d.paid_minor,d.status,d.currency,d.template,d.notes,d.arm_id,d.location_id FROM documents d WHERE d.tenant_id=? AND (?=1 OR ((NOT EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=?) OR EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=? AND s.location_id=COALESCE(d.location_id,d.tenant_id))) AND (NOT EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=?) OR EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=? AND a.arm_id=COALESCE(d.arm_id,d.tenant_id))))) ORDER BY d.created_at DESC LIMIT 150").bind(tenant,['owner','admin'].includes(t.role)?1:0,user.id,user.id,user.id,user.id).all();return json({rows:r.results})}
   if(method==='POST'){
    await member(env,user,slug,'edit');
    const b=await input(req),kind=field(b.kind,'document type',60),items=b.items;
@@ -628,13 +629,14 @@ async function api(req,env,url) {
   }
  }
  if(resource==='payments'){
-  if(method==='GET'){const r=await env.DB.prepare('SELECT p.id,p.amount_minor,p.method,p.received_at,d.document_number FROM payments p JOIN documents d ON d.id=p.document_id AND d.tenant_id=p.tenant_id WHERE p.tenant_id=? ORDER BY p.received_at DESC LIMIT 150').bind(tenant).all();return json({rows:r.results})}
+  if(method==='GET'){const r=await env.DB.prepare("SELECT p.id,p.amount_minor,p.method,p.received_at,d.document_number FROM payments p JOIN documents d ON d.id=p.document_id AND d.tenant_id=p.tenant_id WHERE p.tenant_id=? AND (?=1 OR ((NOT EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=?) OR EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=? AND s.location_id=COALESCE(d.location_id,d.tenant_id))) AND (NOT EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=?) OR EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=? AND a.arm_id=COALESCE(d.arm_id,d.tenant_id))))) ORDER BY p.received_at DESC LIMIT 150").bind(tenant,['owner','admin'].includes(t.role)?1:0,user.id,user.id,user.id,user.id).all();return json({rows:r.results})}
   if(method==='POST'){
    await member(env,user,slug,'edit');
    const b=await input(req),did=field(b.documentId,'document ID',80),amount=cents(b.amount);
    if(amount<=0)fail(400,'Amount must be positive');
-   const d=await env.DB.prepare('SELECT kind FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
-   if(!d||!billable.has(d.kind))fail(404,'Billable document not found');cashier(t,d.kind);
+   const d=await env.DB.prepare('SELECT kind,arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
+   if(!d||!billable.has(d.kind))fail(404,'Billable document not found');
+   await assertDocumentReadScope(env,user,t,d.arm_id,d.location_id);cashier(t,d.kind);
    try{await env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,amount,String(b.method||'Cash').slice(0,60),user.id).run()}catch(e){if(String(e).includes('Payment exceeds'))fail(409,'Payment exceeds outstanding balance');throw e}
    return json({ok:true},201);
   }
@@ -642,14 +644,16 @@ async function api(req,env,url) {
  if(resource==='issue'&&method==='POST'){
   await member(env,user,slug,'edit');
   const b=await input(req),did=field(b.documentId,'document ID',80);
-  const d=await env.DB.prepare('SELECT kind,status FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
-  if(!d||d.status!=='draft')fail(404,'Draft not found');cashier(t,d.kind);
+  const d=await env.DB.prepare('SELECT kind,status,arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
+  if(!d||d.status!=='draft')fail(404,'Draft not found');await assertDocumentReadScope(env,user,t,d.arm_id,d.location_id);cashier(t,d.kind);
   if(receiptTypes.has(d.kind))fail(400,'Issue paid receipts through new sale flow');
   await env.DB.prepare("UPDATE documents SET status='issued',updated_at=datetime('now') WHERE tenant_id=? AND id=? AND status='draft'").bind(tenant,did).run();
   return json({ok:true});
  }
  if(resource==='void'&&method==='POST'){
   const did=field((await input(req)).documentId,'document ID',80);
+  const selected=await env.DB.prepare('SELECT arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(tenant,did).first();
+  if(!selected)fail(404,'Document not found');await assertDocumentReadScope(env,user,t,selected.arm_id,selected.location_id);
   const r=await env.DB.prepare("UPDATE documents SET status='voided',updated_at=datetime('now') WHERE tenant_id=? AND id=? AND status IN ('draft','issued') AND paid_minor=0").bind(tenant,did).run();
   if(!r.meta?.changes)fail(409,'Cannot void a paid or previously voided document');
   return json({ok:true});
