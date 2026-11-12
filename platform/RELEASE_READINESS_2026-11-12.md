@@ -38,3 +38,15 @@
 - Preserve all existing D1 tenants, sessions, MetaForge legacy links and receipt recovery, and never share private R2 backup contents.
 - Do not substitute a browser redirect for verified Paystack payment settlement.
 - This document distinguishes source-level/database/public-website completion from the still-unverified authenticated/live financial acceptance tests. Engineering deployments are complete; release acceptance is **not**.
+
+## Mobile PWA and mail configuration — latest release update
+- Bizlano is installable from the existing public `https://bizlano.pages.dev` host using a `standalone` Web App Manifest, app shortcuts, real 192px and 512px image icons, dedicated maskable icon, service worker, offline fallback page, and an explicit mobile/desktop installation prompt.
+- The Worker serves `/manifest.webmanifest`, `/sw.js`, `/pwa.js`, `/offline`, and three icon paths; all were verified live or by Cloudflare PNG signature/dimension checks.
+- The service worker caches only explicitly named static shell assets, excludes `/api/`, `/media/`, tenant and business routes, and refuses URL query strings; it does **not** cache customer records, authentication API responses or offline payment actions.
+- New source commit: `e0b2bfc0123feae0bfa8dd84b2ba02fa71e7888d` and its Cloudflare Worker deployment.
+- Transactional email domain `notify.globalwebstores.com` was added to the connected Resend account; DKIM, SPF/MX and tracking CNAME were added to the existing DNS zone and verification reached `verified`.
+- A domain-restricted **sending-only** Resend credential was created and saved to the Bizlano Worker as `RESEND_API_KEY` and `BIZLANO_RESEND_API_KEY`. The sender is `noreply@notify.globalwebstores.com`. No API key material belongs in this document.
+- The Worker also holds `RESEND_FROM_EMAIL` and `BIZLANO_BILLING_FROM`, alongside its unchanged DB, ASSETS and receipt-recovery secret bindings. Sender setup is complete, but delivery and account-verification flow have not yet been exercised end-to-end.
+- The owner's Vercel `globalwebstores` project has `PAYSTACK_SECRET_KEY` and `PAYSTACK_PUBLIC_KEY` variables for Production/Preview, but the connector returns **redacted sensitive values**. No Paystack key has been copied to Bizlano or printed. Configure a separately scoped Paystack secret directly in the Bizlano Cloudflare Worker or via a provider-authorized secrets integration; then test independently.
+- Paid plans remain disabled in code (`BILLING_LIVE = false`). There has been **no live charge** and no claiming of Paystack acceptance.
+- The mobile install routes are deployed, but platform-specific Android/iOS installation, offline resumption, and full authenticated document flows still require real-device acceptance.
