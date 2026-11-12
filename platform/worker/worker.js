@@ -73,6 +73,10 @@ async function member(env,user,slug,perm='view'){
  const t=await env.DB.prepare("SELECT t.id,t.slug,t.business_name,t.currency,t.logo_url,t.brand_color,m.role FROM tenants t JOIN memberships m ON m.tenant_id=t.id WHERE t.slug=? AND m.user_id=? AND m.disabled_at IS NULL AND t.disabled_at IS NULL").bind(slug,user.id).first();
  if(!t)fail(403,'You do not belong to this business');
  if(!access[perm].includes(t.role))fail(403,'Your role does not permit that action');
+ if(billingEnabled(env)){
+  await env.DB.prepare("INSERT INTO tenant_entitlements(tenant_id,plan_id,transactions_per_month,saved_design_profiles,staff_limit,arm_limit,location_limit,enabled) VALUES(?,'free',30,1,1,1,1,1) ON CONFLICT(tenant_id) DO NOTHING").bind(t.id).run();
+  await env.DB.prepare("UPDATE tenant_entitlements SET enabled=1,updated_at=datetime('now') WHERE tenant_id=? AND plan_id='free' AND enabled=0").bind(t.id).run();
+ }
  return t;
 }
 const cashier=(t,kind)=>{if(t.role==='cashier'&&!receiptTypes.has(kind))fail(403,'Cashier may only issue receipts')};
@@ -354,7 +358,7 @@ async function api(req,env,url) {
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
  if(user.email.endsWith('@accounts.bizlano.invalid')&&!path.startsWith('/api/customer/'))fail(403,'Customer-only accounts cannot access business management');
- const billingAction=path.match(/^\/api\/b\/([a-z0-9-]+)\/billing\/(status|quote|checkout|verify|cancel)$/);
+ const billingAction=path.match(/^\/api\/b\/([a-z0-9-]+)\/billing\/(status|quote|checkout|verify|cancel|abandon)$/);
  if(billingAction){const t=await member(env,user,billingAction[1],'owner');return billingAccountAPI(req,env,url,user,t,billingAction[2]);}
  if(path==='/api/customer/me'&&method==='GET'){const phoneOnly=user.email.endsWith('@accounts.bizlano.invalid');return json({email:phoneOnly?null:user.email,name:user.display_name,phone:user.contact_phone||null,verified:!phoneOnly,phoneOnly});}
  if(path==='/api/customer/profile'&&method==='POST'){

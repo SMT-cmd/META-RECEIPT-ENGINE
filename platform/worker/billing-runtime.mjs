@@ -94,7 +94,12 @@ async function settleBillingPayment(env,reference,eventId){
   env.DB.prepare("INSERT INTO billing_audit_events(id,tenant_id,actor_user_id,action,entity_type,entity_id) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),invoice.tenant_id,invoice.purchaser_user_id,'subscription.activated','subscription',id),
   ...(notify?[env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),invoice.tenant_id,'paid:'+invoice.id,'billing_confirmation',email,JSON.stringify({subject:'Bizlano plan activated',text:receiptText}))]:[])
  ];
- await env.DB.batch(batch);
+ try{await env.DB.batch(batch)}
+ catch(err){
+  const already=await env.DB.prepare('SELECT state FROM subscription_invoices WHERE id=?').bind(invoice.id).first();
+  if(already?.state==='paid')return {ok:true,alreadyProcessed:true};
+  throw err;
+ }
  return {ok:true,plan:p.id,endsAt:end};
 }
 export async function billingAccountAPI(req,env,url,user,t,action){
@@ -107,6 +112,17 @@ export async function billingAccountAPI(req,env,url,user,t,action){
  if(action==='quote'&&req.method==='POST'){
   const b=await input(req);
   return json({...(await billingQuote(env,t.id,String(b.plan||''),String(b.term||''))),paymentsEnabled:billingEnabled(env)});
+ }
+ if(action==='abandon'&&req.method==='POST'){
+  if(!billingEnabled(env))fail(503,'Paid plans have not launched');
+  const pending=await env.DB.prepare("SELECT id,payment_reference,issued_at FROM subscription_invoices WHERE tenant_id=? AND state='pending' ORDER BY issued_at DESC LIMIT 1").bind(t.id).first();
+  if(!pending)fail(404,'No unfinished subscription payment');
+  if(Date.now()-Date.parse(pending.issued_at.replace(' ','T')+'Z')<30*60*1000)fail(409,'Please allow 30 minutes for provider confirmation');
+  const data=await paystackCall(env,'GET','/transaction/verify/'+encodeURIComponent(pending.payment_reference));
+  if(data.status==='success')return json(await settleBillingPayment(env,pending.payment_reference,'manual-'+pending.payment_reference));
+  if(!['failed','abandoned','reversed'].includes(data.status))fail(409,'Payment provider has not confirmed the payment is closed');
+  await env.DB.prepare("UPDATE subscription_invoices SET state='failed' WHERE tenant_id=? AND id=? AND state='pending'").bind(t.id,pending.id).run();
+  return json({ok:true,mayRetry:true});
  }
  if(action==='cancel'&&req.method==='POST'){
   const active=await env.DB.prepare("SELECT id FROM subscriptions WHERE tenant_id=? AND status IN('active','grace')").bind(t.id).first();
@@ -128,7 +144,11 @@ export async function billingAccountAPI(req,env,url,user,t,action){
    env.DB.prepare("INSERT OR IGNORE INTO price_versions(id,plan_id,term,amount_minor,discount_rule,effective_at) VALUES(?,?,?,?,?,datetime('now'))").bind(payVersion,plan,term,q.amountMinor,q.discount),
    env.DB.prepare("INSERT INTO subscription_invoices(id,tenant_id,amount_minor,currency,payment_reference,state,plan_id,term,price_version_id,purchaser_user_id) VALUES(?,?,?,?,?,'pending',?,?,?,?)").bind(id,t.id,q.amountMinor,'NGN',reference,plan,term,payVersion,user.id)
   ]);
-  const target=new URL('/app?biz='+encodeURIComponent(t.slug)+'&billing=verify',url.origin);
+  const configuredOrigin=String(env.BIZLANO_PUBLIC_ORIGIN||'https://bizlano.pages.dev');
+  let callbackOrigin;
+  try{const parsed=new URL(configuredOrigin);if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)throw Error('Bad URL');callbackOrigin=parsed.origin}
+  catch{fail(503,'Bizlano public payment callback is not configured correctly')}
+  const target=new URL('/app?biz='+encodeURIComponent(t.slug)+'&billing=verify',callbackOrigin);
   try{
    const r=await paystackCall(env,'POST','/transaction/initialize',{
     email:user.email,amount:String(q.amountMinor),currency:'NGN',reference,callback_url:target.toString(),
@@ -176,6 +196,8 @@ export async function runBillingCron(env){
   }
  }
  if(live){
+ await env.DB.prepare("INSERT INTO tenant_entitlements(tenant_id,plan_id,transactions_per_month,saved_design_profiles,staff_limit,arm_limit,location_limit,enabled) SELECT id,'free',30,1,1,1,1,1 FROM tenants WHERE disabled_at IS NULL ON CONFLICT(tenant_id) DO NOTHING").run();
+ await env.DB.prepare("UPDATE tenant_entitlements SET enabled=1,updated_at=datetime('now') WHERE enabled=0 AND plan_id='free'").run();
  const expired=await env.DB.prepare("SELECT s.id,s.tenant_id,s.plan_id,s.current_period_end,u.email,t.business_name FROM subscriptions s JOIN billing_accounts ba ON ba.tenant_id=s.tenant_id JOIN users u ON u.id=ba.billing_contact_user_id JOIN tenants t ON t.id=s.tenant_id WHERE s.status IN('active','grace') AND datetime(s.current_period_end)<=datetime('now') LIMIT 100").all();
  for(const row of expired.results||[]){
   await env.DB.batch([
