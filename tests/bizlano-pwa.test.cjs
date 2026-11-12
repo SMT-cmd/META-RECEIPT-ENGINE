@@ -11,7 +11,7 @@ test('service worker leaves business pages, scripts, APIs and receipt data uncac
  assert.ok(sw.includes("u.pathname.startsWith('/api/')"));
  assert.ok(sw.includes("req.mode==='navigate'"));
  assert.ok(sw.includes("fetch(req,{cache:'no-store'})"));
- assert.ok(!sw.includes("'/app'"));assert.ok(!sw.includes("'/client.js'"));
+ assert.ok(!sw.includes("'/app'"));assert.ok(sw.includes("u.pathname==='/client.js')return;"));
  assert.ok(!sw.includes('cache.put(request'));
 });
 test('all public shells load shared PWA installer and manifest',()=>{

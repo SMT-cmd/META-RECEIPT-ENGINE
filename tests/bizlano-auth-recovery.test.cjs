@@ -14,6 +14,6 @@ test('failure of full app gives independent working auth UI within 5.5 seconds',
  const h=read('index.html');assert.ok(h.includes('root.replaceChildren(p)'));assert.ok(h.includes('5500'));assert.ok(h.includes('form.addEventListener(\'submit\''));
 });
 test('service worker never caches login, workspace HTML or JS',()=>{
- const sw=read('sw.js');assert.ok(sw.includes("if(req.mode==='navigate')"));assert.ok(sw.includes("fetch(req,{cache:'no-store'})"));assert.ok(!sw.includes("'/client.js'"));
+ const sw=read('sw.js');assert.ok(sw.includes("if(req.mode==='navigate')"));assert.ok(sw.includes("fetch(req,{cache:'no-store'})"));assert.ok(sw.includes("u.pathname==='/client.js')return;"));
  assert.ok(!sw.includes("'/app'"));
 });
