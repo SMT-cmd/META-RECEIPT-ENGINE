@@ -1,28 +1,40 @@
-# Bizlano source implementation and release handoff — 12 November 2026
+# Bizlano production reconciliation & release acceptance — 12 November 2026
 
-Status: committed to main. NOT YET DEPLOYED to the live Cloudflare Worker or production D1. Subscription charging remains disabled.
+## Status — deployed, payment charging disabled
+- **Production Cloudflare Worker:** `bizlano`, on the account dedicated to Bizlano. Current repository source includes scoped business arms, physical locations, purchasing, inventory transfers, saved document designs, printable payment confirmations, proposed subscriptions, email notifications, and Paystack verification/refund code.
+- **Public domain:** https://bizlano.pages.dev, backed by the separate Cloudflare Pages `bizlano` gateway and the Bizlano Worker. GWS infrastructure was not changed.
+- **Production D1:** `bizlano-db` — additive migrations 0020 through 0026 applied, including `billing_refunds`.
+- **Legacy state:** One tenant and one user remain, one newly seeded primary business arm and one main location; zero issued sales documents, recorded merchant payments, paid subscriptions, or refund records. Historical migration links and 13 preexisting sessions were preserved.
+- **Cloudflare Worker bindings retained:** DB, ASSETS and RECEIPT_RECOVERY_KEY. Existing Bizlano resources and original authentication/recovery were not deleted or reset.
+- **Scheduler:** Cloudflare Worker cron `0 8 * * *` (UTC). The notification run is no-op without billing activation or explicit campaign approval.
+- **Payment safety:** `BILLING_LIVE = false` in `platform/worker/subscription.mjs`. Neither TEST nor LIVE subscription checkout is active. No financial action or announcement was triggered.
 
-## Implemented in repository
-- Multi-tenant businesses and business arms, with independent names, document prefixes, footers and saved design profiles.
-- Physical locations: shops, offices, service bases and warehouses, stock by location, safe transfers and staff location scopes.
-- Supplier directory, multi-line draft purchase orders, stock receiving exactly once, cancellation and stock updates without extra customer sales.
-- Quote/estimate/proforma-to-invoice lineage, invoice payments and printable immutable payment confirmations; one economic sale counted once.
-- Issued-document immutable appearance snapshots and all 71 template previews, with per-plan saved-profile infrastructure.
-- Owner billing page, five proposed subscription tiers, dormant server-enforced entitlements, GWS discount lookup, prepaid Paystack payment handlers and verification, scheduled expiry and email outbox.
+## Recovery points — private, not public URLs
+- Cloudflare D1 Time Travel bookmark captured before changes: `0000003b-00000000-00005121-a0e1769ccec1d6dd602465121c7cc17d`.
+- Private R2 snapshot: `private-backups/d1/bizlano-production-pre-reconciliation-2026-11-12.json` (schema and data for 36 preexisting application tables; backup contains sensitive account/session records, never publish its contents). D1 Time Travel is the recovery option for an entire database rollback.
+- Original live Worker saved privately to `private-backups/workers/bizlano-live-before-reconciliation-2026-11-12.js`; preceding live version was `7da18eed-9ce1-415b-8306-1bb05f6aa8a5`.
+- Public Pages proxy was deployed with verified Origin-only POST protection and signed GWS/Paystack webhook exceptions; production Pages deployment `e196f813-3a71-440b-953f-a9e95f591aec` finished successfully.
 
-## Executed verification
-- All 18 ordered D1 SQL migrations through 0025_procurement.sql succeeded in disposable Cloudflare D1 databases; temporary databases deleted after testing.
-- Stock transfer, location-specific invoice deduction, paid-document reversal, supplier receiving, duplicate receiving and stock ledger checks passed.
-- Unique transaction ID usage, optional active plan quota checks, excess-location limits, immutable proof receipts and immutable document styling checks passed.
-- Full self-contained 559,626-character Worker JS (including modules) plus dashboard and customer JS passed JS syntax compilation. This is not a full functional browser test or a production deployment.
+## Completed engineering verification
+- All 19 ordered migrations, 0001–0026, passed on disposable Cloudflare D1. Six new migrations 0020–0025 plus 0026 were subsequently applied successfully to production.
+- On disposable D1: business onboarding auto-created main arm/location; stock transfers preserved total stock; a branch invoice reduced only that location's stock; payment confirmation did not produce another sale or double-deduct stock; duplicate payment proof, over-transfer, and issued-style mutation were rejected; supplier purchase receiving, usage deduplication and dormant entitlement constraints passed.
+- Paystack refund journal migration passed reference uniqueness, amount immutability, and delete-prohibition tests.
+- Complete bundled Worker, HTML clients, billing and purchasing modules passed JavaScript syntax evaluation before deployment.
+- Production postdeploy public routes `/`, `/app`, `/receipts`, `/api/health` all rendered via both Pages gateway and the Worker. `/api/health` returned D1/R2 healthy; anonymous private `/api/me` and `/api/b/nonexistent/billing` returned 401.
+- TinyFish read-only desktop browser checked homepage, footer navigation, `/app` login field/button visibility and links to `/receipts`, and reported no visual errors. Dedicated 390px mobile width was not executed.
+- Temporary QA databases were deleted. No test accounts, products, invoices, or payments were inserted into production.
 
-## Open acceptance gates (not complete)
-1. Compare production Worker with GitHub build, preserve production Firebase/native authentication and existing MetaForge receipt recovery before updating Worker.
-2. Take a production D1 backup, apply additive migrations in sequence, test on the dedicated Bizlano account, and provide recovery instructions.
-3. Run full local Node test suite, authentication/roles/tenant boundaries, all document styles and mobile/POS printer user journeys.
-4. Validate the separate GWS order feed and VERIFIED ACTIVE PAID vendor discount with the GWS integration owner. Pairing alone does not qualify.
-5. Test Paystack in TEST mode end to end (duplicate/out-of-order webhooks, declined payments, cancellations, refunds, plan renewal/expiry) before approval.
-6. Verify verified-domain emails, sender authorization, provider quotas, cron delivery, mail retries and bounced-mail behavior.
-7. Approve plan prices and allowances; run owner live acceptance. Paid subscriptions target 1 February 2027 ONLY if release gates are met.
+## External configuration and owner acceptance still required
+1. **Email:** Bizlano's Worker currently has no RESEND_API_KEY or RESEND_FROM_EMAIL. To send account verification and password reset emails, configure a verified sender and Resend API key in the Bizlano Cloudflare account. Do not reuse another business's verified email domain without approval. Test registration, verification, reset and email deliverability. The Resend free tier may be used subject to its limits.
+2. **Paystack TEST:** Missing BIZLANO_PAYSTACK_SECRET_KEY, BIZLANO_PAYMENT_MODE, and optional BIZLANO_PAYSTACK_WEBHOOK_SECRET; configure only under controlled TEST acceptance. Payment return URL defaults to `https://bizlano.pages.dev` or a validated BIZLANO_PUBLIC_ORIGIN. Exercise successful, failed, duplicated and out-of-order notifications, partial and full refunds, lapse/renewal, tier usage and credit/discount arithmetic. The production `BILLING_LIVE` gate must remain OFF until acceptance, and production LIVE payments are not needed for engineering QA.
+3. **Global Webstores integration:** Existing GWS bridge and order feed preserved. Final signed delivery and active paid-vendor eligibility require the separate GWS integration owner to configure/verify the shared secret and actual paid vendor evidence.
+4. **Browser and printer acceptance:** An authenticated owner/staff/buyer walkthrough, business arms, outlets, stock receipt and transfers, quote → invoice → payment proof, customer receipt recovery, all 71 design previews, narrow mobile screen, 58/80 mm POS printing and real PDF export should be checked using the owner's login and devices. The desktop smoke test did not exercise login or submit transactional forms.
+5. **Email reminder opt-in:** BIZLANO_BILLING_FROM/BIZLANO_RESEND_API_KEY and sender verification are required for subscription notifications; BIZLANO_ANNOUNCEMENT_APPROVED must remain unset until campaign approval. Confirm bounces/retries before customer mailing.
+6. **Price approval:** Free / Lite / Standard / Business / Business Max prices and limits are still proposals for optional 1 February 2027 rollout. No charges or restrictions before a separately approved release.
 
-Billing release is a two-factor authorization: hard-coded BILLING_LIVE=false plus environment BIZLANO_BILLING_APPROVED='yes'; no one should flip them without live TEST acceptance. Free records must remain readable after cancellation or expiry. One working branch (main), free-first tools and no GitHub Actions.
+## Source and deployment rules
+- Keep changes on existing GitHub `main`; no GitHub Actions or paid build runners.
+- Build with `cd platform/worker && node build.mjs` before deploying. Cloudflare Pages is a separate proxy and needs its own deployment for gateway changes.
+- Preserve all existing D1 tenants, sessions, MetaForge legacy links and receipt recovery, and never share private R2 backup contents.
+- Do not substitute a browser redirect for verified Paystack payment settlement.
+- This document distinguishes source-level/database/public-website completion from the still-unverified authenticated/live financial acceptance tests. Engineering deployments are complete; release acceptance is **not**.
