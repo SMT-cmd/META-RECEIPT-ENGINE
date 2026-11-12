@@ -21,7 +21,8 @@ async function ensureLegacyReader(){
  if(typeof auth.authStateReady==='function')await auth.authStateReady();
 }
 const app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null,pendingConversion:null};
+const installed=()=>window.matchMedia('(display-mode:standalone)').matches||navigator.standalone===true;
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':new URL(location.href).searchParams.get('mode')==='forgot'?'forgot':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null,pendingConversion:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -130,12 +131,12 @@ function loginScreen(){
  const title=reset?'Create a new password':legacy?'Set up your Bizlano password':pending?'Check your email':logged?'Your secure workspace':state.authMode==='register'?'Register for free':state.authMode==='forgot'?'Reset password':'Welcome back';
  let body='';
  if(legacy)body='<p class="muted">Your existing MetaForge account and business data are safe. Set a Bizlano password using a private link sent to your registered email. No new account is needed.</p><div class="stack"><button class="btn primary" data-action="claim-legacy">Email my setup link</button><button class="btn" data-action="logout">Use another account</button></div><p class="mini muted" style="margin-top:12px">This link expires in 20 minutes.</p>';
- else if(reset)body='<p class="muted">Choose a new password of at least 10 characters.</p><form data-form="reset" class="stack">'+input('New password','password','password','',true,'minlength="10" autocomplete="new-password"')+'<button class="btn primary" type="submit">Update password</button></form>';
+ else if(reset)body='<p class="muted">Choose a new password of at least 10 characters.</p><form data-form="reset" class="stack">'+input('New password','password','password','',true,'minlength="10" autocomplete="new-password"')+'<button class="btn primary" type="submit">Update password and continue</button></form><button class="btn" type="button" data-action="back-to-login" style="margin-top:13px">Already updated? Sign in</button>';
  else if(pending)body='<p class="muted">We sent a verification link to <strong>'+e(state.pendingEmail)+'</strong>. Open it to activate your Bizlano account.</p><div class="stack"><button class="btn primary" data-action="resend">Resend verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>';
  else if(logged)body='<p class="muted">'+e(state.connectError||'Connecting your business workspace securely.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>';
  else if(state.authMode==='forgot')body='<p class="muted">Enter your email and we will send a secure reset link if you have an account.</p><form data-form="forgot" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+'<button class="btn primary" type="submit">Email reset link</button></form><button class="btn" data-action="toggle-auth" style="margin-top:13px">Back to sign in</button>';
  else body='<p class="muted">'+(state.authMode==='register'?'Create your Bizlano workspace with an email you can verify.':'Sign in with your Bizlano email and password.')+'</p><form data-form="auth" class="stack">'+(state.authMode==='register'?input('Full name','name','text','',true,'maxlength="120" autocomplete="name"'):'')+input('Email address','email','email','',true,'autocomplete="email"')+input('Password','password','password','',true,'minlength="'+(state.authMode==='register'?'10':'6')+'" autocomplete="'+(state.authMode==='register'?'new-password':'current-password')+'"')+'<button class="btn primary" type="submit">'+(state.authMode==='register'?'Register for free':'Sign in')+'</button></form><div class="row" style="margin-top:15px"><button class="btn" data-action="toggle-auth">'+(state.authMode==='register'?'Already registered? Sign in':'Register for free')+'</button><button class="btn" data-action="reset">Forgot password?</button></div>';
- app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="/">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and work with your team from anywhere.</p></div><small>Your business, your team, your next chapter.</small></div><div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+title+'</h2>'+body+'<p class="mini muted">Need help with an old MetaForge account? <a href="/help">Visit Help</a>.</p><div class="auth-parent"><a class="auth-parent-mark" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" alt="Global Web Stores official logo" width="39" height="39"></a><div><strong>Powered by Global Web Stores</strong><a href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer">Explore Global Web Stores ↗</a></div></div><a class="auth-home" href="/">← Back to Bizlano homepage</a></div></div></section>';
+ app.innerHTML='<section class="auth-root"><div class="auth-art"><a class="brand" href="'+(installed()?'/app':'/')+'">'+brand()+'</a><div><p class="kicker">YOUR BUSINESS. YOUR SPACE.</p><h1>Run your business, beautifully.</h1><p>Create professional receipts and invoices, organize customers, track stock and work with your team from anywhere.</p></div><small>Your business, your team, your next chapter.</small></div><div class="auth-form-shell"><div><div class="eyebrow">WELCOME TO BIZLANO</div><h2>'+title+'</h2>'+body+'<p class="mini muted">Need help with an old MetaForge account? <a href="/help">Visit Help</a>.</p><div class="auth-parent"><a class="auth-parent-mark" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" alt="Global Web Stores official logo" width="39" height="39"></a><div><strong>Powered by Global Web Stores</strong><a href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer">Explore Global Web Stores ↗</a></div></div>'+(installed()?'':'<a class="auth-home" href="/">← Back to Bizlano homepage</a>')+'</div></div></section>';
 }
 function businessPicker(){
  const businesses=state.me?.businesses||[];
@@ -1148,7 +1149,7 @@ document.addEventListener('click',async ev=>{
  try{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;state.billingQuote=null;await navigate('overview');return}
- if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;render();return}
+ if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;history.replaceState(null,'','/app?mode='+state.authMode);loginScreen();return}
  if(el.dataset.editProfile){
   const p=state.data?.rows?.find(x=>x.id===el.dataset.editProfile);const form=document.querySelector('[data-form=design-profile]');if(!p||!form)throw Error('Saved design no longer available');
   for(const [k,v] of Object.entries({id:p.id,name:p.name,template:p.template,accent:p.accent,secondary:p.secondary_color,font:p.font_family,header:p.header_note,footer:p.footer_note})){const field=form.elements.namedItem(k);if(field)field.value=v||''}
@@ -1195,7 +1196,7 @@ document.addEventListener('click',async ev=>{
  if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
- if(action==='logout'){await api('/logout',{});if(oldDb&&auth.currentUser&&legacySignOut)await legacySignOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;render();return}
+ if(action==='logout'){await api('/logout',{});if(oldDb&&auth.currentUser&&legacySignOut)await legacySignOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;state.resetToken=null;state.authMode='login';state.connectError='';history.replaceState(null,'','/app?mode=login');loginScreen();return}
  if(action==='claim-legacy'){
   if(!state.pendingEmail)throw Error('Account email is missing. Please use password recovery.');
   await api('/account/reset-request',{email:state.pendingEmail});
@@ -1205,7 +1206,8 @@ document.addEventListener('click',async ev=>{
  if(action==='resend'){await api('/account/resend',{email:state.pendingEmail});flash('If your account needs verification, a new email will arrive.');return}
  if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=state.user.emailVerified?null:state.user.email;await attach();return}
- if(action==='reset'){state.authMode='forgot';render();return}
+ if(action==='reset'){state.resetToken=null;state.authMode='forgot';history.replaceState(null,'','/app?mode=forgot');loginScreen();return}
+ if(action==='back-to-login'){state.resetToken=null;state.user=null;state.pendingEmail=null;state.authMode='login';history.replaceState(null,'','/app?mode=login');loginScreen();return}
  if(el.dataset.restoreTemplate!==undefined){stageLegacyStyle(Number(el.dataset.restoreTemplate));return}
  if(action==='design-next'){if(state.designStep<4){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
  if(action==='design-back'){if(state.designStep>1){if(state.designStep!==4)captureDesignForm();state.designStep--;render();window.scrollTo(0,0);}return}
@@ -1359,7 +1361,10 @@ document.addEventListener('submit',async ev=>{
   state.authMode='login';render();flash('If this account exists, a reset link will arrive.');
  }else if(kind==='reset'){
   const result=await api('/account/reset',{token:state.resetToken,password:val(form,'password')});
-  state.resetToken=null;state.user=result.user;history.replaceState(null,'','/app');await attach();
+  state.resetToken=null;state.pendingEmail=null;state.user=result.user;state.authMode='login';state.connectError='';
+  history.replaceState(null,'','/app');
+  try{await attach();flash('Password updated. Welcome to Bizlano.')}
+  catch(error){state.me=null;state.biz=null;state.connectError='Password updated. Reconnect or sign in again.';loginScreen();flash(state.connectError,true)}
  }else if(kind==='business'){
   const name=val(form,'name');const slugValue=slug(val(form,'slug'));
   await api('/businesses',{name,slug:slugValue});state.me=await api('/me');state.biz=state.me.businesses.find(b=>b.slug===slugValue)||state.me.businesses[0];flash('Business workspace created.');await navigate('overview');
@@ -1429,6 +1434,7 @@ document.addEventListener('submit',async ev=>{
 });
 async function nativeBoot(){
  const params=new URL(location.href).searchParams;
+ if(!params.has('verify')&&!params.has('reset'))loginScreen();
  try{
   const verify=params.get('verify');
   if(verify){const result=await api('/account/verify',{token:verify});state.user=result.user;state.pendingEmail=null;history.replaceState(null,'','/app');}
