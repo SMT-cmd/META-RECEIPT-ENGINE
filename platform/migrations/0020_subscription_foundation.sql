@@ -83,3 +83,18 @@ CREATE TABLE IF NOT EXISTS billing_audit_events (
  actor_user_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_type TEXT NOT NULL,
  entity_id TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Count once atomically. Duplicate originating sale IDs never change the counter.
+CREATE TRIGGER IF NOT EXISTS trg_usage_events_increment
+AFTER INSERT ON usage_events
+BEGIN
+  INSERT INTO usage_counters(tenant_id,period_wat,used)
+  VALUES (NEW.tenant_id,NEW.period_wat,1)
+  ON CONFLICT(tenant_id,period_wat) DO UPDATE SET used=usage_counters.used+1;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_usage_events_immutable_update
+BEFORE UPDATE ON usage_events
+BEGIN SELECT RAISE(ABORT,'Usage event history is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_usage_events_immutable_delete
+BEFORE DELETE ON usage_events
+BEGIN SELECT RAISE(ABORT,'Usage event history is immutable'); END;

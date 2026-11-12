@@ -38,3 +38,12 @@ test('billing endpoint is owner-only and read-only; build bundles catalogue',()=
  assert.match(client,/v==='billing'\)return state\.biz\?\.role==='owner'/);
  assert.match(build,/read\('subscription\.mjs'\)\.replace/);
 });
+
+test('per-tenant economic usage is counted by an append-only trigger, not duplicated documents',()=>{
+ const sql=read('platform/migrations/0020_subscription_foundation.sql');
+ assert.match(sql,/PRIMARY KEY\(tenant_id,origin_transaction_id\)/);
+ assert.match(sql,/AFTER INSERT ON usage_events/);
+ assert.match(sql,/ON CONFLICT\(tenant_id,period_wat\) DO UPDATE SET used=usage_counters.used\+1/);
+ assert.match(sql,/BEFORE UPDATE ON usage_events/);
+ assert.match(sql,/BEFORE DELETE ON usage_events/);
+});
