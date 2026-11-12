@@ -51,7 +51,13 @@ async function api(path,data){
  }finally{clearTimeout(timer)}
 }
 async function attach(){
- if(!state.user?.emailVerified)return;
+ // Always render a recoverable screen for signed-in but unverified/legacy sessions.
+ if(!state.user?.emailVerified||state.user.legacyAccount){
+  state.pendingEmail=state.user?.email||state.pendingEmail;
+  state.me=null;state.biz=null;
+  loginScreen();
+  return;
+ }
  state.me=await api('/me');
  const desired=new URL(location.href).searchParams.get('biz');
  const linked=state.me.businesses.find(b=>b.slug===desired)||state.me.businesses.find(b=>b.slug===state.biz?.slug)||state.me.businesses[0];
@@ -118,10 +124,13 @@ function select(label,name,choices,selected){
 function heading(k,title,desc,actions=''){return '<div class="page-head"><div><div class="eyebrow">'+e(k)+'</div><h1>'+e(title)+'</h1><p>'+e(desc)+'</p></div>'+actions+'</div>'}
 function simpleRows(rows,fn){return rows?.length?rows.map(fn).join(''):'<div class="empty">Nothing here yet. Your records will appear as you add them.</div>'}
 function loginScreen(){
- const pending=Boolean(state.pendingEmail&&!state.user),logged=Boolean(state.user&&state.user.emailVerified),reset=Boolean(state.resetToken);
- const title=reset?'Create a new password':pending?'Check your email':logged?'Your secure workspace':state.authMode==='register'?'Register for free':state.authMode==='forgot'?'Reset password':'Welcome back';
+ const legacy=Boolean(state.user?.legacyAccount);
+ const pending=Boolean(state.pendingEmail&&(!state.user||!state.user.emailVerified));
+ const logged=Boolean(state.user&&state.user.emailVerified&&!legacy),reset=Boolean(state.resetToken);
+ const title=reset?'Create a new password':legacy?'Set up your Bizlano password':pending?'Check your email':logged?'Your secure workspace':state.authMode==='register'?'Register for free':state.authMode==='forgot'?'Reset password':'Welcome back';
  let body='';
- if(reset)body='<p class="muted">Choose a new password of at least 10 characters.</p><form data-form="reset" class="stack">'+input('New password','password','password','',true,'minlength="10" autocomplete="new-password"')+'<button class="btn primary" type="submit">Update password</button></form>';
+ if(legacy)body='<p class="muted">Your existing MetaForge account and business data are safe. Set a Bizlano password using a private link sent to your registered email. No new account is needed.</p><div class="stack"><button class="btn primary" data-action="claim-legacy">Email my setup link</button><button class="btn" data-action="logout">Use another account</button></div><p class="mini muted" style="margin-top:12px">This link expires in 20 minutes.</p>';
+ else if(reset)body='<p class="muted">Choose a new password of at least 10 characters.</p><form data-form="reset" class="stack">'+input('New password','password','password','',true,'minlength="10" autocomplete="new-password"')+'<button class="btn primary" type="submit">Update password</button></form>';
  else if(pending)body='<p class="muted">We sent a verification link to <strong>'+e(state.pendingEmail)+'</strong>. Open it to activate your Bizlano account.</p><div class="stack"><button class="btn primary" data-action="resend">Resend verification email</button><button class="btn" data-action="refresh">I have verified</button><button class="btn ghost" data-action="logout">Use another account</button></div>';
  else if(logged)body='<p class="muted">'+e(state.connectError||'Connecting your business workspace securely.')+'</p><div class="stack"><button class="btn primary" data-action="retry-connect">Retry connection</button><button class="btn" data-action="logout">Sign out</button></div>';
  else if(state.authMode==='forgot')body='<p class="muted">Enter your email and we will send a secure reset link if you have an account.</p><form data-form="forgot" class="stack">'+input('Email address','email','email','',true,'autocomplete="email"')+'<button class="btn primary" type="submit">Email reset link</button></form><button class="btn" data-action="toggle-auth" style="margin-top:13px">Back to sign in</button>';
@@ -1187,9 +1196,15 @@ document.addEventListener('click',async ev=>{
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
  if(action==='logout'){await api('/logout',{});if(oldDb&&auth.currentUser&&legacySignOut)await legacySignOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;render();return}
+ if(action==='claim-legacy'){
+  if(!state.pendingEmail)throw Error('Account email is missing. Please use password recovery.');
+  await api('/account/reset-request',{email:state.pendingEmail});
+  flash('Check your email for a Bizlano password setup link. It expires in 20 minutes.');
+  return;
+ }
  if(action==='resend'){await api('/account/resend',{email:state.pendingEmail});flash('If your account needs verification, a new email will arrive.');return}
  if(action==='retry-connect'){state.connectError='';await attach();return}
- if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=null;await attach();return}
+ if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=state.user.emailVerified?null:state.user.email;await attach();return}
  if(action==='reset'){state.authMode='forgot';render();return}
  if(el.dataset.restoreTemplate!==undefined){stageLegacyStyle(Number(el.dataset.restoreTemplate));return}
  if(action==='design-next'){if(state.designStep<4){captureDesignForm();state.designStep++;render();window.scrollTo(0,0);}return}
@@ -1331,7 +1346,12 @@ document.addEventListener('submit',async ev=>{
    await api('/account/register',{email:address,password,name:val(form,'name')});
    state.pendingEmail=address;flash('Your verification link has been sent.');loginScreen();
   }else{
-   const result=await api('/account/login',{email:address,password});
+   let result;
+   try{result=await api('/account/login',{email:address,password})}
+   catch(error){
+    if(/confirm your email/i.test(error.message||'')){state.pendingEmail=address;loginScreen();return}
+    throw error;
+   }
    state.user=result.user;state.pendingEmail=null;await attach();
   }
  }else if(kind==='forgot'){
@@ -1414,7 +1434,7 @@ async function nativeBoot(){
   if(verify){const result=await api('/account/verify',{token:verify});state.user=result.user;state.pendingEmail=null;history.replaceState(null,'','/app');}
   else if(params.get('reset')){state.resetToken=params.get('reset');loginScreen();return;}
   else {const result=await api('/account/session');state.user=result.user;}
-  if(state.user){state.connectError='';await attach();
+  if(state.user){state.connectError='';if(!state.user.emailVerified||state.user.legacyAccount){state.pendingEmail=state.user.email||null;loginScreen();return}await attach();
    const reference=params.get('reference')||params.get('trxref');
    if(state.biz&&params.get('billing')==='verify'&&reference){
     try{await api('/b/'+state.biz.slug+'/billing/verify',{reference});flash('Payment verified. Your plan has been updated.');await navigate('billing')}

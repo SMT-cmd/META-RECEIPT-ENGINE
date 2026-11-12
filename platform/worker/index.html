@@ -1853,6 +1853,69 @@ body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mo
   </div>
  </main>
 </div><div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
-<script>(function(){setTimeout(function(){var box=document.getElementById('bizlano-startup-help');if(box)box.hidden=false},7000)})();</script>
-<script type="module" src="/client.js?v=20261112-fast-auth-1"></script><script src="/pwa.js" defer></script></body>
+<script>(function(){setTimeout(function(){var box=document.getElementById('bizlano-startup-help');if(box)box.hidden=false},4200)})();</script>
+<script>
+/* Independent recovery UI. A broken, cached or blocked main bundle must never hold the spinner forever. */
+(function(){
+ const startup=document.getElementById('bizlano-startup'),root=document.getElementById('app');
+ if(!startup||!root)return;
+ const q=new URL(location.href).searchParams;
+ let mode=q.has('reset')?'reset':q.get('mode')==='register'?'register':'login';
+ let busy=false;
+ const p=document.createElement('div');p.className='bizlano-recovery-ui';
+ function linkMode(next){mode=next;draw()}
+ function field(label,name,type,attr){
+  const wrap=document.createElement('label');wrap.className='bizlano-recovery-field';
+  const title=document.createElement('span');title.textContent=label;
+  const input=document.createElement('input');input.name=name;input.type=type;input.required=true;input.autocomplete=attr||'off';
+  if(name==='password')input.minLength=mode==='login'?6:10;
+  wrap.append(title,input);return wrap;
+ }
+ function note(message,isError){const n=document.getElementById('bizlano-recovery-message');if(n){n.textContent=message;n.style.color=isError?'#a72748':'#31466e'}}
+ async function send(path,payload){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),14000);
+  try{const r=await fetch('/api'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',signal:controller.signal});
+   const body=await r.json().catch(()=>({error:'Unexpected server response'}));
+   if(!r.ok)throw new Error(body.error||'Request failed. Please try again.');return body;
+  }finally{clearTimeout(timer)}
+ }
+ function draw(){
+  if(!root.contains(p))return;
+  p.replaceChildren();
+  const image=document.createElement('img');image.src='/assets/bizlano-mark.png';image.alt='';image.width=64;image.height=64;
+  const heading=document.createElement('h1');heading.textContent=mode==='register'?'Register for free':mode==='forgot'?'Reset password':mode==='reset'?'Set a new password':'Sign in to Bizlano';
+  const desc=document.createElement('p');desc.textContent=mode==='register'?'Create your business workspace.':mode==='forgot'?'Enter your email to receive a reset link.':mode==='reset'?'Choose a new password.':'Your business, beautifully managed.';
+  const form=document.createElement('form');form.className='bizlano-recovery-form';
+  if(mode==='register')form.append(field('Full name','name','text','name'));
+  if(mode!=='reset')form.append(field('Email address','email','email','email'));
+  if(mode==='register'||mode==='login'||mode==='reset')form.append(field(mode==='reset'?'New password':'Password','password','password',mode==='login'?'current-password':'new-password'));
+  const submit=document.createElement('button');submit.type='submit';submit.textContent=mode==='register'?'Register':mode==='forgot'?'Send reset link':mode==='reset'?'Update password':'Sign in';form.append(submit);
+  const status=document.createElement('p');status.id='bizlano-recovery-message';status.setAttribute('role','status');
+  const actions=document.createElement('div');actions.className='bizlano-recovery-actions';
+  for(const [title,next] of [['Register','register'],['Sign in','login'],['Forgot password?','forgot']]){
+   if(next===mode||mode==='reset')continue;const b=document.createElement('button');b.type='button';b.textContent=title;b.addEventListener('click',()=>linkMode(next));actions.append(b);
+  }
+  form.addEventListener('submit',async event=>{
+   event.preventDefault();if(busy)return;busy=true;submit.disabled=true;
+   const data=Object.fromEntries(new FormData(form).entries());
+   note('Connecting…',false);
+   try{
+    if(mode==='register'){await send('/account/register',data);form.replaceWith(document.createTextNode('Check your email for your verification link. You can then sign in.'));note('Verification link sent.',false)}
+    else if(mode==='forgot'){await send('/account/reset-request',{email:data.email});note('If this account exists, a secure link will arrive in your inbox.',false)}
+    else if(mode==='reset'){await send('/account/reset',{token:q.get('reset'),password:data.password});location.replace('/app?auth=ready')}
+    else {const r=await send('/account/login',{email:data.email,password:data.password});if(r.user){location.replace('/app?auth=ready')}else note('Sign-in was not completed.',true)}
+   }catch(error){note(error.name==='AbortError'?'Connection timed out. Try again.':error.message||'Please try again.',true)}
+   finally{busy=false;submit.disabled=false}
+  });
+  p.append(image,heading,desc,form,status,actions);
+ }
+ const style=document.createElement('style');style.textContent='.bizlano-recovery-ui{width:min(100%,420px);margin:7vh auto;padding:28px;border:1px solid #ece7fa;border-radius:22px;background:#fff;box-shadow:0 20px 70px #2e1d6730;color:#222743;font:15px system-ui,sans-serif}.bizlano-recovery-ui img{border-radius:15px}.bizlano-recovery-ui h1{font:800 26px system-ui;margin:16px 0 9px}.bizlano-recovery-ui p{line-height:1.6;color:#606b80}.bizlano-recovery-form{display:grid;gap:15px;margin-top:22px}.bizlano-recovery-field{display:grid;gap:6px;font-weight:650;font-size:13px}.bizlano-recovery-field input{border:1px solid #cdd2df;border-radius:10px;padding:12px;font:16px system-ui;min-height:46px}.bizlano-recovery-form button{border:0;background:#6933e6;color:white;border-radius:10px;min-height:46px;font-weight:800}.bizlano-recovery-form button:disabled{opacity:.6}.bizlano-recovery-actions{display:flex;flex-wrap:wrap;gap:8px}.bizlano-recovery-actions button{background:white;border:1px solid #dde0ea;border-radius:9px;padding:9px 12px;color:#463582;font-weight:650}';
+ document.head.append(style);
+ // Only activate if the full workspace did not replace the temporary loading screen.
+ setTimeout(()=>{if(!document.getElementById('bizlano-startup'))return;
+  root.replaceChildren(p);document.title='Bizlano — Sign in or Register';draw();
+ },5500);
+})();
+</script>
+<script type="module" src="/client.js?v=20261112-legacy-auth-repair-2"></script><script src="/pwa.js" defer></script></body>
 </html>

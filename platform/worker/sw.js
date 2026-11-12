@@ -1,41 +1,24 @@
-/* Bizlano app shell: only public, non-personal assets are cached. */
-const VERSION='bizlano-app-shell-v20261112-auth-fix-2';
-const STATIC=['/','/app','/receipts','/client.js','/customer.js','/pwa.js','/manifest.webmanifest','/pwa/icon-192.png','/pwa/icon-512.png','/pwa/icon-maskable.png','/assets/bizlano-mark.png'];
-const STATIC_ROUTES=new Set(STATIC);
-const PUBLIC_PAGES=new Set(['/','/app','/receipts']);
-const safe=u=>u.origin===self.location.origin&&STATIC_ROUTES.has(u.pathname);
+const VERSION='bizlano-public-pwa-v20261112-auth-repair-3';
+const CACHED=['/offline','/pwa/icon-192.png','/pwa/icon-512.png','/pwa/icon-maskable.png','/assets/bizlano-mark.png'];
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{const cache=await caches.open(VERSION);
-   await Promise.allSettled(STATIC.map(async path=>{const response=await fetch(path,{cache:'no-cache',credentials:'omit'});if(response.ok)await cache.put(path,response)}));
-   await self.skipWaiting();
+  await Promise.allSettled(CACHED.map(async path=>{const r=await fetch(path,{cache:'reload',credentials:'omit'});if(r.ok)await cache.put(path,r)}));
+  await self.skipWaiting();
  })());
 });
 self.addEventListener('activate',event=>{
- event.waitUntil((async()=>{for(const name of await caches.keys())if(name.startsWith('bizlano-app-shell-')&&name!==VERSION)await caches.delete(name);await self.clients.claim()})());
+ event.waitUntil((async()=>{for(const name of await caches.keys())if(name.startsWith('bizlano-'))await (name===VERSION?Promise.resolve():caches.delete(name));await self.clients.claim()})());
 });
 self.addEventListener('fetch',event=>{
- const request=event.request;if(request.method!=='GET')return;
- const u=new URL(request.url);
- if(u.origin!==self.location.origin||u.pathname.startsWith('/api/')||u.pathname.startsWith('/media/')||u.pathname.startsWith('/s/')||u.pathname.startsWith('/go/'))return;
- if(!safe(u))return;
- if(request.mode==='navigate'&&PUBLIC_PAGES.has(u.pathname)){
-  event.respondWith((async()=>{try{const response=await fetch(request);
-      // Never retain URL parameters (including verification and recovery tokens).
-      if(response.ok&&!u.search){const cache=await caches.open(VERSION);await cache.put(u.pathname,response.clone())}
-      return response;
-   }catch{const saved=await(await caches.open(VERSION)).match(u.pathname);return saved||new Response('<!doctype html><title>Bizlano offline</title><meta name="viewport" content="width=device-width,initial-scale=1"><main style="font:16px system-ui;max-width:420px;margin:18vh auto;padding:24px"><h1>Connection unavailable</h1><p>Reconnect to access your business records.</p><button onclick="location.reload()">Try again</button></main>',{headers:{'Content-Type':'text/html; charset=utf-8'}})}})());
-  return;
+ const req=event.request,u=new URL(req.url);
+ if(req.method!=='GET'||u.origin!==self.location.origin||u.pathname.startsWith('/api/'))return;
+ // Never cache sign-in pages, workspace JS or HTML. They must always be fresh.
+ if(req.mode==='navigate'){
+  event.respondWith(fetch(req,{cache:'no-store'}).catch(async()=>await caches.match('/offline')||new Response('Connection unavailable',{status:503})));return;
  }
- // Prefer freshly deployed scripts. Cached code is only an offline fallback, never the normal response.
- if(u.search && u.pathname!=='/client.js' && u.pathname!=='/customer.js')return;
- event.respondWith((async()=>{const cache=await caches.open(VERSION);
-  try{
-   const response=await fetch(request,{cache:'no-store'});
-   if(response.ok)await cache.put(u.pathname,response.clone());
-   return response;
-  }catch{
-   return await cache.match(u.pathname)||new Response('Offline',{status:503});
-  }
- })());
+ if(u.pathname.endsWith('.js')||u.pathname.endsWith('.webmanifest')||u.pathname==='/client.js')return;
+ if(CACHED.includes(u.pathname)){
+  event.respondWith((async()=>await caches.match(u.pathname)||fetch(req))());
+ }
 });
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});

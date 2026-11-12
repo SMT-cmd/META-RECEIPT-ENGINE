@@ -345,7 +345,7 @@ async function api(req,env,url) {
    known={user_id:uid};
   }
   // Keep the verified current identity email in sync; it is the receipt inbox proof.
-  await env.DB.prepare("UPDATE users SET email=?,display_name=? WHERE id=? AND disabled_at IS NULL").bind(claim.email,claim.name,known.user_id).run();
+  await env.DB.prepare("UPDATE users SET email=?,display_name=?,email_verified_at=COALESCE(email_verified_at,datetime('now')) WHERE id=? AND disabled_at IS NULL").bind(claim.email,claim.name,known.user_id).run();
   const token=rnd();
   await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await hash(token),known.user_id).run();
   return json({ok:true},200,{'set-cookie':sessionCookie(token,604800)});

@@ -38,9 +38,9 @@ async function nativeAuthApi(req,env,url){
  if(path==='/api/account/session'&&method==='GET'){
   try{
    const user=await identity(req,env);
-   const record=await env.DB.prepare("SELECT email_verified_at FROM users WHERE id=?").bind(user.id).first();
+   const record=await env.DB.prepare("SELECT email_verified_at,password_hash FROM users WHERE id=?").bind(user.id).first();
    const phoneOnly=user.email.endsWith('@accounts.bizlano.invalid');
-   return json({user:{id:user.id,email:phoneOnly?null:user.email,name:user.display_name,emailVerified:!!record?.email_verified_at||phoneOnly,phoneOnly}});
+   return json({user:{id:user.id,email:phoneOnly?null:user.email,name:user.display_name,emailVerified:!!record?.email_verified_at||phoneOnly,phoneOnly,legacyAccount:record?.password_hash==='firebase'}});
   }catch(e){if(e instanceof ErrorWithStatus&&e.code===401)return json({user:null});throw e}
  }
  if(method!=='POST')fail(405,'Method not allowed');
@@ -95,7 +95,7 @@ async function nativeAuthApi(req,env,url){
  if(path==='/api/account/reset-request'){
   nativeEmailConfig(env);
   await limitAnonymousAttempt(env,'password-reset',remote);
-  const address=email(b.email),user=await env.DB.prepare("SELECT id,email,display_name FROM users WHERE email=? COLLATE NOCASE AND password_hash!='firebase' AND disabled_at IS NULL AND email_verified_at IS NOT NULL").bind(address).first();
+  const address=email(b.email),user=await env.DB.prepare("SELECT id,email,display_name FROM users WHERE email=? COLLATE NOCASE AND disabled_at IS NULL AND (email_verified_at IS NOT NULL OR (password_hash='firebase' AND EXISTS(SELECT 1 FROM legacy_identity_links l WHERE l.user_id=users.id AND l.provider='firebase-metaforge')))").bind(address).first();
   if(user){const token=rnd();await env.DB.prepare("INSERT INTO auth_action_tokens(token_hash,user_id,purpose,expires_at) VALUES(?,?,'reset_password',datetime('now','+20 minutes'))").bind(await hash(token),user.id).run();await nativeSend(env,address,'reset_password',user.display_name,publicOrigin+(b.audience==='customer'?'/receipts':'/app')+'?reset='+encodeURIComponent(token),publicOrigin)}
   return json({ok:true});
  }
