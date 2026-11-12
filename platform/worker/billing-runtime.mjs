@@ -163,7 +163,19 @@ export async function billingPaystackWebhook(req,env){
  return json({ok:true,ignored:e.event},200);
 }
 export async function runBillingCron(env){
- if(!billingEnabled(env))return {disabled:true};
+ const live=billingEnabled(env);
+ const lagosDate=new Date(Date.now()+3600000).toISOString().slice(0,10);
+ const announcementApproved=env.BIZLANO_ANNOUNCEMENT_APPROVED==='yes'&&lagosDate>='2027-01-02'&&lagosDate<'2027-02-01';
+ if(!live&&!announcementApproved)return {disabled:true};
+ if(announcementApproved){
+  const owners=await env.DB.prepare("SELECT m.tenant_id,t.business_name,u.email FROM memberships m JOIN users u ON u.id=m.user_id JOIN tenants t ON t.id=m.tenant_id WHERE m.role='owner' AND m.disabled_at IS NULL AND t.disabled_at IS NULL AND u.disabled_at IS NULL AND u.email NOT LIKE '%@accounts.bizlano.invalid' LIMIT 1000").all();
+  for(const owner of owners.results||[]){
+   const body='Bizlano is introducing optional premium plans from 1 February 2027. Your Free business workspace will continue to work, and your previous receipts and invoices remain yours. You will not be charged unless you choose a plan. Compare the plans in your Bizlano business settings.';
+   await env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)")
+    .bind(crypto.randomUUID(),owner.tenant_id,'feb2027:announcement:'+owner.tenant_id,'service_announcement',owner.email,JSON.stringify({subject:'Bizlano plans: Free stays free',text:body})).run();
+  }
+ }
+ if(live){
  const expired=await env.DB.prepare("SELECT s.id,s.tenant_id,s.plan_id,s.current_period_end,u.email,t.business_name FROM subscriptions s JOIN billing_accounts ba ON ba.tenant_id=s.tenant_id JOIN users u ON u.id=ba.billing_contact_user_id JOIN tenants t ON t.id=s.tenant_id WHERE s.status IN('active','grace') AND datetime(s.current_period_end)<=datetime('now') LIMIT 100").all();
  for(const row of expired.results||[]){
   await env.DB.batch([
@@ -180,6 +192,7 @@ export async function runBillingCron(env){
   const subject='Bizlano plan renewal reminder';
   const message=row.business_name+': Your '+row.plan_id+' access ends on '+row.current_period_end.slice(0,10)+'. Renew only if you wish to continue premium features. Free access and historical documents remain available.';
   await env.DB.prepare("INSERT OR IGNORE INTO outbox_notifications(id,tenant_id,dedupe_key,kind,recipient,payload_json) VALUES(?,?,?,?,?,?)").bind(crypto.randomUUID(),row.tenant_id,'renew:'+row.id+':'+days,'renewal_reminder',row.email,JSON.stringify({subject,text:message})).run();
+ }
  }
  const queue=await env.DB.prepare("SELECT id,dedupe_key,recipient,payload_json,attempts FROM outbox_notifications WHERE status IN('pending','failed') AND (next_attempt_at IS NULL OR next_attempt_at<=datetime('now')) AND attempts<5 ORDER BY created_at ASC LIMIT 10").all();
  if(!env.BIZLANO_RESEND_API_KEY||!env.BIZLANO_BILLING_FROM)return {queued:queue.results?.length||0,mailConfigured:false};
