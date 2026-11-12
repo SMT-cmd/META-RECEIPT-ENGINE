@@ -818,6 +818,7 @@ export default {async scheduled(event,env,ctx){ctx.waitUntil(runBillingCron(env)
   return Response.redirect(new URL('/app?biz='+encodeURIComponent(biz),url.origin),302);
  }
 
+ if(req.method==='GET'&&p==='/customer.webmanifest')return new Response(customerManifest,{headers:{'content-type':'application/manifest+json; charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});
  if(req.method==='GET'&&p==='/manifest.webmanifest')return new Response(appManifest,{headers:{'content-type':'application/manifest+json; charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});
  if(req.method==='GET'&&p==='/sw.js')return new Response(serviceWorkerJs,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-cache,no-store,must-revalidate','service-worker-allowed':'/','x-content-type-options':'nosniff'}});
  if(req.method==='GET'&&p==='/pwa.js')return new Response(pwaJs,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});
@@ -829,7 +830,7 @@ export default {async scheduled(event,env,ctx){ctx.waitUntil(runBillingCron(env)
  }
  if(req.method==='GET'&&Object.prototype.hasOwnProperty.call(legalPages,p))return new Response(legalPage(p),{headers:{'content-type':'text/html;charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff','x-frame-options':'DENY'}});
  if(req.method==='GET'&&(p==='/receipts'||p==='/receipts/'))return new Response(customerHtml,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','referrer-policy':'strict-origin-when-cross-origin'}});
- if(req.method==='GET'&&p==='/customer.js')return new Response(customerJs,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
+ if(req.method==='GET'&&p==='/customer.js')return new Response(customerJs,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'no-store'}});
  if(req.method==='GET'&&p==='/')return new Response(landing,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'public,max-age=180','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&(p==='/app'||p==='/app/'||p==='/join'||p==='/index.html'))return new Response(html,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/client.js')return new Response(client,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'no-store'}});

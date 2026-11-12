@@ -1,6 +1,6 @@
 const root=document.getElementById('customer-app'),modal=document.getElementById('modal'),toast=document.getElementById('toast');
 const params=new URL(location.href).searchParams;
-const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,busy:false,error:'',current:null,nextCursor:null,printPaper:'a4'};
+const state={user:null,account:null,receipts:[],filter:'',business:params.get('business')||'',mode:params.get('mode')==='register'?'register':params.get('mode')==='forgot'?'forgot':'login',pendingEmail:null,resetToken:null,busy:false,error:'',current:null,nextCursor:null,printPaper:'a4'};
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cash=(value,currency='NGN')=>new Intl.NumberFormat('en-NG',{style:'currency',currency,currencyDisplay:'narrowSymbol',maximumFractionDigits:2,minimumFractionDigits:2}).format(Number(value||0)/100);
 const date=s=>{const value=new Date(String(s).slice(0,10)+'T12:00:00Z');return Number.isFinite(value.getTime())?value.toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}):String(s||'')};
@@ -10,15 +10,20 @@ function notice(message,error=false){
  clearTimeout(notice.timeout);notice.timeout=setTimeout(()=>{toast.hidden=true},5000);
 }
 async function request(path,data){
- const r=await fetch('/api'+path,{credentials:'same-origin',...(data===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)})});
- const json=await r.json().catch(()=>null);
- if(!r.ok)throw Error(json?.error||'Please try again later');
- return json;
+ const controller=new AbortController(),auth=path.startsWith('/account/')||path==='/logout';
+ const timer=setTimeout(()=>controller.abort(),path==='/account/session'?6500:auth?14000:30000);
+ try{
+  const r=await fetch('/api'+path,{credentials:'same-origin',cache:'no-store',signal:controller.signal,...(data===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)})});
+  const json=await r.json().catch(()=>null);
+  if(!r.ok)throw Error(json?.error||'Please try again later');
+  return json;
+ }catch(err){if(err?.name==='AbortError')throw Error('Connection timed out. Please try again.');throw err}
+ finally{clearTimeout(timer)}
 }
 function loginView(){
  const pending=Boolean(state.pendingEmail),register=state.mode==='register',phoneRegister=state.mode==='phone-register',forgot=state.mode==='forgot',reset=Boolean(state.resetToken);
  let form='';
- if(reset)form='<p class="muted">Create a new password of at least 10 characters.</p><form id="customer-auth" class="stack"><label class="field">New password<input type="password" name="password" required minlength="10" autocomplete="new-password"></label><button class="button primary" type="submit">Update password</button></form>';
+ if(reset)form='<p class="muted">Create a new password of at least 10 characters.</p><form id="customer-auth" class="stack"><label class="field">New password<input type="password" name="password" required minlength="10" autocomplete="new-password"></label><button class="button primary" type="submit">Update password and continue</button></form><button class="button" data-action="return-to-signin" style="margin-top:12px">Already updated? Sign in</button>';
  else if(pending)form='<p>We sent a secure verification link to <strong>'+escape(state.pendingEmail)+'</strong>. Open it to confirm your account.</p><div class="stack"><button class="button primary" data-action="resend-verification">Resend verification email</button><button class="button" data-action="check-verification">I have verified</button><button class="button" data-action="sign-out">Use another account</button></div>';
  else if(forgot)form='<p class="muted">Enter your account email. If it exists, we will send a password reset link.</p><form id="customer-auth" class="stack"><label class="field">Email address<input name="identifier" type="email" required autocomplete="email"></label><button class="button primary" type="submit">Email reset link</button></form><button class="button" data-action="toggle-auth" style="margin-top:15px">Back to sign in</button>';
  else{
@@ -119,12 +124,13 @@ document.addEventListener('click',async event=>{
   if(action==='print-receipt'){setCustomerPaper(state.printPaper);window.print();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
   if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
-  if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.pendingEmail=null;state.resetToken=null;state.error='';loginView();return}
+  if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.pendingEmail=null;state.resetToken=null;state.error='';history.replaceState(null,'','/receipts?mode='+state.mode);loginView();return}
   if(action==='phone-registration'){state.mode='phone-register';state.error='';loginView();return}
   if(action==='check-verification'){await connect();state.pendingEmail=null;return}
   if(action==='resend-verification'){await request('/account/resend',{email:state.pendingEmail,audience:'customer'});notice('If verification is still needed, a new link will arrive.');return}
-  if(action==='reset-password'){state.mode='forgot';state.error='';loginView();return}
-  if(action==='sign-out'){closeReceipt();await request('/logout',{});state.user=null;state.pendingEmail=null;state.account=null;state.receipts=[];state.error='';state.mode='login';loginView();return}
+  if(action==='reset-password'){state.mode='forgot';state.error='';history.replaceState(null,'','/receipts?mode=forgot');loginView();return}
+  if(action==='return-to-signin'){state.resetToken=null;state.mode='login';state.pendingEmail=null;state.error='';history.replaceState(null,'','/receipts?mode=login');loginView();return}
+  if(action==='sign-out'){closeReceipt();await request('/logout',{});state.user=null;state.pendingEmail=null;state.account=null;state.receipts=[];state.error='';state.resetToken=null;state.mode='login';history.replaceState(null,'','/receipts?mode=login');loginView();return}
   if(action==='retry'){await connect();return}
  }catch(error){state.error=error.message||'Something went wrong';notice(state.error,true);if(!state.account)loginView()}
 });
@@ -152,7 +158,10 @@ document.addEventListener('submit',async event=>{
    const password=form.elements.namedItem('password')?.value||'';
    if(state.resetToken){
     await request('/account/reset',{token:state.resetToken,password});
-    state.resetToken=null;history.replaceState(null,'','/receipts');await connect();notice('Password updated.');
+    state.resetToken=null;state.mode='login';state.pendingEmail=null;state.error='';
+    history.replaceState(null,'','/receipts');
+    notice('Password updated. Opening your receipts.');
+    try{await connect()}catch(error){state.account=null;state.user=null;state.error='Password updated. Sign in with your new password.';loginView()}
    }else if(state.mode==='forgot'){
     await request('/account/reset-request',{email:form.elements.namedItem('identifier').value.trim(),audience:'customer'});
     state.mode='login';loginView();notice('If this account exists, a reset email will arrive.');
@@ -189,6 +198,8 @@ document.addEventListener('submit',async event=>{
  finally{state.busy=false;if(submit?.isConnected)submit.disabled=false}
 });
 async function nativeCustomerBoot(){
+ // Show authentication immediately, without waiting for a network session check.
+ if(!params.has('verify')&&!params.has('reset'))loginView();
  try{
   const verify=params.get('verify');
   if(verify){await request('/account/verify',{token:verify});history.replaceState(null,'','/receipts');}

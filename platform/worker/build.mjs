@@ -23,6 +23,7 @@ const embedded=[
   read('billing-runtime.mjs').replace(/^export /gm,''),
   read('purchasing.mjs').replace(/^export /gm,''),
   'const appManifest='+JSON.stringify(read('manifest.webmanifest'))+';',
+  'const customerManifest='+JSON.stringify(read('customer.webmanifest'))+';',
   'const serviceWorkerJs='+JSON.stringify(read('sw.js'))+';',
   'const pwaJs='+JSON.stringify(read('pwa.js'))+';',
   'const offlineHtml='+JSON.stringify(read('offline.html'))+';'

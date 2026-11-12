@@ -102,15 +102,32 @@ p,small,.muted{line-height:1.65}
  body.customer-print-roll-58mm .document table td,body.customer-print-roll-58mm .document table th{font-size:8px!important;padding:5px 2px!important}
  body.customer-print-roll-80mm .total-line,body.customer-print-roll-58mm .total-line{font-size:11px!important;margin:9px 0!important}
 }
+
+@media(display-mode:standalone){
+ .top-actions,footer{display:none!important}
+ .topbar{padding-top:env(safe-area-inset-top,0px);min-height:calc(64px + env(safe-area-inset-top,0px))}
+ .auth-root{grid-template-columns:1fr;padding:15px 0 calc(26px + env(safe-area-inset-bottom,0px));gap:12px}
+ .auth-story{min-height:0;padding:20px 22px;border-radius:16px}
+ .auth-story h1{font-size:24px;line-height:1.25}
+ .auth-story>p{display:none}
+ .auth-card{padding:24px 20px}
+ .auth-card h2{font-size:23px}
+ .dashboard{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:480px) and (display-mode:standalone){
+ .auth-story{padding:17px 20px}
+ .auth-story h1{font-size:21px}
+ .auth-card{padding:22px 18px}
+}
 </style>
-<link rel="manifest" href="/manifest.webmanifest"><meta name="application-name" content="Bizlano"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
+<link rel="manifest" href="/customer.webmanifest"><meta name="application-name" content="Bizlano Receipts"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
 <body>
 <header><div class="container topbar">
-<a class="brand" href="/" aria-label="Bizlano home"><img src="/assets/bizlano-mark.png" width="41" height="41" alt=""><span>Bizlano</span></a>
+<a class="brand" href="/receipts" aria-label="Bizlano receipts"><img src="/assets/bizlano-mark.png" width="41" height="41" alt=""><span>Bizlano</span></a>
 <nav class="top-actions" aria-label="Navigation"><a href="/">Homepage</a><a href="/app">For businesses</a></nav>
 </div></header>
 <main class="container" id="customer-app" aria-live="polite"><section class="hero"><div class="eyebrow">My receipts</div><h1>One place for every purchase.</h1><p>Loading your secure receipt dashboard…</p></section></main>
 <div id="modal" hidden></div><div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <footer><div class="container spread"><span class="footer-brand-line">© 2026 Bizlano · Powered by Global Web Stores</span><a class="footer-parent" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer" aria-label="Explore Global Web Stores"><span class="footer-parent-mark"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" width="37" height="37" alt="Global Web Stores official logo" loading="lazy"></span><span><strong>A Global Web Stores brand</strong><small>Explore Global Web Stores ↗</small></span></a></div></footer>
-<script type="module" src="/customer.js"></script>
+<script type="module" src="/customer.js?v=20261112-app-flow-v2"></script>
 <script src="/pwa.js" defer></script></body></html>
