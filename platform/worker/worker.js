@@ -237,10 +237,21 @@ async function marketplaceApi(req,env,url){
  fail(404,'Unknown marketplace action');
 }
 
+// Cloudflare PBKDF2 limits individual derivations to 100,000 iterations.
+// Domain-separated 100,000 + 80,000 pass derivation retains substantial cost
+// and a 64-character SHA-256 hex digest without new database columns.
 async function passwordDigest(password,saltHex){
- const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);
+ if(typeof password!=='string'||typeof saltHex!=='string'||!/^[a-f0-9]{32}$/i.test(saltHex))throw Error('Invalid password digest input');
  const salt=Uint8Array.from(saltHex.match(/../g),x=>parseInt(x,16));
- return hex(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:180000,hash:'SHA-256'},key,256)));
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);
+ const first=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},key,256));
+ const next=await crypto.subtle.importKey('raw',first,'PBKDF2',false,['deriveBits']);
+ const tag=new TextEncoder().encode('Bizlano-password-v2');
+ const nextSalt=new Uint8Array(salt.length+tag.length);
+ nextSalt.set(salt);nextSalt.set(tag,salt.length);
+ const digest=await crypto.subtle.deriveBits({name:'PBKDF2',salt:nextSalt,iterations:80000,hash:'SHA-256'},next,256);
+ first.fill(0);
+ return hex(new Uint8Array(digest));
 }
 async function limitAnonymousAttempt(env,kind,remoteIp){
  const key=await hash('bizlano:'+kind+':'+remoteIp),now=Math.floor(Date.now()/1000);
