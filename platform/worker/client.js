@@ -63,6 +63,11 @@ async function load(){
   const [catalogue,history]=await Promise.all([api(t+'/billing'),api(t+'/billing/status')]);
   state.data={...catalogue,...history};render();return;
  }
+ if(section==='purchases'){
+  const [p,s,orders,locations]=await Promise.all([api(t+'/products'),api(t+'/suppliers'),api(t+'/purchases'),api(t+'/locations')]);
+  state.products=p.rows||[];state.org.locations=locations.rows||[];
+  state.data={rows:orders.rows||[],suppliers:s.rows||[]};render();return;
+ }
  if(section==='locationStock'){
   const [p,l,balances]=await Promise.all([api(t+'/products'),api(t+'/locations'),api(t+'/stock-locations')]);
   state.products=p.rows||[];state.org.locations=l.rows||[];state.data={rows:balances.rows||[]};render();return;
@@ -263,7 +268,7 @@ function colourStoryChooser(selected){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['arms','⌂','Business arms'],['locations','▤','Locations'],['locationStock','▥','Stock by location'],['team','♧','Team & invites'],['designProfiles','◈','Saved document designs'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['arms','⌂','Business arms'],['locations','▤','Locations'],['locationStock','▥','Stock by location'],['purchases','▧','Suppliers & purchases'],['team','♧','Team & invites'],['designProfiles','◈','Saved document designs'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
@@ -272,6 +277,7 @@ function navigation(){
   if(v==='upgrade')return state.biz?.role==='owner';
   if(v==='team'||v==='branding'||v==='design'||v==='gws'||v==='arms'||v==='locations'||v==='designProfiles')return admin();
   if(v==='locationStock')return stock();
+  if(v==='purchases')return ['owner','admin','manager','accountant'].includes(state.biz?.role);
   if(v==='alerts')return true;
   if(v==='products'||v==='customers'||v==='payments'||v==='create')return edit();
   return true;
@@ -405,6 +411,37 @@ function targets(){
  '<div class="cols"><section class="panel"><h2>Set sales target</h2><form data-form="target">'+input('Month','month','month',today().slice(0,7),true)+input('Monthly target (₦)','amount','number','',true,'min=".01" step=".01"')+'<button class="btn primary">Save target</button></form></section>'+
  '<section class="panel"><h2>Saved goals</h2>'+simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.label)+'</strong><small>'+e(x.period_start)+' to '+e(x.period_end)+'</small></div><strong>'+curr(x.target_minor)+'</strong></div>')+'</section></div>';
 }
+function purchases(){
+ const rows=state.data?.rows||[],suppliers=(state.data?.suppliers||[]).filter(x=>!x.archived_at),
+  locations=state.org.locations.filter(x=>!x.archived_at),products=state.products.filter(x=>x.track_stock),
+  canWrite=['owner','admin','manager'].includes(state.biz?.role);
+ const supplierChoices=suppliers.map(x=>[x.id,x.name]),locationChoices=locations.map(x=>[x.id,x.name]),productChoices=products.map(x=>[x.id,x.name]);
+ const itemInput='<div class="form-grid purchase-item-row">'+
+  select('Product','purchaseProduct',productChoices)+
+  input('Quantity','purchaseQuantity','number','1',true,'min=".001" step=".001"')+
+  input('Unit cost (₦)','purchaseCost','number','0',true,'min="0" step=".01"')+
+  '<button type="button" class="btn" data-action="remove-purchase-line">Remove item</button></div>';
+ return heading('PURCHASING','Suppliers & stock purchases','Manage stock deliveries and supplier purchases without mixing them with customer sales.')+
+ (canWrite?'<div class="cols"><section class="panel"><h2>New supplier</h2><form data-form="supplier">'+
+  input('Supplier name','name','text','',true)+input('Phone (optional)','phone')+input('Email (optional)','email','email')+
+  input('Address (optional)','address')+'<button class="btn primary">Save supplier</button></form></section>'+
+ '<section class="panel"><h2>New purchase order</h2>'+
+ (suppliers.length&&locations.length&&products.length?
+ '<form data-form="purchase">'+select('Supplier','supplierId',supplierChoices)+select('Receive at','locationId',locationChoices)+
+ input('Supplier reference (optional)','reference')+'<div id="purchase-items">'+itemInput+'</div>'+
+ '<button type="button" class="btn" data-action="add-purchase-line">+ Add another item</button>'+
+ '<label class="field">Notes<textarea name="notes" rows="2" maxlength="400"></textarea></label>'+
+ '<button class="btn primary">Save purchase order</button></form>':
+ '<p class="muted">Save a supplier, location and stock-tracked product before creating a purchase order.</p>')+
+ '</section></div>':'')+
+ '<section class="panel"><h2>Purchase history</h2>'+simpleRows(rows,o=>
+ '<div class="rowcard"><div><strong>'+e(o.supplier_name)+'</strong><small>'+e(o.location_name)+' · '+e(o.created_at)+' · '+e(o.status)+'</small>'+
+ (o.supplier_reference?'<small>Reference: '+e(o.supplier_reference)+'</small>':'')+'</div>'+
+ '<div class="end"><strong>'+curr(o.total_minor)+'</strong>'+
+ (canWrite&&o.status==='draft'?'<button type="button" class="btn primary" data-purchase-receive="'+e(o.id)+'">Mark stock received</button><button type="button" class="btn" data-purchase-cancel="'+e(o.id)+'">Cancel</button>':'')+
+ '</div></div>')+'</section>';
+}
+
 function designProfiles(){
  const rows=state.data?.rows||[],active=rows.filter(x=>!x.archived_at),arms=state.org.arms.filter(x=>!x.archived_at);
  return heading('DOCUMENT STUDIO','Saved document designs','Keep a different document identity for each business arm. All 71 designs remain available to preview.')+
@@ -1039,7 +1076,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,designProfiles,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,purchases,designProfiles,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='team')syncStaffScopeForm();
@@ -1079,6 +1116,25 @@ document.addEventListener('click',async ev=>{
  if(action==='cancel-billing'){
   if(!confirm('Stop any future automatic renewal? Your paid-through access will remain.'))return;
   await api('/b/'+state.biz.slug+'/billing/cancel',{});flash('Renewal setting updated.');await navigate('billing');return;
+ }
+ if(action==='add-purchase-line'){
+  const items=document.getElementById('purchase-items'),first=items?.querySelector('.purchase-item-row');
+  if(!items||!first)throw Error('Open purchase order editor first');
+  if(items.children.length>=50)throw Error('A purchase order may contain 50 items');
+  const clone=first.cloneNode(true);
+  clone.querySelectorAll('input').forEach(x=>x.value=x.name==='purchaseQuantity'?'1':'0');
+  items.appendChild(clone);return;
+ }
+ if(action==='remove-purchase-line'){
+  const items=document.getElementById('purchase-items');
+  if(items?.children.length>1)el.closest('.purchase-item-row')?.remove();
+  return;
+ }
+ if(el.dataset.purchaseReceive||el.dataset.purchaseCancel){
+  const receive=Boolean(el.dataset.purchaseReceive),id=el.dataset.purchaseReceive||el.dataset.purchaseCancel;
+  if(!confirm(receive?'Confirm stock has physically arrived at the selected location?':'Cancel this unfinished purchase order?'))return;
+  await api('/b/'+state.biz.slug+'/purchases',{action:receive?'receive':'cancel',id});
+  flash(receive?'Stock received and inventory updated.':'Purchase cancelled.');await navigate('purchases');return;
  }
  if(action==='archive-arm'||action==='archive-location'){
   if(!confirm('Archive this item? Historical documents will remain available.'))return;
@@ -1250,6 +1306,16 @@ document.addEventListener('submit',async ev=>{
   const t='/b/'+state.biz.slug;
   if(kind==='customer')await api(t+'/customers',{name:val(form,'name'),phone:val(form,'phone'),email:val(form,'email'),address:val(form,'address')});
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
+  if(kind==='supplier'){await api(t+'/suppliers',{name:val(form,'name'),phone:val(form,'phone'),email:val(form,'email'),address:val(form,'address')});flash('Supplier saved.');await navigate('purchases');state.busy=false;return}
+  if(kind==='purchase'){
+   const items=[...form.querySelectorAll('.purchase-item-row')].map(row=>({
+    productId:row.querySelector('[name=purchaseProduct]')?.value,
+    quantity:Number(row.querySelector('[name=purchaseQuantity]')?.value),
+    unitCost:Number(row.querySelector('[name=purchaseCost]')?.value)
+   }));
+   await api(t+'/purchases',{action:'create',supplierId:val(form,'supplierId'),locationId:val(form,'locationId'),reference:val(form,'reference'),notes:val(form,'notes'),items});
+   flash('Purchase order saved. Mark stock received only when it arrives.');await navigate('purchases');state.busy=false;return;
+  }
   if(kind==='staff-scope'){
     const userId=val(form,'userId'),locations=[...form.querySelectorAll('input[name="locationScope"]:checked')].map(x=>x.value),arms=[...form.querySelectorAll('input[name="armScope"]:checked')].map(x=>x.value);
     await api(t+'/staff-scopes',{userId,locations,arms});flash('Staff assignments saved.');await navigate('team');state.busy=false;return;

@@ -441,7 +441,7 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes|design-profiles|payment-confirmations)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes|design-profiles|payment-confirmations|suppliers|purchases)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
@@ -661,6 +661,7 @@ async function api(req,env,url) {
    return json({id:did,number,total_minor:total},201);
   }
  }
+ if(['suppliers','purchases'].includes(resource))return purchasingAPI(req,env,user,t,resource);
  if(resource==='payment-confirmations'&&method==='POST'){
   await member(env,user,slug,'edit');
   const b=await input(req),paymentId=String(b.paymentId||'');
