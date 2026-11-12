@@ -431,12 +431,12 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes|design-profiles)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
- if(['billing','arms','locations','stock-locations','stock-transfer','staff-scopes'].includes(resource))return workspaceExtraAPI(req,env,user,t,resource);
+ if(['billing','arms','locations','stock-locations','stock-transfer','staff-scopes','design-profiles'].includes(resource))return workspaceExtraAPI(req,env,user,t,resource);
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
   const b=await input(req),source=field(b.source,'migration source',190),records=b.records||[];
@@ -610,8 +610,16 @@ async function api(req,env,url) {
    }
    const recipientEmail=b.customerEmail?email(b.customerEmail):null,recipientPhone=phone(b.customerPhone);
    if(b.draft!==true&&!recipientEmail&&!recipientPhone)fail(400,'Enter a customer email or phone number to issue this document');
-   const preferred=await env.DB.prepare('SELECT template FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
-   const selectedTemplate=String(b.template||preferred?.template||'signature');
+   const preferred=await env.DB.prepare('SELECT * FROM tenant_designs WHERE tenant_id=?').bind(tenant).first();
+   const profileId=b.profileId||null;
+   let profile=null;
+   if(profileId){
+    if(!/^[a-f0-9-]{36}$/.test(profileId))fail(400,'Invalid design profile');
+    profile=await env.DB.prepare('SELECT * FROM document_design_profiles WHERE tenant_id=? AND id=? AND archived_at IS NULL').bind(tenant,profileId).first();
+    if(!profile)fail(404,'Saved design not found');
+   }
+   const selectedTemplate=String(profile?.template||b.template||preferred?.template||'signature');
+   const snapshot={template:selectedTemplate,accent:profile?.accent||preferred?.accent||'#6935df',secondary_color:profile?.secondary_color||preferred?.secondary_color||'#19223b',font_family:profile?.font_family||preferred?.font_family||'modern',text_logo_style:preferred?.text_logo_style||'split',header_note:profile?.header_note||preferred?.header_note||'',footer_note:profile?.footer_note||preferred?.footer_note||'Thank you for your business.',contact:preferred?.contact||'',paper:preferred?.paper||'a4',show_logo:preferred?.show_logo??1,logo_url:t.logo_url||null,business_name:t.business_name};
    if(!TEMPLATES.has(selectedTemplate))fail(400,'Unsupported document design');
    if(!types.has(kind))fail(400,'Invalid document type');
    cashier(t,kind);
@@ -632,7 +640,7 @@ async function api(req,env,url) {
    const date=String(b.date||day()),due=String(b.dueDate||'');
    if(!dateValid(date)||(due&&!dateValid(due)))fail(400,'Invalid date');
    const did=crypto.randomUUID(),economicId=transactionId||did,number=docScope.documentPrefix+'-'+kind.replace(/[^a-z]/g,'').slice(0,4).toUpperCase()+'-'+date.slice(0,4)+'-'+did.slice(0,8).toUpperCase();
-   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by,arm_id,location_id,economic_transaction_id,origin_document_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id,docScope.armId,docScope.locationId,economicId,convertedFrom)];
+   const batch=[env.DB.prepare('INSERT INTO documents(id,tenant_id,document_number,kind,template,recipient_name,recipient_email,recipient_phone,issued_on,due_on,currency,subtotal_minor,discount_minor,tax_minor,shipping_minor,total_minor,status,notes,created_by,arm_id,location_id,economic_transaction_id,origin_document_id,design_snapshot_json,design_profile_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(did,tenant,number,kind,selectedTemplate,String(b.customer||'Walk-in').slice(0,120),recipientEmail,recipientPhone,date,due||null,t.currency,subtotal,discount,tax,shipping,total,draft?'draft':'issued',String(b.notes||'').slice(0,1800),user.id,docScope.armId,docScope.locationId,economicId,convertedFrom,JSON.stringify(snapshot),profileId)];
    if(!draft&&billable.has(kind))batch.push(env.DB.prepare('INSERT INTO usage_events(tenant_id,origin_transaction_id,period_wat) VALUES(?,?,?) ON CONFLICT(tenant_id,origin_transaction_id) DO NOTHING').bind(tenant,economicId,lagosUsagePeriod()));
    for(const line of lines)batch.push(env.DB.prepare('INSERT INTO document_lines(id,tenant_id,document_id,product_id,description,quantity_milli,unit_price_minor,line_total_minor) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,line.productId,line.description,line.qty,line.price,line.value));
    if(received>0)batch.push(env.DB.prepare('INSERT INTO payments(id,tenant_id,document_id,amount_minor,method,recorded_by) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),tenant,did,received,String(b.method||'Cash').slice(0,50),user.id));

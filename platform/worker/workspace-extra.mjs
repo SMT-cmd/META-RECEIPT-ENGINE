@@ -22,9 +22,48 @@ export async function workspaceExtraAPI(req,env,user,t,resource){
   return json({...publicBillingCatalogue(),currentPlan:active?.plan_id||'free',paidThrough:active?.current_period_end||null,businessName:t.business_name,
    actual:{monthlyFinalizedTransactions:used?.used||0,arms:arms?.n||1,locations:places?.n||1,staff:members?.n||1},billingStatus:'not_activated'});
  }
+ if(resource==='design-profiles'){
+  if(!write){
+   const r=await env.DB.prepare('SELECT id,name,template,accent,secondary_color,font_family,header_note,footer_note,archived_at FROM document_design_profiles WHERE tenant_id=? ORDER BY archived_at IS NOT NULL,created_at DESC LIMIT 100').bind(tenant).all();
+   return json({rows:r.results||[]});
+  }
+  if(!admin)fail(403,'Only administrators can manage document designs');
+  const b=await input(req),action=str(b.action||'create',24),id=b.id;
+  if(action==='assign'){
+   if(!uuid(b.armId)||!uuid(b.profileId))fail(400,'Choose a business arm and document design');
+   if(!await active('business_arms',b.armId))fail(404,'Business arm does not exist');
+   const found=await env.DB.prepare('SELECT id FROM document_design_profiles WHERE tenant_id=? AND id=? AND archived_at IS NULL').bind(tenant,b.profileId).first();
+   if(!found)fail(404,'Document design no longer available');
+   await env.DB.prepare('UPDATE business_arms SET design_profile_id=? WHERE tenant_id=? AND id=? AND archived_at IS NULL').bind(b.profileId,tenant,b.armId).run();
+   return json({ok:true});
+  }
+  if(action==='archive'){
+   if(!uuid(id))fail(400,'Invalid document design');
+   const assigned=await env.DB.prepare('SELECT count(*) n FROM business_arms WHERE tenant_id=? AND design_profile_id=? AND archived_at IS NULL').bind(tenant,id).first();
+   if(assigned?.n)fail(409,'Choose another design for the assigned business arm first');
+   const changed=await env.DB.prepare("UPDATE document_design_profiles SET archived_at=datetime('now') WHERE tenant_id=? AND id=? AND archived_at IS NULL").bind(tenant,id).run();
+   if(!changed.meta?.changes)fail(404,'Document design not found');
+   return json({ok:true});
+  }
+  if(!['create','update'].includes(action))fail(400,'Invalid design action');
+  const template=str(b.template,90),name=required(b.name,100),accent=str(b.accent||'#6935df',7),secondary=str(b.secondary||'#19223b',7),font=str(b.font||'modern',20);
+  if(!TEMPLATES.has(template))fail(400,'Choose one of the available designs');
+  if(!/^#[0-9a-fA-F]{6}$/.test(accent)||!/^#[0-9a-fA-F]{6}$/.test(secondary)||!['modern','editorial','mono','rounded'].includes(font))fail(400,'Choose valid colours and a font');
+  if(action==='create'){
+   const newId=crypto.randomUUID();
+   await env.DB.prepare('INSERT INTO document_design_profiles(tenant_id,id,name,template,accent,secondary_color,font_family,header_note,footer_note,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)')
+   .bind(tenant,newId,name,template,accent,secondary,font,str(b.header,220),str(b.footer||'Thank you for your business.',260),user.id).run();
+   return json({id:newId},201);
+  }
+  if(!uuid(id))fail(400,'Invalid design profile');
+  const changed=await env.DB.prepare('UPDATE document_design_profiles SET name=?,template=?,accent=?,secondary_color=?,font_family=?,header_note=?,footer_note=? WHERE tenant_id=? AND id=? AND archived_at IS NULL')
+   .bind(name,template,accent,secondary,font,str(b.header,220),str(b.footer||'Thank you for your business.',260),tenant,id).run();
+  if(!changed.meta?.changes)fail(404,'Design profile not found');
+  return json({ok:true});
+ }
  if(resource==='arms'){
   if(!write){
-   const r=await env.DB.prepare('SELECT id,slug,name,document_prefix,contact_phone,receipt_footer,is_primary,archived_at FROM business_arms WHERE tenant_id=? ORDER BY is_primary DESC,created_at ASC').bind(tenant).all();
+   const r=await env.DB.prepare('SELECT id,slug,name,document_prefix,contact_phone,receipt_footer,design_profile_id,is_primary,archived_at FROM business_arms WHERE tenant_id=? ORDER BY is_primary DESC,created_at ASC').bind(tenant).all();
    return json({rows:r.results||[]});
   }
   if(!admin)fail(403,'Only administrators can manage business arms');
