@@ -18,7 +18,8 @@ export async function workspaceExtraAPI(req,env,user,t,resource){
     env.DB.prepare('SELECT count(*) n FROM business_locations WHERE tenant_id=? AND archived_at IS NULL').bind(tenant).first(),
     env.DB.prepare('SELECT count(*) n FROM memberships WHERE tenant_id=? AND disabled_at IS NULL').bind(tenant).first()
   ]);
-  return json({...publicBillingCatalogue(),currentPlan:'free',businessName:t.business_name,
+  const active=await env.DB.prepare("SELECT plan_id,status,current_period_end FROM subscriptions WHERE tenant_id=? AND status IN('active','grace') AND current_period_end>datetime('now') ORDER BY starts_at DESC LIMIT 1").bind(tenant).first();
+  return json({...publicBillingCatalogue(),currentPlan:active?.plan_id||'free',paidThrough:active?.current_period_end||null,businessName:t.business_name,
    actual:{monthlyFinalizedTransactions:used?.used||0,arms:arms?.n||1,locations:places?.n||1,staff:members?.n||1},billingStatus:'not_activated'});
  }
  if(resource==='arms'){

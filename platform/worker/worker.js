@@ -267,6 +267,7 @@ function customerDocument(row,lines){
 }
 async function api(req,env,url) {
  const path=url.pathname,method=req.method;
+ if(path===BILLING_PAYMENT_PATH)return billingPaystackWebhook(req,env);
  if(path==='/api/health'){const r=await env.DB.prepare('SELECT 1 AS ok').first();return json({ok:r?.ok===1,service:'bizlano',db:'D1',assets:'R2'})}
  if(path.startsWith('/api/account/'))return nativeAuthApi(req,env,url);
  if(path==='/api/public/contact'&&method==='POST'){
@@ -343,6 +344,8 @@ async function api(req,env,url) {
  if(path.startsWith(BRIDGE_PATH))return marketplaceApi(req,env,url);
  const user=await identity(req,env);
  if(user.email.endsWith('@accounts.bizlano.invalid')&&!path.startsWith('/api/customer/'))fail(403,'Customer-only accounts cannot access business management');
+ const billingAction=path.match(/^\/api\/b\/([a-z0-9-]+)\/billing\/(status|quote|checkout|verify|cancel)$/);
+ if(billingAction){const t=await member(env,user,billingAction[1],'owner');return billingAccountAPI(req,env,url,user,t,billingAction[2]);}
  if(path==='/api/customer/me'&&method==='GET'){const phoneOnly=user.email.endsWith('@accounts.bizlano.invalid');return json({email:phoneOnly?null:user.email,name:user.display_name,phone:user.contact_phone||null,verified:!phoneOnly,phoneOnly});}
  if(path==='/api/customer/profile'&&method==='POST'){
   const b=await input(req),contact=phone(b.phone),name=b.name?field(b.name,'display name',120):user.display_name;
@@ -744,7 +747,7 @@ async function brandPage(slug,env,origin){
  '</style></head><body><header><a href="'+base+'/"><img src="/assets/bizlano-logo.png" alt="Bizlano"></a><a href="'+base+'/">← Back to Bizlano</a></header><main><section class="card">'+logo+'<div class="eyebrow">'+name+'</div><h1>Lost your receipt?</h1><p>Sign in using the email you gave '+name+'. Your receipts from this business and other participating stores will be together in your private Bizlano account.</p><a class="button" href="'+recovery+'">Recover your receipt →</a><div class="separator"></div><h2>Business and staff access</h2><p>Only authorized business members can manage receipts, sales and records.</p><a class="small-link" href="'+staff+'">Sign in to business workspace →</a></section></main><footer>Powered by Bizlano · <a href="'+base+'/">Bizlano homepage</a><br><a class="owner-brand" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" alt="Global Web Stores official logo" width="38" height="38"><span>A Global Web Stores brand<br>Explore Global Web Stores ↗</span></a></footer></body></html>';
  return new Response(page,{headers:{'content-type':'text/html;charset=utf-8','cache-control':'private,no-store','x-content-type-options':'nosniff','x-frame-options':'DENY'}});
 }
-export default {async fetch(req,env){
+export default {async scheduled(event,env,ctx){ctx.waitUntil(runBillingCron(env))},async fetch(req,env){
  const url=new URL(req.url),p=url.pathname;
  // Future wildcard domain works only after DNS and Cloudflare routes are configured.
  // The usable fallback today is /s/<business-slug> on the existing Cloudflare hostname.
@@ -780,7 +783,7 @@ export default {async fetch(req,env){
  if(!p.startsWith('/api/'))return new Response('Not found',{status:404});
  if(!['GET','POST'].includes(req.method))return json({error:'Method not allowed'},405);
  if(req.method==='POST'){
-  if(!p.startsWith(BRIDGE_PATH)&&req.headers.get('origin')!==url.origin)return json({error:'Cross-site request denied'},403);
+  if(!p.startsWith(BRIDGE_PATH)&&p!==BILLING_PAYMENT_PATH&&req.headers.get('origin')!==url.origin)return json({error:'Cross-site request denied'},403);
   if(!p.endsWith('/logo')&&!p.endsWith('/signature')&&!req.headers.get('content-type')?.includes('application/json'))return json({error:'Expected JSON'},415);
  }
  try{return await api(req,env,url)}catch(e){

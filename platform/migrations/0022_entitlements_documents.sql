@@ -48,7 +48,8 @@ CREATE TRIGGER IF NOT EXISTS trg_staff_limit BEFORE INSERT ON memberships
  AND (SELECT count(*) FROM memberships WHERE tenant_id=NEW.tenant_id AND disabled_at IS NULL)>=e.staff_limit)
  BEGIN SELECT RAISE(ABORT,'Staff limit reached'); END;
 CREATE TRIGGER IF NOT EXISTS trg_usage_limit BEFORE INSERT ON usage_events
- WHEN EXISTS(SELECT 1 FROM tenant_entitlements e WHERE e.tenant_id=NEW.tenant_id AND e.enabled=1
+ WHEN NOT EXISTS(SELECT 1 FROM usage_events u WHERE u.tenant_id=NEW.tenant_id AND u.origin_transaction_id=NEW.origin_transaction_id)
+ AND EXISTS(SELECT 1 FROM tenant_entitlements e WHERE e.tenant_id=NEW.tenant_id AND e.enabled=1
  AND COALESCE((SELECT used FROM usage_counters WHERE tenant_id=NEW.tenant_id AND period_wat=NEW.period_wat),0)>=e.transactions_per_month)
  BEGIN SELECT RAISE(ABORT,'Monthly transaction allowance reached'); END;
 CREATE TRIGGER IF NOT EXISTS trg_document_economic_immutable BEFORE UPDATE OF economic_transaction_id,origin_document_id ON documents
