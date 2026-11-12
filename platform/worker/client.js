@@ -534,22 +534,39 @@ function stageLegacyStyle(index){
 }
 
 function billing(){
- const d=state.data;
- if(!d)return '<div class="empty">Loading plan information…</div>';
+ const d=state.data;if(!d)return '<div class="empty">Loading your business plan…</div>';
  const money=n=>'₦'+Number(n||0).toLocaleString('en-NG');
  const periods=[['monthly','Monthly'],['quarterly','3 months'],['six_months','6 months'],['yearly','Yearly']];
- return heading('BUSINESS SETTINGS','Plans & billing','Clear plans for the way your business operates.')+
- '<section class="panel"><h2>Your current access: Free</h2><p class="muted">All existing Bizlano records and previously issued documents remain accessible. Paid subscriptions are not open yet, and no payment is required.</p><p class="mini muted">The prices below are proposals for an optional launch on 1 February 2027, subject to final testing and approval.</p></section>'+
- '<div class="cols">'+(d.plans||[]).map(p=>
+ const plans=d.plans||[];
+ const current=plans.find(p=>p.id===d.currentPlan),history=d.invoices||[],active=(d.subscriptions||[]).find(s=>['active','grace'].includes(s.status)&&Date.parse(s.current_period_end)>Date.now());
+ const q=state.billingQuote;
+ return heading('BUSINESS SETTINGS','Plans & billing','One business workspace for your documents, sales, stock and team.')+
+ '<section class="panel"><h2>Current plan: '+e(current?.name||'Free')+'</h2>'+
+ '<p class="muted">'+(active?'Paid access through '+e(active.current_period_end?.slice(0,10)||'your current term')+'.': 'You are using the Free workspace. No payment is required to continue.')+'</p>'+
+ '<p class="mini muted">This month: '+Number(d.actual?.monthlyFinalizedTransactions||0).toLocaleString('en-NG')+' finalized business transactions · '+Number(d.actual?.arms||1)+' business arms · '+Number(d.actual?.locations||1)+' locations · '+Number(d.actual?.staff||1)+' team members.</p>'+
+ (active?'<button type="button" class="btn" data-action="cancel-billing">Manage renewal</button>':'')+
+ '<p class="mini muted">Previously issued receipts and your business records remain available if you change plans.</p></section>'+
+ '<section class="panel"><h2>Compare a plan</h2><p class="muted">Choose a plan and payment period to preview the amount. No card or charge is required to compare.</p>'+
+ '<form class="form-grid" data-form="billing-quote">'+
+ select('Plan','plan',plans.filter(p=>p.id!=='free').map(p=>[p.id,p.name]),q?.plan||'standard')+
+ select('Payment period','term',periods,q?.term||'monthly')+
+ '<button type="submit" class="btn primary">Show price</button></form>'+
+ (q?'<div class="banner"><strong>'+money(q.amountNGN)+' · '+e(periods.find(x=>x[0]===q.term)?.[1]||q.term)+'</strong><p class="mini muted">'+(q.verifiedGwsPaidVendor?'Verified Global Webstores seller benefit applied.':'Standard proposed Bizlano price.')+' This does not subscribe you automatically.</p>'+
+ (d.paymentsEnabled?'<button type="button" class="btn primary" data-action="start-billing">Continue to secure payment</button>':'<p class="mini muted">Optional paid subscriptions are not open yet. You can continue using Free.</p>')+'</div>':'')+
+ '</section>'+
+ '<div class="cols">'+plans.map(p=>
  '<section class="panel"><h2>'+e(p.name)+(p.id==='standard'?' · Recommended':'')+'</h2>'+
  '<div class="metric" style="margin:12px 0"><span>Proposed monthly price</span><strong>'+money(p.priceNGN.monthly)+'</strong></div>'+
- '<p class="muted">'+Number(p.monthlyTransactions).toLocaleString('en-NG')+' completed business transactions/month</p>'+
- '<p class="muted">'+p.designProfiles+' saved design profiles · '+p.availableDesigns+' designs to choose from</p>'+
- '<p class="muted">'+p.staff+' staff · '+p.brands+' business '+(p.brands===1?'arm':'arms')+' · '+p.locations+' '+(p.locations===1?'location':'locations')+'</p>'+
- '<details class="tidy-details"><summary>Compare payment periods</summary><div class="tidy-content">'+periods.map(([term,label])=>
- '<p class="row"><span>'+label+'</span><strong>'+money(p.priceNGN[term])+'</strong></p>').join('')+'</div></details>'+
- '</section>').join('')+'</div>'+
- '<section class="panel"><h2>Before subscriptions open</h2><p class="muted">Free access remains available. You can preview every document design. A verified paying Global Webstores vendor may qualify for a separate 50% Bizlano discount once eligibility checks are available. No discount is activated by entering a pairing code.</p><p class="mini muted">Your receipts, invoice history, customer details and financial records are not deleted when a plan changes.</p></section>';
+ '<p class="muted">'+Number(p.monthlyTransactions).toLocaleString('en-NG')+' completed business transactions per month</p>'+
+ '<p class="muted">'+p.designProfiles+' saved design profiles · '+p.availableDesigns+' designs available</p>'+
+ '<p class="muted">'+p.staff+' team members · '+p.brands+' business arms · '+p.locations+' locations</p>'+
+ '<details class="tidy-details"><summary>See all payment periods</summary><div class="tidy-content">'+periods.map(([term,label])=>
+ '<p class="row"><span>'+label+'</span><strong>'+money(p.priceNGN[term])+'</strong></p>').join('')+'</div></details></section>').join('')+'</div>'+
+ '<section class="panel"><h2>Payment history</h2>'+
+ (history.length?simpleRows(history,h=>'<div class="rowcard"><div><strong>'+e(plans.find(p=>p.id===h.plan_id)?.name||h.plan_id||'Subscription')+'</strong><small>'+e(h.issued_at)+' · '+e(h.state)+'</small></div><strong>'+money(h.amount_minor/100)+'</strong></div>'):'<p class="muted">No subscription payments yet.</p>')+
+ '</section>'+
+ '<section class="panel"><h2>About the Global Webstores benefit</h2><p class="muted">Verified vendors with an active paid Global Webstores subscription can qualify for 50% off Bizlano’s monthly list price. The benefit does not stack with longer-period discounts or other vouchers.</p>'+
+ '<p class="mini muted">Prices are proposed for an optional February 2027 launch, subject to final financial and security acceptance. Historical receipts remain accessible even if your plan changes.</p></section>';
 }
 function upgrade(){
  const a=state.legacyArchive;
@@ -1019,7 +1036,7 @@ document.addEventListener('click',async ev=>{
  const view=el.dataset.nav,action=el.dataset.action;
  try{
  if(view){await navigate(view);return}
- if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
+ if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;state.billingQuote=null;await navigate('overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;render();return}
  if(el.dataset.editProfile){
   const p=state.data?.rows?.find(x=>x.id===el.dataset.editProfile);const form=document.querySelector('[data-form=design-profile]');if(!p||!form)throw Error('Saved design no longer available');
@@ -1243,7 +1260,14 @@ async function nativeBoot(){
   if(verify){const result=await api('/account/verify',{token:verify});state.user=result.user;state.pendingEmail=null;history.replaceState(null,'','/app');}
   else if(params.get('reset')){state.resetToken=params.get('reset');loginScreen();return;}
   else {const result=await api('/account/session');state.user=result.user;}
-  if(state.user){state.connectError='';await attach();}
+  if(state.user){state.connectError='';await attach();
+   const reference=params.get('reference')||params.get('trxref');
+   if(state.biz&&params.get('billing')==='verify'&&reference){
+    try{await api('/b/'+state.biz.slug+'/billing/verify',{reference});flash('Payment verified. Your plan has been updated.');await navigate('billing')}
+    catch(error){flash(error.message||'Payment is awaiting confirmation. Check billing history before retrying.',true)}
+    finally{history.replaceState(null,'','/app?biz='+encodeURIComponent(state.biz.slug))}
+   }
+  }
   else loginScreen();
  }catch(err){state.me=null;state.connectError=err.message||'Sign-in was not completed';flash(state.connectError,true);loginScreen();}
 }
