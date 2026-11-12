@@ -97,8 +97,32 @@ function showReceipt(r){
  modal.querySelector('[data-action="close-receipt"]')?.focus();
 }
 function closeReceipt(){
+ clearCustomerPrint();
  modal.hidden=true;modal.innerHTML='';state.current=null;document.body.style.overflow='';
 }
+function clearCustomerPrint(){
+ document.body.classList.remove('customer-print-active');
+ document.getElementById('bizlano-customer-print-root')?.remove();
+}
+function printCustomerDocument(){
+ const source=modal.querySelector('#customer-print.document');
+ if(!state.current||!source){notice('Open a receipt before saving it.',true);return}
+ clearCustomerPrint();
+ setCustomerPaper(state.printPaper);
+ const printRoot=document.createElement('div');
+ printRoot.id='bizlano-customer-print-root';
+ printRoot.setAttribute('aria-label','Printable customer receipt');
+ const receipt=source.cloneNode(true);
+ receipt.removeAttribute('id');
+ printRoot.append(receipt);
+ document.body.append(printRoot);
+ document.body.classList.add('customer-print-active');
+ try{window.print()}catch(error){
+  clearCustomerPrint();
+  notice('Unable to open print preview. Try your browser print option.',true);
+ }
+}
+window.addEventListener('afterprint',clearCustomerPrint);
 async function loadCustomerReceipts(){
  const result=await request('/customer/receipts');state.receipts=result.rows||[];state.nextCursor=result.nextCursor||null;state.error='';customerView();
 }
@@ -121,7 +145,7 @@ document.addEventListener('click',async event=>{
    return;
   }
   if(action==='close-receipt'){closeReceipt();return}
-  if(action==='print-receipt'){setCustomerPaper(state.printPaper);window.print();return}
+  if(action==='print-receipt'){printCustomerDocument();return}
   if(action==='all-receipts'){state.business='';history.replaceState(null,'','/receipts');customerView();return}
   if(action==='load-more'&&state.nextCursor){const r=await request('/customer/receipts?cursor='+encodeURIComponent(state.nextCursor));const existing=new Set(state.receipts.map(x=>x.id));state.receipts.push(...(r.rows||[]).filter(x=>!existing.has(x.id)));state.nextCursor=r.nextCursor||null;customerView();return}
   if(action==='toggle-auth'){state.mode=state.mode==='login'?'register':'login';state.pendingEmail=null;state.resetToken=null;state.error='';history.replaceState(null,'','/receipts?mode='+state.mode);loginView();return}

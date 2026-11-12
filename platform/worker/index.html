@@ -1852,6 +1852,37 @@ body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mo
  .auth-art{min-height:0;padding:calc(18px + env(safe-area-inset-top,0px)) 20px 16px}
  .auth-form-shell{min-height:0}
 }
+
+/* PDF and printer output: print ONLY the chosen document, never the dashboard. */
+@media screen{
+ #bizlano-print-root{display:none!important}
+}
+@media print{
+ body.bizlano-print-active{background:#fff!important;overflow:visible!important;height:auto!important;min-height:0!important}
+ body.bizlano-print-active > :not(#bizlano-print-root){display:none!important}
+ body.bizlano-print-active > #bizlano-print-root{
+  display:block!important;position:static!important;inset:auto!important;
+  float:none!important;width:100%!important;height:auto!important;
+  max-height:none!important;max-width:none!important;min-height:0!important;
+  overflow:visible!important;transform:none!important;contain:none!important;
+  padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;
+  background:#fff!important
+ }
+ body.bizlano-print-active #bizlano-print-root > .receipt,
+ body.bizlano-print-active #bizlano-print-root > .legacy-receipt{
+  display:block!important;position:relative!important;margin:0!important;
+  height:auto!important;max-height:none!important;min-height:0!important;
+  overflow:visible!important;box-shadow:none!important;
+  break-inside:auto!important;page-break-inside:auto!important
+ }
+ body.bizlano-print-active #bizlano-print-root > .bizlano-print-warning{
+  display:block!important;color:#9b3343;border:2px dashed #cb7584;
+  padding:9px 12px;margin:0 0 14px;font:800 12px system-ui,sans-serif;
+  letter-spacing:1px;text-align:center;break-after:avoid-page
+ }
+ /* The original preview is hidden above, so only the single cloned watermark prints. */
+ body.bizlano-print-active .print-unsaved #preview::before{content:none!important}
+}
 </style>
 <link rel="manifest" href="/manifest.webmanifest"><meta name="application-name" content="Bizlano"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
 <body><div id="app">
@@ -1930,5 +1961,5 @@ body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mo
  },5500);
 })();
 </script>
-<script type="module" src="/client.js?v=20261112-app-flow-v2"></script><script src="/pwa.js" defer></script></body>
+<script type="module" src="/client.js?v=20261112-document-only-pdf"></script><script src="/pwa.js" defer></script></body>
 </html>

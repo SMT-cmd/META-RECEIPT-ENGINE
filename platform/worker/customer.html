@@ -119,6 +119,28 @@ p,small,.muted{line-height:1.65}
  .auth-story h1{font-size:21px}
  .auth-card{padding:22px 18px}
 }
+
+/* Customer receipt PDF/print: no header, navigation, modal or page behind it. */
+@media screen{
+ #bizlano-customer-print-root{display:none!important}
+}
+@media print{
+ body.customer-print-active{background:#fff!important;overflow:visible!important;height:auto!important;min-height:0!important}
+ body.customer-print-active > :not(#bizlano-customer-print-root){display:none!important}
+ body.customer-print-active > #bizlano-customer-print-root{
+  display:block!important;position:static!important;inset:auto!important;
+  float:none!important;width:100%!important;height:auto!important;min-height:0!important;
+  max-height:none!important;max-width:none!important;overflow:visible!important;
+  padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;
+  transform:none!important;contain:none!important;background:#fff!important
+ }
+ body.customer-print-active #bizlano-customer-print-root > .document{
+  display:block!important;position:static!important;margin:0!important;
+  width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;
+  max-height:none!important;overflow:visible!important;box-shadow:none!important;
+  break-inside:auto!important;page-break-inside:auto!important
+ }
+}
 </style>
 <link rel="manifest" href="/customer.webmanifest"><meta name="application-name" content="Bizlano Receipts"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
 <body>
@@ -129,5 +151,5 @@ p,small,.muted{line-height:1.65}
 <main class="container" id="customer-app" aria-live="polite"><section class="hero"><div class="eyebrow">My receipts</div><h1>One place for every purchase.</h1><p>Loading your secure receipt dashboard…</p></section></main>
 <div id="modal" hidden></div><div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <footer><div class="container spread"><span class="footer-brand-line">© 2026 Bizlano · Powered by Global Web Stores</span><a class="footer-parent" href="https://www.globalwebstores.com/explore" target="_blank" rel="noopener noreferrer" aria-label="Explore Global Web Stores"><span class="footer-parent-mark"><img src="https://www.globalwebstores.com/brand/global-webstores-full.png" width="37" height="37" alt="Global Web Stores official logo" loading="lazy"></span><span><strong>A Global Web Stores brand</strong><small>Explore Global Web Stores ↗</small></span></a></div></footer>
-<script type="module" src="/customer.js?v=20261112-app-flow-v2"></script>
+<script type="module" src="/customer.js?v=20261112-document-only-pdf"></script>
 <script src="/pwa.js" defer></script></body></html>

@@ -1096,14 +1096,39 @@ function applyPrintPaper(paper){
  node.textContent=rules[chosen];
  return chosen;
 }
+// Render a print-only copy of the selected document as a direct body child.
+// Printing the dashboard itself can include navigation and the whole screen on mobile.
+function clearBusinessPrint(){
+ document.body.classList.remove('bizlano-print-active','print-unsaved');
+ document.getElementById('bizlano-print-root')?.remove();
+}
 function printDocument(){
  if(state.view==='create'&&state.docStep!==4){flash('Review your document before printing.',true);return}
- if(!document.querySelector('#preview .receipt, #preview .legacy-receipt')){flash('Open a document to print.',true);return}
+ const source=document.querySelector('#preview .receipt, #preview .legacy-receipt');
+ if(!source){flash('Open a document to print.',true);return}
+ clearBusinessPrint();
  applyPrintPaper(state.printPaper||state.design?.paper||'a4');
- document.body.classList.toggle('print-unsaved',state.view==='create');
- window.print();
+ const printRoot=document.createElement('div');
+ printRoot.id='bizlano-print-root';
+ printRoot.setAttribute('aria-label','Printable Bizlano document');
+ if(state.view==='create'){
+  const warning=document.createElement('div');
+  warning.className='bizlano-print-warning';
+  warning.textContent='UNSAVED PREVIEW — NOT ISSUED';
+  printRoot.append(warning);
+  document.body.classList.add('print-unsaved');
+ }
+ const copy=source.cloneNode(true);
+ copy.removeAttribute('id');
+ printRoot.append(copy);
+ document.body.append(printRoot);
+ document.body.classList.add('bizlano-print-active');
+ try{window.print()}catch(error){
+  clearBusinessPrint();
+  flash('Unable to open print preview. Try your browser print option.',true);
+ }
 }
-document.addEventListener('afterprint',()=>document.body.classList.remove('print-unsaved'));
+window.addEventListener('afterprint',clearBusinessPrint);
 function printOptions(){
  const selected=state.printPaper||state.design?.paper||'a4';
  return '<section class="print-options panel"><div class="print-options-main"><div><strong>Print your document</strong><p class="mini muted">Choose the paper size, then select your printer or Save as PDF.</p></div>'+
