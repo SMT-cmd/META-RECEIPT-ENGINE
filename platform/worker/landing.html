@@ -119,7 +119,7 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 }
 
 </style>
-</head>
+<link rel="manifest" href="/manifest.webmanifest"><meta name="application-name" content="Bizlano"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <div class="topline"><strong>Meet your new business workspace.</strong> Everything that matters, finally together. <a href="/app?mode=register">Register for free</a></div>
@@ -194,5 +194,5 @@ img,svg{max-width:100%;height:auto}h1,h2,h3,p{margin-top:0}h1,h2,h3,.brand{font-
 <script>
 (function(){const btn=document.getElementById('menu-toggle'),nav=document.getElementById('site-nav');if(!btn||!nav)return;function close(){nav.classList.remove('open');btn.setAttribute('aria-expanded','false');btn.setAttribute('aria-label','Open navigation')}btn.addEventListener('click',function(){const open=nav.classList.toggle('open');btn.setAttribute('aria-expanded',String(open));btn.setAttribute('aria-label',open?'Close navigation':'Open navigation')});nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',close));document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});})();
 </script>
-</body>
+<script src="/pwa.js" defer></script></body>
 </html>

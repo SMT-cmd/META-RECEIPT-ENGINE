@@ -818,6 +818,15 @@ export default {async scheduled(event,env,ctx){ctx.waitUntil(runBillingCron(env)
   return Response.redirect(new URL('/app?biz='+encodeURIComponent(biz),url.origin),302);
  }
 
+ if(req.method==='GET'&&p==='/manifest.webmanifest')return new Response(appManifest,{headers:{'content-type':'application/manifest+json; charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});
+ if(req.method==='GET'&&p==='/sw.js')return new Response(serviceWorkerJs,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-cache,no-store,must-revalidate','service-worker-allowed':'/','x-content-type-options':'nosniff'}});
+ if(req.method==='GET'&&p==='/pwa.js')return new Response(pwaJs,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff'}});
+ if(req.method==='GET'&&p==='/offline')return new Response(offlineHtml,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+ if(req.method==='GET'&&/^\/pwa\/icon-(192|512)\.png$/.test(p)||req.method==='GET'&&p==='/pwa/icon-maskable.png'){
+  const key=p==='/pwa/icon-192.png'?'brand/bizlano-icon-192.png':p==='/pwa/icon-512.png'?'brand/bizlano-icon-512.png':'brand/bizlano-maskable-512.png';
+  const asset=await env.ASSETS.get(key);
+  return asset?new Response(asset.body,{headers:{'content-type':'image/png','cache-control':'public,max-age=604800','x-content-type-options':'nosniff'}}):new Response('App icon unavailable',{status:404});
+ }
  if(req.method==='GET'&&Object.prototype.hasOwnProperty.call(legalPages,p))return new Response(legalPage(p),{headers:{'content-type':'text/html;charset=utf-8','cache-control':'public,max-age=300','x-content-type-options':'nosniff','x-frame-options':'DENY'}});
  if(req.method==='GET'&&(p==='/receipts'||p==='/receipts/'))return new Response(customerHtml,{headers:{'content-type':'text/html;charset=utf-8','x-content-type-options':'nosniff','cache-control':'no-store','x-frame-options':'DENY','referrer-policy':'strict-origin-when-cross-origin'}});
  if(req.method==='GET'&&p==='/customer.js')return new Response(customerJs,{headers:{'content-type':'application/javascript;charset=utf-8','cache-control':'public,max-age=300'}});
