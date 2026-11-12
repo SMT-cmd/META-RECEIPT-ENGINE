@@ -8,7 +8,7 @@ const firebase=initializeApp({
  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
 });
 const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
-const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[]}};
+const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
 const oldMoney=n=>'₦'+Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -51,6 +51,14 @@ async function load(){
  const section=state.view;
  let resource=section==='overview'||section==='branding'?'overview':section==='create'?'products':section==='team'?'team':section==='alerts'?'notifications':section==='gws'?'marketplace':section;
  if(section==='upgrade'){state.data={};render();return}
+ if(section==='designProfiles'){
+  const [profiles,arms]=await Promise.all([api(t+'/design-profiles'),api(t+'/arms')]);
+  state.org.profiles=profiles.rows||[];state.org.arms=arms.rows||[];state.data=profiles;render();return;
+ }
+ if(section==='billing'){
+  const [catalogue,history]=await Promise.all([api(t+'/billing'),api(t+'/billing/status')]);
+  state.data={...catalogue,...history};render();return;
+ }
  if(section==='locationStock'){
   const [p,l,balances]=await Promise.all([api(t+'/products'),api(t+'/locations'),api(t+'/stock-locations')]);
   state.products=p.rows||[];state.org.locations=l.rows||[];state.data={rows:balances.rows||[]};render();return;
@@ -62,8 +70,8 @@ async function load(){
  if(section==='design'){const x=await api(t+'/design');state.design=x.design;state.data=x;state.designIndustry=state.designIndustry||x.industry||state.biz.industry||'general';render();if(!state.legacyChecked)void findLegacyStyles();return}
  if(section==='branding'){const [main,details]=await Promise.all([api(t+'/overview'),api(t+'/design')]);state.data=main;state.design=details.design;render();return}
  if(section==='create') {
-  const [p,c,d,arms,locations]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design'),api(t+'/arms'),api(t+'/locations')]);
-  state.org={arms:arms.rows||[],locations:locations.rows||[]};
+  const [p,c,d,arms,locations,profiles]=await Promise.all([api(t+'/products'),api(t+'/customers'),api(t+'/design'),api(t+'/arms'),api(t+'/locations'),api(t+'/design-profiles')]);
+  state.org={arms:arms.rows||[],locations:locations.rows||[],profiles:profiles.rows||[]};
   state.design=d.design;
   state.products=p.rows;state.customers=c.rows;state.data={};
  }else state.data=await api(t+'/'+resource);
@@ -251,14 +259,14 @@ function colourStoryChooser(selected){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['arms','⌂','Business arms'],['locations','▤','Locations'],['locationStock','▥','Stock by location'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['arms','⌂','Business arms'],['locations','▤','Locations'],['locationStock','▥','Stock by location'],['team','♧','Team & invites'],['designProfiles','◈','Saved document designs'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
   if(v==='billing')return state.biz?.role==='owner';
   if(v==='upgrade')return state.biz?.role==='owner';
-  if(v==='team'||v==='branding'||v==='design'||v==='gws'||v==='arms'||v==='locations')return admin();
+  if(v==='team'||v==='branding'||v==='design'||v==='gws'||v==='arms'||v==='locations'||v==='designProfiles')return admin();
   if(v==='locationStock')return stock();
   if(v==='alerts')return true;
   if(v==='products'||v==='customers'||v==='payments'||v==='create')return edit();
@@ -392,6 +400,29 @@ function targets(){
  '<div class="cols"><section class="panel"><h2>Set sales target</h2><form data-form="target">'+input('Month','month','month',today().slice(0,7),true)+input('Monthly target (₦)','amount','number','',true,'min=".01" step=".01"')+'<button class="btn primary">Save target</button></form></section>'+
  '<section class="panel"><h2>Saved goals</h2>'+simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.label)+'</strong><small>'+e(x.period_start)+' to '+e(x.period_end)+'</small></div><strong>'+curr(x.target_minor)+'</strong></div>')+'</section></div>';
 }
+function designProfiles(){
+ const rows=state.data?.rows||[],active=rows.filter(x=>!x.archived_at),arms=state.org.arms.filter(x=>!x.archived_at);
+ return heading('DOCUMENT STUDIO','Saved document designs','Keep a different document identity for each business arm. All 71 designs remain available to preview.')+
+ '<div class="cols"><section class="panel"><h2>Create or replace a saved design</h2><p class="muted">Use a saved profile for receipts, invoices, estimates and quotations. Replacing a profile never changes previously issued documents.</p>'+
+ '<form data-form="design-profile"><input type="hidden" name="id" value="">'+
+ input('Design name','name','text','',true)+
+ '<label class="field">Choose design<select name="template">'+groupedTemplateOptions('signature')+'</select></label>'+
+ '<div class="form-grid">'+input('Primary colour','accent','color','#6935df',true)+input('Secondary colour','secondary','color','#19223b',true)+'</div>'+
+ select('Typeface','font',[['modern','Modern'],['editorial','Editorial'],['mono','Monospace'],['rounded','Rounded']])+
+ input('Header message','header','text','')+
+ '<label class="field">Footer message<textarea name="footer" rows="2" maxlength="260">Thank you for your business.</textarea></label>'+
+ '<button class="btn primary">Save design</button></form></section>'+
+ '<section class="panel"><h2>Your saved designs ('+active.length+')</h2>'+
+ simpleRows(rows,x=>'<div class="rowcard"><div><strong>'+e(x.name)+'</strong><small>'+e(templateTitle(x.template))+(x.archived_at?' · Archived':'')+'</small></div>'+
+ (!x.archived_at?'<div class="row"><button type="button" class="btn" data-edit-profile="'+e(x.id)+'">Edit</button><button type="button" class="btn" data-archive-profile="'+e(x.id)+'">Archive</button></div>':'')+'</div>')+
+ '</section></div>'+
+ '<section class="panel"><h2>Use a saved design for a business arm</h2>'+
+ (active.length&&arms.length?
+ '<form data-form="assign-profile"><div class="form-grid">'+select('Business arm','armId',arms.map(a=>[a.id,a.name]))+select('Saved design','profileId',active.map(p=>[p.id,p.name]))+'</div><button class="btn primary">Assign design</button></form>':
+ '<p class="muted">Save a design first, then assign it to a department or brand.</p>')+
+ '</section>';
+}
+
 function businessArms(){
  const rows=state.data?.rows||[];
  const active=rows.filter(x=>!x.archived_at);
@@ -754,6 +785,7 @@ function docEditor(){
  '<label class="field">Receipt design<select name="template" aria-label="Receipt design">'+groupedTemplateOptions(state.design?.template||'signature')+'</select></label></div>'+ 
  '<div class="form-grid">'+select('Business arm','armId',state.org.arms.filter(x=>!x.archived_at).map(x=>[x.id,x.name]))+
  select('Sale location','locationId',state.org.locations.filter(x=>!x.archived_at).map(x=>[x.id,x.name]))+'</div>'+
+ '<div class="form-grid">'+select('Saved document design','profileId',[['','Business default'],...state.org.profiles.filter(p=>!p.archived_at).map(p=>[p.id,p.name])])+'</div>'+
  '<p class="mini muted">The receipt will use this exact style. Change your business default any time in Document Studio.</p>'+
  '<div class="wizard-actions">'+forward+'</div>')+
  panel(2,'<div class="eyebrow">STEP 2 OF 4</div><h2>Who is this for?</h2>'+
@@ -817,7 +849,7 @@ function editorDialog(){
 function currentDoc(){
  const f=document.querySelector('[data-form=document]');if(!f)return null;
  const items=[...document.querySelectorAll('.line-item')].map((r,i)=>({description:r.querySelector('.li-description').value,qty:Number(r.querySelector('.li-qty').value),price:Number(r.querySelector('.li-price').value),productId:state.items[i]?.productId||null}));
- return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),armId:val(f,'armId'),locationId:val(f,'locationId'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
+ return {kind:val(f,'kind'),date:val(f,'date'),dueDate:val(f,'dueDate'),template:val(f,'template'),armId:val(f,'armId'),locationId:val(f,'locationId'),profileId:val(f,'profileId'),customer:val(f,'customer'),customerEmail:val(f,'customerEmail'),customerPhone:val(f,'customerPhone'),items,discountPct:Number(val(f,'discountPct')||0),taxPct:Number(val(f,'taxPct')||0),shipping:Number(val(f,'shipping')||0),received:Number(val(f,'received')||0),method:val(f,'method'),notes:val(f,'notes')};
 }
 
 // The original August 19 MetaForge document structure, adapted to Bizlano's tenant-scoped,
@@ -826,8 +858,8 @@ function heritageReceipt(doc,number,stored=false,style=state.design){
  const id=String(doc.template||style?.template||'heritage-modern-tech');
  const meta=HERITAGE_TEMPLATES[id];
  if(!meta)return '';
- const company=String(state.biz?.business_name||'Business');
- const logo=style?.show_logo===0?'':(state.biz?.logo_url||state.data?.business?.logo_url||'');
+ const company=String(style?.business_name||state.biz?.business_name||'Business');
+ const logo=style?.show_logo===0?'':(style?.logo_url||state.biz?.logo_url||state.data?.business?.logo_url||'');
  const primary=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:meta.accent;
  const secondary=meta.secondary||'#1a1a1a',note=style?.footer_note||'Thank you for your business.';
  const invoice=String(doc.kind||'receipt').replace(/-/g,' ').toUpperCase();
@@ -889,10 +921,10 @@ function receipt(doc,number,stored=false,style=state.design){
  const vat=Math.round((subtotal-discount)*(Number(doc.taxPct)||0))/100;
  const total=stored?doc.total_minor/100:subtotal-discount+vat+Number(doc.shipping||0);
  const template=String(doc.template||style?.template||'signature'),art=templateArt(template);
- const logo=style?.show_logo===0?'':(state.biz.logo_url||state.data?.business?.logo_url||'');
+ const logo=style?.show_logo===0?'':(style?.logo_url||state.biz.logo_url||state.data?.business?.logo_url||'');
  const accent=/^#[0-9a-fA-F]{6}$/.test(style?.accent||'')?style.accent:art.accent;
  const paper=style?.paper||'a4',contact=style?.contact||'',headerNote=style?.header_note||'',footerNote=style?.footer_note||'';
- const company=String(state.biz?.business_name||'Business'),initials=company.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+ const company=String(style?.business_name||state.biz?.business_name||'Business'),initials=company.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
  const documentType=String(doc.kind||'Invoice').replaceAll('-',' ').toUpperCase(),documentNumber=number||'UNSAVED DRAFT';
  const head='<div class="r-head"><div class="r-brand"><div class="r-brand-identity">'+(logo?'<img class="receipt-logo" src="'+e(logo)+'" alt="Business logo">':'<span class="r-initials" aria-hidden="true">'+e(initials)+'</span>')+
   '<div class="r-brand-name"><span class="r-overline">BUSINESS DOCUMENT</span><h2>'+stylizedCompanyName(company,style?.text_logo_style||'split')+'</h2><div class="r-small">'+e(headerNote||'Official business document')+'</div>'+(contact?'<div class="r-small">'+e(contact)+'</div>':'')+'</div></div></div>'+
@@ -960,14 +992,14 @@ function printPage(doc){
  const isSaved=Boolean(doc.document_number);
  const displayDoc=isSaved?doc:{...doc,unsavedPreview:true,document_number:'UNSAVED PREVIEW'};
  const body=heading('DOCUMENT PREVIEW','Your printable document','Review it, choose the paper size and print or save as PDF.','<button class="btn" data-nav="documents">Back to documents</button>')+
- printOptions()+'<div class="receipt-stage printable-document" style="max-width:850px;margin:auto"><div id="preview">'+receipt(displayDoc,displayDoc.document_number,isSaved)+'</div></div>';
+ printOptions()+'<div class="receipt-stage printable-document" style="max-width:850px;margin:auto"><div id="preview">'+receipt(displayDoc,displayDoc.document_number,isSaved,doc.design_snapshot_json?JSON.parse(doc.design_snapshot_json):state.design)+'</div></div>';
  shell(body);
 }
 
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,arms:businessArms,locations:businessLocations,locationStock,designProfiles,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();
@@ -989,6 +1021,24 @@ document.addEventListener('click',async ev=>{
  if(view){await navigate(view);return}
  if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;await navigate('overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;render();return}
+ if(el.dataset.editProfile){
+  const p=state.data?.rows?.find(x=>x.id===el.dataset.editProfile);const form=document.querySelector('[data-form=design-profile]');if(!p||!form)throw Error('Saved design no longer available');
+  for(const [k,v] of Object.entries({id:p.id,name:p.name,template:p.template,accent:p.accent,secondary:p.secondary_color,font:p.font_family,header:p.header_note,footer:p.footer_note})){const field=form.elements.namedItem(k);if(field)field.value=v||''}
+  form.scrollIntoView({behavior:'smooth',block:'start'});return;
+ }
+ if(el.dataset.archiveProfile){
+  if(!confirm('Archive this design? Documents already issued will not change.'))return;
+  await api('/b/'+state.biz.slug+'/design-profiles',{action:'archive',id:el.dataset.archiveProfile});flash('Design archived.');await navigate('designProfiles');return;
+ }
+ if(action==='start-billing'){
+  if(!state.billingQuote)throw Error('Choose your plan and payment period first');
+  const r=await api('/b/'+state.biz.slug+'/billing/checkout',{plan:state.billingQuote.plan,term:state.billingQuote.term});
+  window.location.assign(r.checkoutUrl);return;
+ }
+ if(action==='cancel-billing'){
+  if(!confirm('Stop any future automatic renewal? Your paid-through access will remain.'))return;
+  await api('/b/'+state.biz.slug+'/billing/cancel',{});flash('Renewal setting updated.');await navigate('billing');return;
+ }
  if(action==='archive-arm'||action==='archive-location'){
   if(!confirm('Archive this item? Historical documents will remain available.'))return;
   await api('/b/'+state.biz.slug+(action==='archive-arm'?'/arms':'/locations'),{action:'archive',id:el.dataset.orgId});
@@ -1081,6 +1131,13 @@ document.addEventListener('input',ev=>{
  if(ev.target.closest('[data-form=design]')){captureDesignForm();refreshStudioPreview()}
 });
 document.addEventListener('change',ev=>{
+ if(ev.target.closest('[data-form=document]')&&['armId','profileId'].includes(ev.target.name)){
+  const form=ev.target.closest('[data-form=document]'),chosen=ev.target.name==='armId'?state.org.arms.find(x=>x.id===val(form,'armId'))?.design_profile_id:val(form,'profileId');
+  if(ev.target.name==='armId')form.elements.namedItem('profileId').value=chosen||'';
+  const profile=state.org.profiles.find(p=>p.id===chosen);
+  if(profile)form.elements.namedItem('template').value=profile.template;
+  drawPreview();return;
+ }
  if(ev.target.matches('[data-print-paper]')){applyPrintPaper(ev.target.value);return}
  if(ev.target.matches('[data-design-custom-color]')){setDesignColour(ev.target.value);render();return}
  if(ev.target.matches('[data-business-category]')){state.designIndustry=ev.target.value;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;state.templateChoice=departmentById(departmentForIndustry(ev.target.value)).templates[0];setDesignColour(templateArt(state.templateChoice).accent);return}
@@ -1133,6 +1190,18 @@ document.addEventListener('submit',async ev=>{
   const t='/b/'+state.biz.slug;
   if(kind==='customer')await api(t+'/customers',{name:val(form,'name'),phone:val(form,'phone'),email:val(form,'email'),address:val(form,'address')});
   if(kind==='product')await api(t+'/products',{name:val(form,'name'),sku:val(form,'sku'),price:Number(val(form,'price')),stock:Number(val(form,'stock')),lowStock:Number(val(form,'lowStock')),trackStock:form.elements.namedItem('trackStock').checked});
+  if(kind==='billing-quote'){
+    state.billingQuote=await api(t+'/billing/quote',{plan:val(form,'plan'),term:val(form,'term')});
+    render();flash('Here is your proposed plan price.');state.busy=false;return;
+  }
+  if(kind==='design-profile'){
+    await api(t+'/design-profiles',{action:val(form,'id')?'update':'create',id:val(form,'id')||undefined,name:val(form,'name'),template:val(form,'template'),accent:val(form,'accent'),secondary:val(form,'secondary'),font:val(form,'font'),header:val(form,'header'),footer:val(form,'footer')});
+    flash('Saved design updated.');await navigate('designProfiles');state.busy=false;return;
+  }
+  if(kind==='assign-profile'){
+    await api(t+'/design-profiles',{action:'assign',armId:val(form,'armId'),profileId:val(form,'profileId')});
+    flash('Business arm design updated.');await navigate('designProfiles');state.busy=false;return;
+  }
   if(kind==='arm'){await api(t+'/arms',{name:val(form,'name'),slug:val(form,'slug'),prefix:val(form,'prefix'),phone:val(form,'phone'),footer:val(form,'footer')});flash('Business arm added.');await navigate('arms');return}
   if(kind==='location'){await api(t+'/locations',{name:val(form,'name'),code:val(form,'code'),type:val(form,'type'),address:val(form,'address')});flash('Location added.');await navigate('locations');return}
   if(kind==='stock-transfer'){const fromLocationId=val(form,'fromLocationId'),toLocationId=val(form,'toLocationId');if(fromLocationId===toLocationId)throw Error('Choose two different locations');await api(t+'/stock-transfer',{productId:val(form,'productId'),fromLocationId,toLocationId,quantity:Number(val(form,'quantity')),reason:val(form,'reason')});flash('Stock transferred.');await navigate('locationStock');return}
