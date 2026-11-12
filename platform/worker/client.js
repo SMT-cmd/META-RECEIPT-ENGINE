@@ -246,11 +246,12 @@ function colourStoryChooser(selected){
 const NAV=[
  ['overview','⌂','Overview'],['documents','▤','Documents'],['create','＋','New receipt'],
  ['customers','♙','Customers'],['products','▥','Products & stock'],['payments','⇆','Payments'],
- ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['upgrade','⇧','Upgrade old receipts']
+ ['expenses','↗','Expenses'],['targets','▥','Sales targets'],['team','♧','Team & invites'],['branding','⚙','Brand identity'],['design','◈','Document studio'],['gws','⇆','Global Webstores'],['alerts','♧','Receipt notifications'],['billing','₦','Plans & billing'],['upgrade','⇧','Upgrade old receipts']
 ];
 function navigation(){
  const filtered=NAV.filter(([v])=>{
   if(v==='expenses'||v==='targets')return finance();
+  if(v==='billing')return state.biz?.role==='owner';
   if(v==='upgrade')return state.biz?.role==='owner';
   if(v==='team'||v==='branding'||v==='design'||v==='gws')return admin();
   if(v==='alerts')return true;
@@ -451,6 +452,24 @@ function stageLegacyStyle(index){
  flash('Your previous '+templateTitle(record.template)+' design is ready to review. Save it to use it here.');
 }
 
+function billing(){
+ const d=state.data;
+ if(!d)return '<div class="empty">Loading plan information…</div>';
+ const money=n=>'₦'+Number(n||0).toLocaleString('en-NG');
+ const periods=[['monthly','Monthly'],['quarterly','3 months'],['six_months','6 months'],['yearly','Yearly']];
+ return heading('BUSINESS SETTINGS','Plans & billing','Clear plans for the way your business operates.')+
+ '<section class="panel"><h2>Your current access: Free</h2><p class="muted">All existing Bizlano records and previously issued documents remain accessible. Paid subscriptions are not open yet, and no payment is required.</p><p class="mini muted">The prices below are proposals for an optional launch on 1 February 2027, subject to final testing and approval.</p></section>'+
+ '<div class="cols">'+(d.plans||[]).map(p=>
+ '<section class="panel"><h2>'+e(p.name)+(p.id==='standard'?' · Recommended':'')+'</h2>'+
+ '<div class="metric" style="margin:12px 0"><span>Proposed monthly price</span><strong>'+money(p.priceNGN.monthly)+'</strong></div>'+
+ '<p class="muted">'+Number(p.monthlyTransactions).toLocaleString('en-NG')+' completed business transactions/month</p>'+
+ '<p class="muted">'+p.designProfiles+' saved design profiles · '+p.availableDesigns+' designs to choose from</p>'+
+ '<p class="muted">'+p.staff+' staff · '+p.brands+' business '+(p.brands===1?'arm':'arms')+' · '+p.locations+' '+(p.locations===1?'location':'locations')+'</p>'+
+ '<details class="tidy-details"><summary>Compare payment periods</summary><div class="tidy-content">'+periods.map(([term,label])=>
+ '<p class="row"><span>'+label+'</span><strong>'+money(p.priceNGN[term])+'</strong></p>').join('')+'</div></details>'+
+ '</section>').join('')+'</div>'+
+ '<section class="panel"><h2>Before subscriptions open</h2><p class="muted">Free access remains available. You can preview every document design. A verified paying Global Webstores vendor may qualify for a separate 50% Bizlano discount once eligibility checks are available. No discount is activated by entering a pairing code.</p><p class="mini muted">Your receipts, invoice history, customer details and financial records are not deleted when a plan changes.</p></section>';
+}
 function upgrade(){
  const a=state.legacyArchive;
  const total=(a?.engines||[]).reduce((v,x)=>v+x.receipts.length,0);
@@ -896,7 +915,7 @@ function printPage(doc){
 function render(){
  if(!state.user||!state.user.emailVerified||!state.me){loginScreen();return}
  if(!state.biz){businessPicker();return}
- const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,gws:globalWebstores,upgrade,create:docEditor};
+ const views={overview,documents:docs,customers,products,payments,expenses,targets,team,branding,design:designStudio,alerts,gws:globalWebstores,billing,upgrade,create:docEditor};
  const fn=views[state.view]||overview;
  shell(fn());
  if(state.view==='create')drawPreview();

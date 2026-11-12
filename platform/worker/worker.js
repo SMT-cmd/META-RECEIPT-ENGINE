@@ -427,11 +427,17 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
  const t=await member(env,user,slug,scope),tenant=t.id;
+ if(resource==='billing'){
+  await member(env,user,slug,'owner');
+  if(method!=='GET')fail(405,'Paid subscriptions are not available yet');
+  // Read-only proposal. No payments, subscriptions or quotas are active.
+  return json({...publicBillingCatalogue(),currentPlan:'free',businessName:t.business_name});
+ }
  if(resource==='migrate'&&method==='POST'){
   await member(env,user,slug,'owner');
   const b=await input(req),source=field(b.source,'migration source',190),records=b.records||[];
