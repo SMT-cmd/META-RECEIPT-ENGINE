@@ -391,7 +391,7 @@ function products(){
 function payments(){
  const rows=state.data?.rows||[];
  return heading('PAYMENTS','Your recorded payments','Review the payments entered by your team and check them against your payment records.')+
- '<section class="panel">'+simpleRows(rows,p=>'<div class="rowcard"><div><strong>'+e(p.document_number)+'</strong><small>'+e(p.method)+' · '+e(p.received_at)+'</small></div><strong>'+curr(p.amount_minor)+'</strong></div>')+'</section>';
+ '<section class="panel">'+simpleRows(rows,p=>'<div class="rowcard"><div><strong>'+e(p.document_number)+'</strong><small>'+e(p.method)+' · '+e(p.received_at)+'</small></div><div class="end"><strong>'+curr(p.amount_minor)+'</strong><button class="btn" type="button" data-payment-proof="'+e(p.id)+'">Print payment receipt</button></div></div>')+'</section>';
 }
 function expenses(){
  const rows=state.data?.rows||[];
@@ -1046,7 +1046,7 @@ function render(){
  if(state.view==='create')drawPreview();
 }
 async function navigate(view){
- closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];if(view==='create')state.docStep=1;if(view==='design'){state.designStep=1;state.designDraft=null;state.templateChoice=null;state.designIndustry=null;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;}
+ closeMenu();state.view=view;state.items=[{description:'',qty:1,price:0,productId:''}];if(view==='create'){state.docStep=1;state.pendingConversion=null}else state.pendingConversion=null;if(view==='design'){state.designStep=1;state.designDraft=null;state.templateChoice=null;state.designIndustry=null;state.designBrowseAll=false;state.designDepartment=null;state.designScroll=0;}
  try{await load()}catch(err){flash(err.message,true);render()}
  window.scrollTo(0,0);
 }
@@ -1156,6 +1156,12 @@ document.addEventListener('click',async ev=>{
  if(action==='add-line'){state.items=currentDoc()?.items||state.items;state.items.push({description:'',qty:1,price:0});document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(el.dataset.removeLine!==undefined){state.items=currentDoc()?.items||state.items;if(state.items.length>1)state.items.splice(Number(el.dataset.removeLine),1);document.getElementById('lines').innerHTML=state.items.map(lineHtml).join('');drawPreview();return}
  if(action==='print-preview'){printDocument();return}
+ if(el.dataset.paymentProof){
+  const t='/b/'+state.biz.slug;
+  const created=await api(t+'/payment-confirmations',{paymentId:el.dataset.paymentProof});
+  const receipt=(await api(t+'/payment-confirmation/'+created.id)).receipt;
+  printPage(receipt);return;
+ }
  if(el.dataset.convert){
   const original=(await api('/b/'+state.biz.slug+'/doc/'+el.dataset.convert)).document;
   await navigate('create');

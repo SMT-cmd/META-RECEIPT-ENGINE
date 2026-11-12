@@ -417,6 +417,16 @@ async function api(req,env,url) {
   ]);
   return json({ok:true});
  }
+ const proofDetail=path.match(/^\/api\/b\/([a-z0-9-]+)\/payment-confirmation\/([a-f0-9-]{36})$/);
+ if(proofDetail&&method==='GET'){
+  const t=await member(env,user,proofDetail[1]);
+  const row=await env.DB.prepare('SELECT * FROM payment_confirmations WHERE tenant_id=? AND id=?').bind(t.id,proofDetail[2]).first();
+  if(!row)fail(404,'Payment receipt not found');
+  const doc=await env.DB.prepare('SELECT arm_id,location_id FROM documents WHERE tenant_id=? AND id=?').bind(t.id,row.source_document_id).first();
+  if(!doc)fail(404,'Original invoice not found');
+  await assertDocumentReadScope(env,user,t,doc.arm_id,doc.location_id);
+  return json({receipt:JSON.parse(row.payload_json)});
+ }
  const detail=path.match(/^\/api\/b\/([a-z0-9-]+)\/doc\/([a-f0-9-]{36})$/);
  if(detail&&method==='GET'){
   const tenant=await member(env,user,detail[1]);
@@ -431,7 +441,7 @@ async function api(req,env,url) {
    taxPct:d.subtotal_minor>d.discount_minor?d.tax_minor*100/(d.subtotal_minor-d.discount_minor):0,
    shipping:d.shipping_minor/100}});
  }
- const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes|design-profiles)$/);
+ const m=path.match(/^\/api\/b\/([a-z0-9-]+)\/(overview|trends|design|notifications|marketplace|customers|products|documents|payments|expenses|targets|team|invite|logo|signature|issue|void|migrate|billing|arms|locations|stock-locations|stock-transfer|staff-scopes|design-profiles|payment-confirmations)$/);
  if(!m)fail(404,'Not found');
  const slug=m[1],resource=m[2];
  const scope=resource==='expenses'||resource==='targets'&&method==='POST'?'finance':['team','invite','logo','signature','void','marketplace'].includes(resource)||resource==='design'&&method==='POST'?'admin':resource==='products'&&method==='POST'?'stock':['customers','products','payments'].includes(resource)?'edit':'view';
@@ -650,6 +660,28 @@ async function api(req,env,url) {
    await audit(env,tenant,user,'document.created',did);
    return json({id:did,number,total_minor:total},201);
   }
+ }
+ if(resource==='payment-confirmations'&&method==='POST'){
+  await member(env,user,slug,'edit');
+  const b=await input(req),paymentId=String(b.paymentId||'');
+  if(!/^[a-f0-9-]{36}$/.test(paymentId))fail(400,'Invalid payment record');
+  const payment=await env.DB.prepare('SELECT p.id,p.amount_minor,p.method,p.received_at,d.id document_id,d.kind,d.document_number,d.template,d.recipient_name,d.recipient_email,d.recipient_phone,d.arm_id,d.location_id,d.design_snapshot_json FROM payments p JOIN documents d ON d.tenant_id=p.tenant_id AND d.id=p.document_id WHERE p.tenant_id=? AND p.id=?').bind(tenant,paymentId).first();
+  if(!payment||!['invoice','tax-invoice'].includes(payment.kind))fail(404,'Select a recorded invoice payment');
+  await assertDocumentReadScope(env,user,t,payment.arm_id,payment.location_id);
+  const existing=await env.DB.prepare('SELECT id FROM payment_confirmations WHERE tenant_id=? AND payment_id=?').bind(tenant,paymentId).first();
+  if(existing)return json({id:existing.id,alreadyCreated:true});
+  const id=crypto.randomUUID(),number='PAY-'+id.slice(0,8).toUpperCase();
+  const receipt={kind:'receipt',document_number:number,template:payment.template,customer:payment.recipient_name,customerEmail:payment.recipient_email,customerPhone:payment.recipient_phone,date:String(payment.received_at).slice(0,10),total_minor:payment.amount_minor,paid_minor:payment.amount_minor,status:'paid',notes:'Payment for invoice '+payment.document_number+' · '+payment.method,items:[{description:'Payment recorded for '+payment.document_number,qty:1,price:payment.amount_minor/100}],design_snapshot_json:payment.design_snapshot_json};
+  try{
+   await env.DB.prepare('INSERT INTO payment_confirmations(tenant_id,id,payment_id,source_document_id,number,amount_minor,payload_json,issued_by) VALUES(?,?,?,?,?,?,?,?)')
+   .bind(tenant,id,paymentId,payment.document_id,number,payment.amount_minor,JSON.stringify(receipt),user.id).run();
+  }catch(e){
+   if(!String(e).includes('UNIQUE'))throw e;
+   const previous=await env.DB.prepare('SELECT id FROM payment_confirmations WHERE tenant_id=? AND payment_id=?').bind(tenant,paymentId).first();
+   if(previous)return json({id:previous.id,alreadyCreated:true});
+   throw e;
+  }
+  return json({id,number},201);
  }
  if(resource==='payments'){
   if(method==='GET'){const r=await env.DB.prepare("SELECT p.id,p.amount_minor,p.method,p.received_at,d.document_number FROM payments p JOIN documents d ON d.id=p.document_id AND d.tenant_id=p.tenant_id WHERE p.tenant_id=? AND (?=1 OR ((NOT EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=?) OR EXISTS(SELECT 1 FROM staff_location_scopes s WHERE s.tenant_id=d.tenant_id AND s.user_id=? AND s.location_id=COALESCE(d.location_id,d.tenant_id))) AND (NOT EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=?) OR EXISTS(SELECT 1 FROM staff_arm_scopes a WHERE a.tenant_id=d.tenant_id AND a.user_id=? AND a.arm_id=COALESCE(d.arm_id,d.tenant_id))))) ORDER BY p.received_at DESC LIMIT 150").bind(tenant,['owner','admin'].includes(t.role)?1:0,user.id,user.id,user.id,user.id).all();return json({rows:r.results})}
