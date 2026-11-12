@@ -1,13 +1,26 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
-import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,reload,signOut} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js';
-import {getFirestore,collection,query,where,limit,getDocs} from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js';
-const firebase=initializeApp({
- apiKey:'AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',
- authDomain:'metaforge-6afdf.firebaseapp.com',
- projectId:'metaforge-6afdf',
- appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
-});
-const auth=getAuth(firebase),oldDb=getFirestore(firebase),app=document.getElementById('app'),toast=document.getElementById('toast');
+// Native Bizlano sign-in must never wait for Google/Firebase CDN modules.
+// Load the legacy MetaForge reader only when an owner explicitly opens migration.
+let auth={currentUser:null},oldDb=null,collection=null,query=null,where=null,limit=null,getDocs=null,legacySignOut=null,legacyModules=null;
+async function ensureLegacyReader(){
+ if(oldDb)return;
+ if(!legacyModules)legacyModules=Promise.all([
+  import('https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js'),
+  import('https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js'),
+  import('https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js')
+ ]).catch(error=>{legacyModules=null;throw new Error('Old MetaForge records are not available right now. Import a backup or try again.')});
+ const [firebaseApp,firebaseAuth,firestore]=await legacyModules;
+ const firebase=firebaseApp.initializeApp({
+  apiKey:'AIzaSyAElgJBP-F322zoJ-T1qeE48s2ka0EcEvw',
+  authDomain:'metaforge-6afdf.firebaseapp.com',
+  projectId:'metaforge-6afdf',
+  appId:'1:261172077627:web:cb3cec74be2dbcb1d6281e'
+ });
+ auth=firebaseAuth.getAuth(firebase);legacySignOut=firebaseAuth.signOut;
+ oldDb=firestore.getFirestore(firebase);
+ ({collection,query,where,limit,getDocs}=firestore);
+ if(typeof auth.authStateReady==='function')await auth.authStateReady();
+}
+const app=document.getElementById('app'),toast=document.getElementById('toast');
 const state={user:null,me:null,biz:null,view:'overview',data:null,products:[],customers:[],items:[{description:'',qty:1,price:0,productId:''}],busy:false,authMode:new URL(location.href).searchParams.get('mode')==='register'?'register':'login',pendingEmail:null,resetToken:null,preview:null,legacyArchive:null,backupReady:false,chartMode:'bar',chartDays:30,connectError:'',design:null,templateChoice:null,designStep:1,designIndustry:null,designDraft:null,designScroll:0,designBrowseAll:false,designDepartment:null,legacyStyles:[],legacyChecked:false,docStep:1,printPaper:null,org:{arms:[],locations:[],profiles:[]},billingQuote:null,pendingConversion:null};
 const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const curr=n=>'₦'+Number(n/100||0).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -23,10 +36,19 @@ const stock=()=>['owner','admin','manager'].includes(state.biz?.role);
 function flash(m,error=false){toast.textContent=m;toast.classList.remove('hidden');toast.classList.toggle('error',error);clearTimeout(flash.timer);flash.timer=setTimeout(()=>toast.classList.add('hidden'),4800)}
 async function api(path,data){
  const opts=data===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(data)};
- const r=await fetch('/api'+path,{...opts,credentials:'same-origin'});
- let body;try{body=await r.json()}catch{throw Error('Cannot read server response')}
- if(!r.ok)throw Error(body.error||'Request failed');
- return body;
+ const controller=new AbortController();
+ const authRequest=path.startsWith('/account/')||path==='/logout';
+ const timeoutMs=path==='/account/session'?6500:authRequest?12000:30000;
+ const timer=setTimeout(()=>controller.abort(),timeoutMs);
+ try{
+  const r=await fetch('/api'+path,{...opts,credentials:'same-origin',cache:'no-store',signal:controller.signal});
+  let body;try{body=await r.json()}catch{throw Error('Cannot read the server response. Try again.')}
+  if(!r.ok)throw Error(body.error||'Request failed. Please try again.');
+  return body;
+ }catch(err){
+  if(err?.name==='AbortError')throw Error('The connection is taking too long. Check your internet and try again.');
+  throw err;
+ }finally{clearTimeout(timer)}
 }
 async function attach(){
  if(!state.user?.emailVerified)return;
@@ -569,8 +591,10 @@ function readLegacyBrandConfig(raw){
 async function findLegacyStyles(){
  if(state.legacyChecked)return;
  state.legacyChecked=true;
- if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)return;
+ if(state.biz?.role!=='owner')return;
  try{
+  await ensureLegacyReader();
+  if(!auth.currentUser?.emailVerified)return;
   const q=query(collection(oldDb,'short_urls'),where('owner_uid','==',auth.currentUser.uid),limit(20));
   const rows=await getDocs(q),styles=[];
   for(const doc of rows.docs){
@@ -648,7 +672,9 @@ function upgrade(){
  '<div class="banner">Older receipts stay separate from your new sales until you review them.</div></section></div>';
 }
 async function scanLegacy(){
- if(state.biz?.role!=='owner'||!auth.currentUser?.emailVerified)throw Error('Only the verified owner can migrate history');
+ if(state.biz?.role!=='owner')throw Error('Only the business owner can migrate history');
+ await ensureLegacyReader();
+ if(!auth.currentUser?.emailVerified)throw Error('Sign in to your old MetaForge account before scanning its history');
  const account=auth.currentUser,issues=[],engines=[];
  const found=await getDocs(query(collection(oldDb,'short_urls'),where('owner_uid','==',account.uid),limit(11)));
  if(found.size>10)issues.push('Some older receipts may not appear in this quick search. You can also import a backup.');
@@ -673,6 +699,7 @@ function downloadLegacy(){
  state.backupReady=true;render();flash('Backup download started. Confirm the file is saved before importing.');
 }
 async function importLegacy(archive,includeBrowser){
+ await ensureLegacyReader();
  if(!archive||archive.kind!=='metaforge-legacy'||archive.version!==1)throw Error('Unsupported MetaForge legacy archive');
  if(archive.userUid!==auth.currentUser?.uid)throw Error('The archive does not belong to your signed-in account');
  if(state.biz.role!=='owner')throw Error('Only the business owner can import receipts');
@@ -1159,7 +1186,7 @@ document.addEventListener('click',async ev=>{
  if(action==='copy-recovery-message'){await copyShareText(recoveryMessage());return}
  if(action==='menu'){toggleMenu();return}
  if(action==='picker'){state.biz=null;render();return}
- if(action==='logout'){await api('/logout',{});if(auth.currentUser)await signOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;render();return}
+ if(action==='logout'){await api('/logout',{});if(oldDb&&auth.currentUser&&legacySignOut)await legacySignOut(auth);state.user=null;state.pendingEmail=null;state.me=null;state.biz=null;render();return}
  if(action==='resend'){await api('/account/resend',{email:state.pendingEmail});flash('If your account needs verification, a new email will arrive.');return}
  if(action==='retry-connect'){state.connectError='';await attach();return}
  if(action==='refresh'){const result=await api('/account/session');state.user=result.user;if(!state.user)throw Error('Open the verification link sent to your email.');state.pendingEmail=null;await attach();return}
@@ -1398,4 +1425,5 @@ async function nativeBoot(){
   else loginScreen();
  }catch(err){state.me=null;state.connectError=err.message||'Sign-in was not completed';flash(state.connectError,true);loginScreen();}
 }
-nativeBoot();
+// Always finish the loading screen, even when the user's connection is slow.
+nativeBoot().catch(error=>{console.error('Bizlano startup failed',error?.message||error);state.connectError='Could not load your session. You can still sign in or register.';loginScreen()});

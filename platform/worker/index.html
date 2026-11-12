@@ -1822,7 +1822,37 @@ body,html{background:#fff!important}.sidebar,.topbar,.page-head,.editor-form,.mo
 }
 
 
+
+
+/* Short-lived branded launch screen while the local sign-in script starts. */
+.bizlano-startup{position:fixed;inset:0;z-index:5;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse 80% 52% at 50% 20%,#ede7ff 0%,#fbfaff 62%,#f6f7fd 100%);padding:28px 20px;text-align:center;color:#24254a}
+.bizlano-startup-body{width:min(100%,390px);display:flex;flex-direction:column;align-items:center;gap:0;animation:bizlanoReveal .32s ease-out both}
+.bizlano-startup-logo{width:82px;height:82px;border-radius:20px;box-shadow:0 14px 38px #3e238e20}
+.bizlano-startup h1{font:800 clamp(28px,8vw,36px)/1.3 Manrope,system-ui,sans-serif;margin:19px 0 3px;letter-spacing:-1.1px}
+.bizlano-startup p{font:500 13px/1.6 'DM Sans',system-ui,sans-serif;color:#63708b;margin:0}
+.bizlano-startup-spinner{width:34px;height:34px;border-radius:50%;border:3px solid #dcd2f8;border-top-color:#6933e6;border-right-color:#8b56ed;margin:34px 0 16px;animation:bizlanoRotate .85s linear infinite}
+.bizlano-startup-caption{color:#666987;font:600 12px/1.6 system-ui,sans-serif}
+.bizlano-startup-help{margin-top:22px;font:500 12px/1.8 system-ui;color:#56647f}
+.bizlano-startup-help[hidden]{display:none}
+.bizlano-startup-help a{display:inline-block;margin:8px 5px 0;padding:7px 15px;color:#fff;background:#6933e6;border-radius:9px;text-decoration:none;font-weight:750}
+@keyframes bizlanoRotate{to{transform:rotate(360deg)}}
+@keyframes bizlanoReveal{from{opacity:.2;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.bizlano-startup-spinner{animation-duration:2.5s}.bizlano-startup-body{animation:none}}
+
 </style>
 <link rel="manifest" href="/manifest.webmanifest"><meta name="application-name" content="Bizlano"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><link rel="apple-touch-icon" href="/pwa/icon-192.png"></head>
-<body><div id="app"><div class="empty">Loading Bizlano securely…</div></div><div id="toast" class="toast hidden" role="status" aria-live="polite"></div><script type="module" src="/client.js?v=20261111-design-departments-71"></script><script src="/pwa.js" defer></script></body>
+<body><div id="app">
+ <main id="bizlano-startup" class="bizlano-startup" role="status" aria-live="polite" aria-label="Opening Bizlano">
+  <div class="bizlano-startup-body">
+   <img class="bizlano-startup-logo" src="/assets/bizlano-mark.png" alt="" width="82" height="82" fetchpriority="high">
+   <h1>Bizlano</h1>
+   <p>Your business, beautifully managed.</p>
+   <div class="bizlano-startup-spinner" aria-hidden="true"></div>
+   <span class="bizlano-startup-caption">Opening your workspace…</span>
+   <div id="bizlano-startup-help" class="bizlano-startup-help" hidden>Taking longer than expected?<div><a href="/app?mode=register&retry=1">Register</a><a href="/app?mode=login&retry=1">Sign in</a></div></div>
+  </div>
+ </main>
+</div><div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+<script>(function(){setTimeout(function(){var box=document.getElementById('bizlano-startup-help');if(box)box.hidden=false},7000)})();</script>
+<script type="module" src="/client.js?v=20261112-fast-auth-1"></script><script src="/pwa.js" defer></script></body>
 </html>
