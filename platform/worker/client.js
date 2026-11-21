@@ -314,7 +314,7 @@ function navigation(){
   if(v==='products'||v==='customers'||v==='payments'||v==='create')return edit();
   return true;
  });
- const primary=['overview','documents','create','customers','products','payments'];
+ const primary=['overview','documents','create','customers','products','payments','gws'];
  const item=([v,icon,label])=>'<button type="button" data-nav="'+v+'" data-active="'+(v===state.view)+'"><span aria-hidden="true">'+icon+'</span> '+e(label)+'</button>';
  const main=filtered.filter(([v])=>primary.includes(v)).map(item).join('');
  const other=filtered.filter(([v])=>!primary.includes(v));
@@ -403,6 +403,7 @@ function overview(){
  '<button type="button" class="quick-tile" data-nav="documents"><strong>▤ View documents</strong><span>History and printing</span></button>'+
  (edit()?'<button type="button" class="quick-tile" data-nav="products"><strong>▥ Products & stock</strong><span>Prices and stock levels</span></button>':'')+
  (admin()?'<button type="button" class="quick-tile" data-nav="design"><strong>◈ Receipt designs</strong><span>Styles for your business</span></button>':'')+
+ (admin()?'<button type="button" class="quick-tile" data-nav="gws"><strong>⇆ Connect Global Webstores</strong><span>Link your store to branded receipts</span></button>':'')+
  '</div></section>'+
  '<details class="panel tidy-details" id="sales-details"><summary><strong>Sales insights</strong><span>View charts and trends</span></summary><div class="tidy-content">'+salesChart()+'</div></details>'+
  '<details class="panel tidy-details" id="share-details"><summary><strong>Share your business page</strong><span>Customer receipt recovery link</span></summary><div class="tidy-content">'+recoveryTools()+'</div></details>';
@@ -743,9 +744,9 @@ function globalWebstores(){
  '<div class="cols"><section class="panel"><div class="eyebrow">YOUR STORE CONNECTION</div><h2>'+(info.connected?'Your store is connected':'Connect Global Webstores')+'</h2>'+
  (info.connected?'<div class="banner"><strong>Connected</strong><br>Since '+e(info.connectedAt||'')+'<br>'+(info.lastSaleAt?'Last receipt event: '+e(info.lastSaleAt):'No recorded paid sales yet.')+'</div>'+
  '<p class="muted">When your store sends verified events, Bizlano records receipts, catalog snapshots, delivery updates and reconciliation details. Your direct Bizlano stock stays separate.</p><button class="btn" data-action="disconnect-gws">Disconnect this store</button>':
- '<p class="muted">Open your Global Webstores vendor dashboard and choose Connect Bizlano. Generate a secure one-time code here and enter it in that dashboard. Do not share account passwords.</p>'+
+ '<ol class="stack" aria-label="Connect Global Webstores"><li><strong>1. Generate your one-time code here.</strong><p class="mini muted">The code lasts 30 minutes. Keep it private.</p></li><li><strong>2. Open your GWS integration screen.</strong><p class="mini muted"><a class="btn" href="https://www.globalwebstores.com/dashboard/integrations/bizlano" target="_blank" rel="noopener noreferrer">Open GWS connection screen ↗</a></p></li><li><strong>3. Paste the code into GWS and select Connect.</strong><p class="mini muted">Return here to see the connected status.</p></li></ol>'+
  '<button class="btn primary" data-action="gws-code">Generate a secure connection code</button><div id="gws-link-result" class="banner hidden"></div>')+
- '<div style="margin-top:18px"><a href="https://www.globalwebstores.com/dashboard" class="btn" target="_blank" rel="noopener noreferrer">Open Global Webstores dashboard ↗</a></div></section>'+
+ '<div style="margin-top:18px"><a href="https://www.globalwebstores.com/dashboard/integrations/bizlano" class="btn" target="_blank" rel="noopener noreferrer">Go to GWS connection ↗</a></div></section>'+
  '<section class="panel"><h2>Connected business activity</h2><div class="stats" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">'+
  stat('Synced products',feed.products)+stat('Order status updates',feed.orderUpdates)+stat('Refund records',feed.refunds)+stat('Payout records',feed.settlements)+'</div>'+
  '<p class="muted">Figures show recorded events, not payments initiated by Bizlano. Refund and payout records are kept for reconciliation; they do not silently change issued receipts.</p><div class="stack">'+
@@ -1173,7 +1174,7 @@ document.addEventListener('click',async ev=>{
  const view=el.dataset.nav,action=el.dataset.action;
  try{
  if(view){await navigate(view);return}
- if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;state.billingQuote=null;await navigate('overview');return}
+ if(el.dataset.business){const selected=state.me?.businesses.find(b=>b.slug===el.dataset.business);if(!selected)throw Error('Business is no longer available');state.biz=selected;state.billingQuote=null;const connect=new URL(location.href).searchParams.get('connect')==='gws'&&admin();if(connect)history.replaceState(null,'','/app?biz='+encodeURIComponent(selected.slug));await navigate(connect?'gws':'overview');return}
  if(action==='toggle-auth'){state.authMode=state.authMode==='register'||state.authMode==='forgot'?'login':'register';state.resetToken=null;history.replaceState(null,'','/app?mode='+state.authMode);loginScreen();return}
  if(el.dataset.editProfile){
   const p=state.data?.rows?.find(x=>x.id===el.dataset.editProfile);const form=document.querySelector('[data-form=design-profile]');if(!p||!form)throw Error('Saved design no longer available');
@@ -1282,7 +1283,7 @@ document.addEventListener('click',async ev=>{
     const result=await api('/b/'+state.biz.slug+'/marketplace',{action:'link'});
     const code=result.code;
     const box=document.getElementById('gws-link-result');
-    box.classList.remove('hidden');box.innerHTML='<p class="mini">Valid for '+result.expiresInMinutes+' minutes. Never share publicly.</p><code style="display:block;overflow-wrap:anywhere;font-weight:800;user-select:all">'+e(code)+'</code><button class="btn" type="button" data-copy="'+e(code)+'">Copy connection code</button>';
+    box.classList.remove('hidden');box.innerHTML='<p class="mini">Valid for '+result.expiresInMinutes+' minutes. Keep this code private.</p><code style="display:block;overflow-wrap:anywhere;font-weight:800;user-select:all">'+e(code)+'</code><div class="row"><button class="btn primary" type="button" data-copy="'+e(code)+'">Copy connection code</button><a class="btn" href="https://www.globalwebstores.com/dashboard/integrations/bizlano" target="_blank" rel="noopener noreferrer">Continue to GWS ↗</a></div>';
     return;
  }
  if(el.dataset.copy){await navigator.clipboard.writeText(el.dataset.copy);flash('Connection code copied.');return}
@@ -1466,6 +1467,10 @@ async function nativeBoot(){
   else if(params.get('reset')){state.resetToken=params.get('reset');loginScreen();return;}
   else {const result=await api('/account/session');state.user=result.user;}
   if(state.user){state.connectError='';if(!state.user.emailVerified||state.user.legacyAccount){state.pendingEmail=state.user.email||null;loginScreen();return}await attach();
+   if(params.get('connect')==='gws'&&state.biz&&admin()){
+    history.replaceState(null,'','/app?biz='+encodeURIComponent(state.biz.slug));
+    await navigate('gws');
+   }
    const reference=params.get('reference')||params.get('trxref');
    if(state.biz&&params.get('billing')==='verify'&&reference){
     try{await api('/b/'+state.biz.slug+'/billing/verify',{reference});flash('Payment verified. Your plan has been updated.');await navigate('billing')}
