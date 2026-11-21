@@ -6,8 +6,9 @@ test('GWS connection visible to authorized business owners from overview and nav
  assert.match(ui,/if\(v==='team'\|\|v==='branding'\|\|v==='design'\|\|v==='gws'/);
 });
 test('a GWS vendor can follow a deep link straight to the Bizlano connection code',()=>{
- assert.match(ui,/params.get\('connect'\)==='gws'&&state.biz&&admin\(\)/);
- assert.match(ui,/await navigate\('gws'\)/);
+ assert.match(ui,/new URL\(location.href\).searchParams.get\('connect'\)==='gws'&&admin\(\)/);
+ assert.match(ui,/state.view='gws'/);
+ assert.match(ui,/await load\(\)/);
  assert.match(ui,/Open GWS connection screen/);
  assert.match(ui,/Continue to GWS/);
  assert.match(ui,/Copy connection code/);

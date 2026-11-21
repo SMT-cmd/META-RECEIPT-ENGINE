@@ -70,8 +70,15 @@ async function attach(){
   state.me=await api('/me');state.biz=state.me.businesses[0]||null;
   flash('You have joined the business workspace.');
  }
- if(state.biz)await load();
- else render();
+ if(state.biz){
+  // Complete the original owner-only GWS deep link after *any* sign-in route,
+  // including the login form, reconnection and a restored session.
+  if(new URL(location.href).searchParams.get('connect')==='gws'&&admin()){
+   state.view='gws';
+   history.replaceState(null,'','/app?biz='+encodeURIComponent(state.biz.slug));
+  }
+  await load();
+ }else render();
 }
 async function load(){
  if(!state.biz){render();return}
@@ -1467,10 +1474,6 @@ async function nativeBoot(){
   else if(params.get('reset')){state.resetToken=params.get('reset');loginScreen();return;}
   else {const result=await api('/account/session');state.user=result.user;}
   if(state.user){state.connectError='';if(!state.user.emailVerified||state.user.legacyAccount){state.pendingEmail=state.user.email||null;loginScreen();return}await attach();
-   if(params.get('connect')==='gws'&&state.biz&&admin()){
-    history.replaceState(null,'','/app?biz='+encodeURIComponent(state.biz.slug));
-    await navigate('gws');
-   }
    const reference=params.get('reference')||params.get('trxref');
    if(state.biz&&params.get('billing')==='verify'&&reference){
     try{await api('/b/'+state.biz.slug+'/billing/verify',{reference});flash('Payment verified. Your plan has been updated.');await navigate('billing')}
